@@ -1,0 +1,111 @@
+ANATOMIA — OFFLINE-ANATOMIE-APP
+================================
+30 Einheiten, 107 Lektionen, 825 Strukturen, 98 klinische Faelle.
+Knochen, Muskeln, Arterien, Venen, Nerven, Gelenke, Organe, Sinnesorgane,
+Lymph- und Hormonsystem, Beckenorgane, Schnittbildanatomie.
+
+BILDER JE LEKTION
+1. Atlasbild (Standard): echte Anatomie-Abbildungen; ueber die englischen
+   Originalbeschriftungen legt die App lateinische Etiketten, die gerade
+   besprochene Struktur ist farbig hervorgehoben. Antippen vergroessert,
+   Schalter "Latein an/aus" blendet die Etiketten aus.
+2. 3D echt: MRT-basierte Modelle mit einzeln benannten Knochen und Muskeln;
+   die gefragte Struktur leuchtet auf, Ziehen dreht das Modell (29 Lektionen).
+3. Schema: eigene Zeichnung mit farbiger Markierung.
+
+LERNMODI
+- Lektion: Karten durchblaettern, dann Quiz mit vier Fragearten —
+  Auswahl, Ausreisser, Namen eintippen (Tippfehler erlaubt) und
+  "Zeige die Struktur im Bild" (Antippen der richtigen Stelle).
+- Karteikarten: Vor dem Start waehlst du die Koerperregion (Ganzer Koerper,
+  Kopf & Hals, Gehirn & Nerven, Thorax, Abdomen & Becken, Ruecken, Arm & Hand,
+  Bein & Fuss, Schnittbilder) und die Stapelgroesse (20 bis alle Karten der
+  Region). Optional nur Strukturen, die noch nie dran waren.
+  Vorderseite: das anatomische Bild, aus dem die Beschriftung herausretuschiert
+  wurde (der Hintergrund wird passend rekonstruiert, keine weissen Kaesten mehr),
+  die gesuchte Struktur mit Pfeil und Ring markiert. Rueckseite: lateinischer und deutscher
+  Name, Funktion und die beschriftete Originaltafel.
+  Bewertung "Gewusst" / "Nochmal"; "Nochmal"-Karten kommen am Ende wieder.
+  Karten pro Region: Kopf & Hals 144, Gehirn & Nerven 107, Thorax 96,
+  Abdomen & Becken 126, Ruecken 27, Arm & Hand 86, Bein & Fuss 122,
+  Schnittbilder 18 — insgesamt 726.
+- Wiederholen: Spaced Repetition nach Leitner. Richtig beantwortete Karten
+  kommen nach 1, 2, 4, 8, 16, 32 Tagen wieder; Fehler setzen die Karte zurueck.
+  Die Kachel oben zeigt, wie viele Karten heute faellig sind.
+- Fehlerbuch: Alles falsch Beantwortete sammelt sich automatisch, nach
+  Einheiten sortiert und mit Fehlerzahl. Daraus laesst sich ein Uebungsstapel
+  starten; richtig beantwortete Strukturen verschwinden wieder.
+- Faelle: 98 klinische Vignetten mit Aufloesung und Erklaerung. Antworten
+  erscheinen jedes Mal in anderer Reihenfolge, und auch die falschen Optionen
+  wechseln — sie werden aus passenden Strukturen derselben Lektion gezogen.
+  Pro Durchgang kommen 12 Faelle.
+- Schnittbilder: gezeichnete CT-Ebenen (Thorax Th4/5, Abdomen L1) sowie neun
+  echte MRT-Schnitte des Kopfes (axial in vier Hoehen, zwei sagittal, zwei
+  koronar) mit exakt nach MNI-Koordinaten gesetzten Strukturmarkierungen.
+- Radiologie (eigene Einheit, 9 Lektionen): Roentgen-Thorax p.a. mit allen
+  Konturen, Roentgenzeichen (Silhouettenzeichen, Luftbronchogramm, Kerley-B,
+  Erguss, Pneumothorax, freie Luft, Atelektase, Stauung), CT des Kopfes mit den
+  Blutungstypen, CT Becken, Hounsfield-Dichtewerte und Fensterung,
+  MRT-Sequenzen (T1, T2, FLAIR, DWI/ADC, KM, Fettsaettigung, SWI),
+  Kontrastmittelphasen, Ebenen und Projektionen, Sonografie-Grundlagen.
+
+BELOHNUNGEN UND LADEN
+Taler verdienst du beim Lernen: 20 pro abgeschlossener Lektion, 40 extra fuer
+ein fehlerfreies Quiz, 100 fuer einen bestandenen Einheiten-Test, 1 pro
+gewusster Karteikarte, 5 pro richtig geloestem Fall.
+Im Laden (Kachel oben auf dem Startbildschirm) gibt es:
+ - Design: Papier in Sepia, Mint oder Schiefer; Lernpfad in Gold oder Koralle
+ - Hilfen: viertes Herz fuer jedes Lektionsquiz, Joker-Paket (streicht zwei
+   falsche Antworten), Serien-Schutz (rettet die Tagesserie einmal)
+ - Titel: Anatom, Praeparator, Radiologe — erscheinen auf dem Startbildschirm
+Gekaufte Designs lassen sich jederzeit umschalten.
+
+NAVIGATION
+Der Startbildschirm zeigt oben eine Koerperkarte: Tippe auf Kopf, Gehirn,
+Thorax, Abdomen, Arm oder Bein, und darunter erscheinen nur die Lektionen
+dieser Region. Zwei Kacheln darunter fuehren zu Ruecken und Schnittbildern.
+Die Zahlen in der Figur zeigen deinen Fortschritt je Region, die Faerbung
+wird mit steigendem Fortschritt gruener. "Ganzer Koerper" hebt die Auswahl auf.
+Darueber gibt es ein Suchfeld (findet auch einzelne Strukturen), eine
+Weiterlernen-Karte mit der naechsten offenen Lektion und die vier Uebungsmodi.
+Alle Einheiten sind von Anfang an frei waehlbar. Innerhalb einer Einheit ist
+zunaechst nur die erste Lektion offen; jede weitere schaltet sich frei, sobald
+die vorherige mit dem Quiz abgeschlossen ist. Gesperrte Lektionen zeigen ein
+Schloss. Die Einheiten-Tests, Karteikarten, Faelle und das Fehlerbuch bleiben
+jederzeit zugaenglich.
+
+DATEIEN
+Alle Dateien liegen auf einer Ebene, keine Unterordner, nichts umbenennen.
+
+WEG A — NETLIFY (am einfachsten, ZIP bleibt zu)
+1. Kostenloses Konto auf netlify.com anlegen.
+2. app.netlify.com/drop oeffnen, ZIP-Datei hineinziehen.
+3. Nach etwa einer Minute erscheint die Adresse, z. B. name.netlify.app
+
+WEG B — GITHUB PAGES
+1. Konto auf github.com, "+" -> "New repository" -> Public -> Create.
+2. "uploading an existing file" anklicken.
+3. GitHub nimmt hoechstens 100 Dateien pro Vorgang: in zwei Runden hochladen,
+   nach jeder Runde "Commit changes".
+4. Settings -> Pages -> Branch "main", Ordner "/ (root)" -> Save.
+5. Nach ein bis zwei Minuten steht https://DEINNAME.github.io/REPO/
+
+AUF IPHONE ODER IPAD INSTALLIEREN
+1. Adresse in SAFARI oeffnen.
+2. Teilen-Symbol -> "Zum Home-Bildschirm".
+3. Beim ersten Start etwa fuenf Minuten im WLAN geoeffnet lassen (rund 35 MB
+   Bilder und 3D-Modelle wandern in den Offline-Speicher).
+4. Danach laeuft alles im Flugmodus.
+
+FORTSCHRITT
+XP, Sterne, Wiederholungsplan und Fehlerbuch liegen lokal auf dem Geraet.
+Sie gehen verloren, wenn die App vom Home-Bildschirm geloescht oder die
+Safari-Websitedaten geleert werden. Ein Cloud-Backup gibt es nicht.
+
+BILDNACHWEIS
+Farbige Abbildungen: OpenStax College, "Anatomy & Physiology" (2013), CC BY.
+Historische Tafeln: Henry Gray, "Anatomy of the Human Body" (1918), gemeinfrei.
+3D-Modelle: BodyParts3D (CC BY-SA 2.1 JP) und Z-Anatomy (CC BY-SA), aufbereitet
+ueber das Projekt BodyExplorer.
+MRT-Schnitte: MNI152-Standardgehirn (Montreal Neurological Institute / FSL).
+Schemazeichnungen und CT-Ebenen sind eigene Darstellungen.
