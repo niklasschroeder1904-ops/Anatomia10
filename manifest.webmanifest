@@ -1,0 +1,14 @@
+{
+  "name": "Anatomia — Anatomie-Trainer",
+  "short_name": "Anatomia",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F6FB",
+  "theme_color": "#1E2836",
+  "icons": [
+    { "src": "./icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
