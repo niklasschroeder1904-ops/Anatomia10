@@ -4,6 +4,13 @@ ANATOMIA — OFFLINE-ANATOMIE-APP
 200 beschriftete Abbildungen im Bildatlas, 3 echte CT-/MRT-Serien zum Scrollen.
 
 NEU IN DIESER VERSION
+- Fehlerbuch mit 3D-Koerper: Knochen, Organe, Muskeln und Gefaesse sind zu
+  einem ganzen Menschen zusammengesetzt; falsch beantwortete Strukturen
+  leuchten rot (je dunkler, desto oefter falsch), Antippen zeigt den Namen.
+  Ansichten Vorne / Seite / Hinten / Oben, Ebenen ein- und ausschaltbar.
+- Koerperkarte: Im Organ-Fenster sind die Lektionen nach Thema sortiert;
+  die erste Lektion jedes Themas ist immer frei, die naechste nach Abschluss.
+- App zuruecksetzen: ganz unten auf dem Startbildschirm oder in der Statistik.
 - Koerperkarte wie aus dem Atlas: zoomen (zwei Finger, Doppeltippen, +/-),
   Organe und Koerperteile antippen, Umschalter "Vorne / Hinten" mit
   Rueckenansicht (Wirbelsaeule, Rueckenmuskeln, Gesaess, Kniekehle ...).
