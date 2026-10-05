@@ -1,9 +1,25 @@
 ANATOMIA — OFFLINE-ANATOMIE-APP
 ================================
-30 Einheiten, 134 Lektionen, 1065 Strukturen, 122 klinische Faelle,
+53 Einheiten, 521 Lektionen, rund 3500 Lernkarten, 122 klinische Faelle,
 200 beschriftete Abbildungen im Bildatlas, 3 echte CT-/MRT-Serien zum Scrollen.
 
 NEU IN DIESER VERSION
+- 381 neue Bildatlas-Lektionen in 22 Einheiten: Jede beschriftete Struktur
+  auf jeder der 200 Abbildungen hat jetzt eine eigene Lernkarte mit
+  Erklaerung, Quizfragen und Karteikarte.
+- Neue Einheit "Grundlagen: Sprache der Anatomie" (Lagebezeichnungen,
+  Ebenen & Achsen, Bewegungen, Organsysteme, Koerperhoehlen, Gewebe).
+- Lernstufen oben auf dem Startbildschirm: "Einsteiger" zeigt nur das
+  Grundwissen (107 Lektionen), "Fortgeschritten" nur die komplexen
+  Lektionen (414), "Alles" zeigt alles.
+- Viele neue Belohnungen: 6 neue Hintergruende (u. a. Koralle), 5 neue
+  Lernpfad-Farben, 10 Avatare, 4 Erfolgs-Effekte, Doppel-XP, Joker- und
+  Serien-Schutz-Pakete, 6 neue Titel und 21 Erfolge mit Taler-Bonus.
+- Gekaufte Designs lassen sich jederzeit wieder ausschalten ("aus").
+- Behoben: Die Lernpfad-Farbe (z. B. Koralle) wurde nicht angezeigt. Sie
+  faerbt jetzt die Wirbelsaeule neben den Lektionen.
+
+FRUEHERE NEUERUNGEN
 - Alle Abbildungen sind textfrei: Die englische Originalbeschriftung wurde
   entfernt, die Hinweislinien bleiben stehen. Die Beschriftung legt die App
   selbst darueber, umschaltbar Latein / Deutsch / aus.
@@ -60,10 +76,15 @@ LERNMODI
 BELOHNUNGEN UND LADEN
 Taler gibt es fuer abgeschlossene Lektionen, fehlerfreie Quizze, bestandene
 Einheiten-Tests, gewusste Karteikarten, geloeste Faelle und Selbsttests im
-Bildatlas. Im Laden: Designs, viertes Herz, Joker, Serien-Schutz und Titel.
+Bildatlas. Fuer Erfolge (z. B. 10 Lektionen, 7-Tage-Serie, bestandene Tests)
+gibt es Extra-Taler zum Abholen; ein roter Punkt am Taler-Knopf zeigt sie an.
+Im Laden: Hintergruende, Lernpfad-Farben, Avatare, Erfolgs-Effekte, viertes
+Herz, Joker, Serien-Schutz, Doppel-XP und Titel. Alles Gekaufte laesst sich
+mit "einschalten" / "aus" jederzeit an- und abschalten.
 
 NAVIGATION
-Oben eine Koerperkarte: Region antippen, darunter erscheinen nur deren
+Ganz oben die Lernstufe: Einsteiger, Fortgeschritten oder Alles.
+Darunter eine Koerperkarte: Region antippen, darunter erscheinen nur deren
 Lektionen. Ohne Auswahl sind die Einheiten nach Region sortiert,
 die Radiologie steht am Ende. Alle Einheiten sind von Anfang an frei waehlbar;
 innerhalb einer Einheit schaltet sich die naechste Lektion frei, sobald die
