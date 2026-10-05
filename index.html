@@ -11282,6 +11282,7 @@ function HomeScreen({
   onMnemo: goMnemo,
   onStats: goStats,
   onDark: tgDark,
+  onReset: onReset,
 }) {
   const lv = s.level || "alle",
     VU = levelUnits(UNITS, lv),
@@ -11945,6 +11946,19 @@ function HomeScreen({
             );
           }),
         ),
+    React.createElement(
+      "div",
+      { style: { textAlign: "center", paddingTop: 10 } },
+      React.createElement(
+        "button",
+        {
+          onClick: onReset,
+          className: "ana-body",
+          style: { background: "none", border: `1.5px solid ${C.line}`, borderRadius: 999, padding: "7px 14px", color: C.inkSoft, fontSize: 13, cursor: "pointer" },
+        },
+        "\u21BA App zur\xFCcksetzen",
+      ),
+    ),
     React.createElement(
       "div",
       { className: "ana-body", style: { color: "#9AA3B2", fontSize: 12, textAlign: "center", padding: "14px 0 26px" } },
@@ -14029,7 +14043,7 @@ function StatTile({ icon: s, value: r, label: o }) {
     React.createElement("div", { className: "ana-body", style: { fontSize: 11.5, color: C.inkSoft, lineHeight: 1.25 } }, o),
   );
 }
-function StatsScreen({ progress: s, onExit: r }) {
+function StatsScreen({ progress: s, onExit: r, onReset: rs }) {
   const o = ALL_LESSONS.filter((v) => s.best[v.id] != null),
     e = Object.values(s.best || {}).filter((v) => v >= 0.999).length,
     t = Object.values(s.srs || {}),
@@ -14174,6 +14188,12 @@ function StatsScreen({ progress: s, onExit: r }) {
             React.createElement("span", { style: { fontSize: 12, color: C.inkSoft } }, v.date.split("-").reverse().join(".")),
           ),
         ),
+    rs &&
+      React.createElement(
+        "div",
+        { style: { marginTop: 22 } },
+        React.createElement(Btn, { ghost: !0, color: C.bad, onClick: rs }, "\u21BA App zur\xFCcksetzen"),
+      ),
   );
 }
 const withMeta = (s, r) => {
@@ -14188,6 +14208,56 @@ const withMeta = (s, r) => {
   }
   return o;
 };
+function ResetScreen({ progress: s, onExit: r, onReset: o }) {
+  const [e, t] = useState(!1),
+    a = ALL_LESSONS.filter((n) => s.best[n.id] != null).length;
+  return React.createElement(
+    "div",
+    { style: { minHeight: "100vh", paddingBottom: 30 } },
+    React.createElement(
+      TopBar,
+      { onBack: r },
+      React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, "App zur\xFCcksetzen"),
+    ),
+    React.createElement(
+      "div",
+      { className: "ana-body", style: { fontSize: 15, color: C.ink, lineHeight: 1.5, padding: "4px 4px 12px" } },
+      "Damit f\xE4ngst du komplett von vorn an. Gel\xF6scht wird alles, was auf diesem Ger\xE4t gespeichert ist:",
+    ),
+    React.createElement(
+      "div",
+      { className: "ana-body", style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 14, padding: "10px 14px", fontSize: 14, color: C.ink, lineHeight: 1.7 } },
+      `• ${a} abgeschlossene Lektionen und alle Sterne`,
+      React.createElement("br"),
+      `• ${s.xp || 0} XP, ${s.coins || 0} Taler und deine Tagesserie`,
+      React.createElement("br"),
+      "• Gekaufte Designs, Avatare, Titel, Joker und Erfolge",
+      React.createElement("br"),
+      "• Wiederholungsplan, Fehlerbuch, Statistik und Pr\xFCfungen",
+      React.createElement("br"),
+      "• Einstellungen wie Lernstufe und Dunkelmodus",
+    ),
+    React.createElement(
+      "div",
+      { className: "ana-body", style: { fontSize: 13.5, color: C.bad, padding: "12px 4px 18px", lineHeight: 1.45, fontWeight: 700 } },
+      "Das kann nicht r\xFCckg\xE4ngig gemacht werden.",
+    ),
+    e
+      ? React.createElement(
+          "div",
+          { style: { display: "flex", flexDirection: "column", gap: 10 } },
+          React.createElement("div", { className: "ana-display", style: { fontSize: 16, fontWeight: 700, color: C.ink, textAlign: "center" } }, "Wirklich alles l\xF6schen?"),
+          React.createElement(Btn, { color: C.bad, dark: C.badDark, onClick: o }, "Ja, alles l\xF6schen und neu anfangen"),
+          React.createElement(Btn, { ghost: !0, color: C.inkSoft, onClick: () => t(!1) }, "Nein, abbrechen"),
+        )
+      : React.createElement(
+          "div",
+          { style: { display: "flex", flexDirection: "column", gap: 10 } },
+          React.createElement(Btn, { ghost: !0, color: C.bad, onClick: () => t(!0) }, "App zur\xFCcksetzen"),
+          React.createElement(Btn, { ghost: !0, color: C.inkSoft, onClick: r }, "Zur\xFCck"),
+        ),
+  );
+}
 function AnatomiaApp() {
   const [s, r] = useState(null),
     [o, e] = useState({ name: "home" });
@@ -14400,6 +14470,19 @@ function AnatomiaApp() {
       onMnemo: goMnemo,
       onStats: goStats,
       onDark: toggleDark,
+      onReset: () => e({ name: "reset" }),
+    });
+  else if (o.name === "reset")
+    A = React.createElement(ResetScreen, {
+      progress: s,
+      onExit: () => e({ name: "home" }),
+      onReset: () => {
+        try {
+          window.speechSynthesis && window.speechSynthesis.cancel();
+        } catch {}
+        const u = { ...DEFAULT_STATE, owned: [], claimed: [] };
+        (r(u), saveProgress(u), e({ name: "home" }), window.scrollTo(0, 0));
+      },
     });
   else if (o.name === "examsetup")
     A = React.createElement(ExamSetupScreen, {
@@ -14433,7 +14516,7 @@ function AnatomiaApp() {
       onErrors: () => e({ name: "errors" }),
     });
   else if (o.name === "mnemo") A = React.createElement(MnemonicScreen, { onExit: () => e({ name: "home" }) });
-  else if (o.name === "stats") A = React.createElement(StatsScreen, { progress: s, onExit: () => e({ name: "home" }) });
+  else if (o.name === "stats") A = React.createElement(StatsScreen, { progress: s, onExit: () => e({ name: "home" }), onReset: () => e({ name: "reset" }) });
   else if (o.name === "figatlas")
     A = React.createElement(FigureAtlasScreen, {
       initCat: o.cat,
