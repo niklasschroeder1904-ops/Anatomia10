@@ -1,101 +1,100 @@
 ANATOMIA — OFFLINE-ANATOMIE-APP
 ================================
-30 Einheiten, 107 Lektionen, 825 Strukturen, 98 klinische Faelle.
-Knochen, Muskeln, Arterien, Venen, Nerven, Gelenke, Organe, Sinnesorgane,
-Lymph- und Hormonsystem, Beckenorgane, Schnittbildanatomie.
+30 Einheiten, 134 Lektionen, 1065 Strukturen, 122 klinische Faelle,
+200 beschriftete Abbildungen im Bildatlas, 3 echte CT-/MRT-Serien zum Scrollen.
+
+NEU IN DIESER VERSION
+- Alle Abbildungen sind textfrei: Die englische Originalbeschriftung wurde
+  entfernt, die Hinweislinien bleiben stehen. Die Beschriftung legt die App
+  selbst darueber, umschaltbar Latein / Deutsch / aus.
+- Bildatlas: 200 Abbildungen in 13 Bereichen, mit Suche nach Strukturen,
+  Vollbild mit Zoom und einem Selbsttest pro Abbildung.
+- Quiz und Karteikarten nehmen jetzt die echten Abbildungen: Die gesuchte
+  Beschriftung ist durch ein Fragezeichen ersetzt. Bei Abbildungen mit
+  mehreren Teilbildern zoomt die App auf das passende Teilbild.
+- Fuenf neue Einheiten (32 Lektionen): Schaedel, Kiefer & Mund;
+  Gehirn: Kerne, Bahnen & Sinus; Organe & Gewebe im Detail;
+  Knochen & Gelenke im Detail; Augenmuskeln, Innenohr & Nase.
+- 24 neue klinische Faelle, viele davon mit Bildgebung.
+- Schnittbilder: echte CT- und MRT-Serien wie am Befundplatz.
+- Schriften sind eingebettet, die App braucht kein Internet mehr dafuer.
 
 BILDER JE LEKTION
-1. Atlasbild (Standard): echte Anatomie-Abbildungen; ueber die englischen
-   Originalbeschriftungen legt die App lateinische Etiketten, die gerade
-   besprochene Struktur ist farbig hervorgehoben. Antippen vergroessert,
-   Schalter "Latein an/aus" blendet die Etiketten aus.
-2. 3D echt: MRT-basierte Modelle mit einzeln benannten Knochen und Muskeln;
-   die gefragte Struktur leuchtet auf, Ziehen dreht das Modell (29 Lektionen).
+1. Atlasbild: echte Abbildung, die besprochene Struktur ist farbig
+   hervorgehoben. Antippen oder "Gross" oeffnet das Vollbild (zwei Finger
+   zoomen, Doppeltippen vergroessert). "Ganzes Bild" zeigt bei Teilbildern
+   die komplette Abbildung.
+2. 3D echt: Modelle mit einzeln benannten Knochen, Muskeln und Organen;
+   die gefragte Struktur leuchtet auf, Ziehen dreht das Modell (50 Lektionen).
 3. Schema: eigene Zeichnung mit farbiger Markierung.
+Lektionen zu Fachbegriffen (Radiologie) zeigen Textkarten.
 
 LERNMODI
-- Lektion: Karten durchblaettern, dann Quiz mit vier Fragearten —
-  Auswahl, Ausreisser, Namen eintippen (Tippfehler erlaubt) und
-  "Zeige die Struktur im Bild" (Antippen der richtigen Stelle).
-- Karteikarten: Vor dem Start waehlst du die Koerperregion (Ganzer Koerper,
-  Kopf & Hals, Gehirn & Nerven, Thorax, Abdomen & Becken, Ruecken, Arm & Hand,
-  Bein & Fuss, Schnittbilder) und die Stapelgroesse (20 bis alle Karten der
-  Region). Optional nur Strukturen, die noch nie dran waren.
-  Vorderseite: das anatomische Bild, aus dem die Beschriftung herausretuschiert
-  wurde (der Hintergrund wird passend rekonstruiert, keine weissen Kaesten mehr),
-  die gesuchte Struktur mit Pfeil und Ring markiert. Rueckseite: lateinischer und deutscher
-  Name, Funktion und die beschriftete Originaltafel.
-  Bewertung "Gewusst" / "Nochmal"; "Nochmal"-Karten kommen am Ende wieder.
-  Karten pro Region: Kopf & Hals 144, Gehirn & Nerven 107, Thorax 96,
-  Abdomen & Becken 126, Ruecken 27, Arm & Hand 86, Bein & Fuss 122,
-  Schnittbilder 18 — insgesamt 726.
-- Wiederholen: Spaced Repetition nach Leitner. Richtig beantwortete Karten
-  kommen nach 1, 2, 4, 8, 16, 32 Tagen wieder; Fehler setzen die Karte zurueck.
-  Die Kachel oben zeigt, wie viele Karten heute faellig sind.
-- Fehlerbuch: Alles falsch Beantwortete sammelt sich automatisch, nach
-  Einheiten sortiert und mit Fehlerzahl. Daraus laesst sich ein Uebungsstapel
-  starten; richtig beantwortete Strukturen verschwinden wieder.
-- Faelle: 98 klinische Vignetten mit Aufloesung und Erklaerung. Antworten
-  erscheinen jedes Mal in anderer Reihenfolge, und auch die falschen Optionen
-  wechseln — sie werden aus passenden Strukturen derselben Lektion gezogen.
-  Pro Durchgang kommen 12 Faelle.
-- Schnittbilder: gezeichnete CT-Ebenen (Thorax Th4/5, Abdomen L1) sowie neun
-  echte MRT-Schnitte des Kopfes (axial in vier Hoehen, zwei sagittal, zwei
-  koronar) mit exakt nach MNI-Koordinaten gesetzten Strukturmarkierungen.
-- Radiologie (eigene Einheit, 9 Lektionen): Roentgen-Thorax p.a. mit allen
-  Konturen, Roentgenzeichen (Silhouettenzeichen, Luftbronchogramm, Kerley-B,
-  Erguss, Pneumothorax, freie Luft, Atelektase, Stauung), CT des Kopfes mit den
-  Blutungstypen, CT Becken, Hounsfield-Dichtewerte und Fensterung,
-  MRT-Sequenzen (T1, T2, FLAIR, DWI/ADC, KM, Fettsaettigung, SWI),
-  Kontrastmittelphasen, Ebenen und Projektionen, Sonografie-Grundlagen.
+- Lektion: Karten durchblaettern, dann Quiz mit mehreren Fragearten —
+  Fragezeichen im Bild benennen, Auswahl, Ausreisser, Namen eintippen
+  (Tippfehler erlaubt) und "Wo liegt ...?" (richtige Stelle antippen).
+- Karteikarten: Koerperregion und Stapelgroesse waehlen, optional nur
+  Strukturen, die noch nie dran waren. Vorderseite: Abbildung ohne
+  Beschriftung, die gesuchte Stelle mit Fragezeichen. Rueckseite: lateinischer
+  und deutscher Name, Funktion und die beschriftete Abbildung.
+  Karten pro Region: Kopf & Hals 198, Gehirn & Nerven 104, Thorax 88,
+  Abdomen & Becken 150, Ruecken 29, Arm & Hand 81, Bein & Fuss 97,
+  Schnittbilder 318.
+- Wiederholen: Spaced Repetition nach Leitner (1, 2, 4, 8, 16, 32 Tage).
+- Fehlerbuch: Alles falsch Beantwortete sammelt sich automatisch.
+- Faelle: 122 klinische Vignetten mit Aufloesung, 12 pro Durchgang.
+- Bildatlas: Abbildung waehlen, Strukturen antippen, Beschriftung auf
+  Latein, Deutsch oder ausblenden, Selbsttest mit bis zu 10 Fragen.
+  Die Suche auf dem Startbildschirm findet auch Abbildungen.
+- Schnittbilder: CT Thorax & Oberbauch, CT Kopf, MRT Kopf (T1/T2).
+  Mit dem Finger ueber das Bild wischen oder den Regler ziehen, Fenster
+  (Weichteil, Lunge, Knochen) umschalten. Gelbe Striche markieren
+  beschriftete Schichten; von dort geht es direkt zur passenden Lektion.
+- Radiologie und Schnittbilder (5 Einheiten, 38 Lektionen): Roentgen-Thorax,
+  Roentgenzeichen, CT Kopf mit Blutungstypen, Hounsfield-Werte und Fenster,
+  MRT-Sequenzen, Kontrastmittelphasen, Projektionen, Sonografie,
+  Schlaganfall-Bildgebung, akutes Abdomen, Zugaenge und Fremdmaterial,
+  Frakturen, Angiografie, Strahlenschutz, KM- und MR-Sicherheit, dazu echte
+  MRT- und CT-Lektionen.
 
 BELOHNUNGEN UND LADEN
-Taler verdienst du beim Lernen: 20 pro abgeschlossener Lektion, 40 extra fuer
-ein fehlerfreies Quiz, 100 fuer einen bestandenen Einheiten-Test, 1 pro
-gewusster Karteikarte, 5 pro richtig geloestem Fall.
-Im Laden (Kachel oben auf dem Startbildschirm) gibt es:
- - Design: Papier in Sepia, Mint oder Schiefer; Lernpfad in Gold oder Koralle
- - Hilfen: viertes Herz fuer jedes Lektionsquiz, Joker-Paket (streicht zwei
-   falsche Antworten), Serien-Schutz (rettet die Tagesserie einmal)
- - Titel: Anatom, Praeparator, Radiologe — erscheinen auf dem Startbildschirm
-Gekaufte Designs lassen sich jederzeit umschalten.
+Taler gibt es fuer abgeschlossene Lektionen, fehlerfreie Quizze, bestandene
+Einheiten-Tests, gewusste Karteikarten, geloeste Faelle und Selbsttests im
+Bildatlas. Im Laden: Designs, viertes Herz, Joker, Serien-Schutz und Titel.
 
 NAVIGATION
-Der Startbildschirm zeigt oben eine Koerperkarte: Tippe auf Kopf, Gehirn,
-Thorax, Abdomen, Arm oder Bein, und darunter erscheinen nur die Lektionen
-dieser Region. Zwei Kacheln darunter fuehren zu Ruecken und Schnittbildern.
-Die Zahlen in der Figur zeigen deinen Fortschritt je Region, die Faerbung
-wird mit steigendem Fortschritt gruener. "Ganzer Koerper" hebt die Auswahl auf.
-Darueber gibt es ein Suchfeld (findet auch einzelne Strukturen), eine
-Weiterlernen-Karte mit der naechsten offenen Lektion und die vier Uebungsmodi.
-Alle Einheiten sind von Anfang an frei waehlbar. Innerhalb einer Einheit ist
-zunaechst nur die erste Lektion offen; jede weitere schaltet sich frei, sobald
-die vorherige mit dem Quiz abgeschlossen ist. Gesperrte Lektionen zeigen ein
-Schloss. Die Einheiten-Tests, Karteikarten, Faelle und das Fehlerbuch bleiben
-jederzeit zugaenglich.
+Oben eine Koerperkarte: Region antippen, darunter erscheinen nur deren
+Lektionen. Ohne Auswahl sind die Einheiten nach Region sortiert,
+die Radiologie steht am Ende. Alle Einheiten sind von Anfang an frei waehlbar;
+innerhalb einer Einheit schaltet sich die naechste Lektion frei, sobald die
+vorherige mit dem Quiz abgeschlossen ist.
 
 DATEIEN
 Alle Dateien liegen auf einer Ebene, keine Unterordner, nichts umbenennen.
+Falls das Paket in mehreren ZIP-Teilen kommt: alle Teile in denselben Ordner
+entpacken (bzw. bei Netlify den gemeinsamen Ordner hochladen).
 
-WEG A — NETLIFY (am einfachsten, ZIP bleibt zu)
+WEG A — NETLIFY (am einfachsten)
 1. Kostenloses Konto auf netlify.com anlegen.
-2. app.netlify.com/drop oeffnen, ZIP-Datei hineinziehen.
+2. app.netlify.com/drop oeffnen, den Ordner mit allen Dateien hineinziehen
+   (bei nur einer ZIP-Datei geht auch die ZIP direkt).
 3. Nach etwa einer Minute erscheint die Adresse, z. B. name.netlify.app
 
 WEG B — GITHUB PAGES
 1. Konto auf github.com, "+" -> "New repository" -> Public -> Create.
 2. "uploading an existing file" anklicken.
-3. GitHub nimmt hoechstens 100 Dateien pro Vorgang: in zwei Runden hochladen,
-   nach jeder Runde "Commit changes".
+3. GitHub nimmt hoechstens 100 Dateien pro Vorgang: in mehreren Runden
+   hochladen, nach jeder Runde "Commit changes".
 4. Settings -> Pages -> Branch "main", Ordner "/ (root)" -> Save.
 5. Nach ein bis zwei Minuten steht https://DEINNAME.github.io/REPO/
 
 AUF IPHONE ODER IPAD INSTALLIEREN
 1. Adresse in SAFARI oeffnen.
 2. Teilen-Symbol -> "Zum Home-Bildschirm".
-3. Beim ersten Start etwa fuenf Minuten im WLAN geoeffnet lassen (rund 35 MB
-   Bilder und 3D-Modelle wandern in den Offline-Speicher).
+3. Beim ersten Start einige Minuten im WLAN geoeffnet lassen (rund 50 MB
+   Bilder, Schichtserien und 3D-Modelle wandern in den Offline-Speicher).
 4. Danach laeuft alles im Flugmodus.
+Bei einem Update die App einmal im WLAN oeffnen und neu starten.
 
 FORTSCHRITT
 XP, Sterne, Wiederholungsplan und Fehlerbuch liegen lokal auf dem Geraet.
@@ -103,9 +102,14 @@ Sie gehen verloren, wenn die App vom Home-Bildschirm geloescht oder die
 Safari-Websitedaten geleert werden. Ein Cloud-Backup gibt es nicht.
 
 BILDNACHWEIS
-Farbige Abbildungen: OpenStax College, "Anatomy & Physiology" (2013), CC BY.
-Historische Tafeln: Henry Gray, "Anatomy of the Human Body" (1918), gemeinfrei.
-3D-Modelle: BodyParts3D (CC BY-SA 2.1 JP) und Z-Anatomy (CC BY-SA), aufbereitet
-ueber das Projekt BodyExplorer.
-MRT-Schnitte: MNI152-Standardgehirn (Montreal Neurological Institute / FSL).
-Schemazeichnungen und CT-Ebenen sind eigene Darstellungen.
+Abbildungen: OpenStax College, "Anatomy & Physiology", CC BY 4.0
+(openstax.org). Die englische Beschriftung wurde entfernt und durch
+lateinische und deutsche Begriffe ersetzt.
+3D-Modelle: BodyParts3D (CC BY-SA 2.1 JP) und Z-Anatomy (CC BY-SA),
+aufbereitet ueber das Projekt BodyExplorer.
+MRT-Schnitte der Lektionen: MNI152-Standardgehirn (Montreal Neurological
+Institute / FSL).
+CT- und MRT-Serien im Schnittbild-Viewer: NiiVue-Demodatensaetze (BSD-Lizenz).
+Schriften: Fredoka und Atkinson Hyperlegible (SIL Open Font License, siehe
+OFL-Fredoka.txt und OFL-Atkinson.txt).
+Schemazeichnungen und gezeichnete CT-Ebenen sind eigene Darstellungen.
