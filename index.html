@@ -5190,6 +5190,34 @@ body { margin: 0; }
     bad: "#D93B3B",
     badDark: "#A82525",
     gold: "#F2B705",
+    mute: "#E9EDF4",
+    okBg: "#E4F6E9",
+    badBg: "#FBE4E4",
+    goldBg: "#FFF8E1",
+    blueBg: "#EEF4FB",
+    tealBg: "#EAF4F7",
+    okText: "#1F7F3A",
+    badText: "#A82525",
+    okText2: "#245F36",
+    badText2: "#7A2E2E",
+  },
+  LIGHT_TOKENS = { ink: "#1E2836", inkSoft: "#5B6B80", mute: "#E9EDF4", okBg: "#E4F6E9", badBg: "#FBE4E4", goldBg: "#FFF8E1", blueBg: "#EEF4FB", tealBg: "#EAF4F7", okText: "#1F7F3A", badText: "#A82525", okText2: "#245F36", badText2: "#7A2E2E" },
+  DARK_TOKENS = {
+    paper: "#11161E",
+    card: "#1B222D",
+    line: "#2E3848",
+    ink: "#E6EBF2",
+    inkSoft: "#9DAABD",
+    mute: "#283142",
+    okBg: "#163826",
+    badBg: "#44201F",
+    goldBg: "#352D12",
+    blueBg: "#1A2C43",
+    tealBg: "#15363C",
+    okText: "#7BE09A",
+    badText: "#FF9A94",
+    okText2: "#BDEFCB",
+    badText2: "#F7C6C2",
   },
   UNITS = [
     {
@@ -7563,7 +7591,7 @@ function LabeledImage({
 function ModeSwitch({ mode: s, setMode: r, color: o, dark: e = !1 }) {
   return React.createElement(
     "div",
-    { style: { display: "inline-flex", borderRadius: 999, padding: 2, background: e ? "rgba(255,255,255,0.12)" : "#EEF1F7" } },
+    { style: { display: "inline-flex", borderRadius: 999, padding: 2, background: e ? "rgba(255,255,255,0.12)" : C.mute } },
     [
       ["la", "Latein"],
       ["de", "Deutsch"],
@@ -7804,7 +7832,7 @@ function AtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 270 
                 padding: "5px 11px",
                 borderRadius: 999,
                 border: `2px solid ${C.line}`,
-                background: "#fff",
+                background: C.card,
                 color: C.inkSoft,
                 fontWeight: 700,
                 cursor: "pointer",
@@ -7823,7 +7851,7 @@ function AtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 270 
                 padding: "5px 11px",
                 borderRadius: 999,
                 border: `2px solid ${C.line}`,
-                background: "#fff",
+                background: C.card,
                 color: C.inkSoft,
                 fontWeight: 700,
                 cursor: "pointer",
@@ -7843,7 +7871,7 @@ function AtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 270 
               padding: "5px 10px",
               borderRadius: 999,
               border: `1.5px solid ${C.line}`,
-              background: "#fff",
+              background: C.card,
               color: C.inkSoft,
               fontSize: 12,
               fontWeight: 700,
@@ -7862,7 +7890,7 @@ function AtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 270 
             padding: "5px 10px",
             borderRadius: 999,
             border: `1.5px solid ${C.line}`,
-            background: "#fff",
+            background: C.card,
             color: C.inkSoft,
             fontSize: 12,
             fontWeight: 700,
@@ -8015,7 +8043,7 @@ function OldAtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 2
                 padding: "5px 11px",
                 borderRadius: 999,
                 border: `2px solid ${C.line}`,
-                background: "#fff",
+                background: C.card,
                 color: C.inkSoft,
                 fontWeight: 700,
                 cursor: "pointer",
@@ -8033,7 +8061,7 @@ function OldAtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 2
                 padding: "5px 11px",
                 borderRadius: 999,
                 border: `2px solid ${C.line}`,
-                background: "#fff",
+                background: C.card,
                 color: C.inkSoft,
                 fontWeight: 700,
                 cursor: "pointer",
@@ -8051,7 +8079,7 @@ function OldAtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 2
             padding: "5px 10px",
             borderRadius: 999,
             border: `2px solid ${m ? e : C.line}`,
-            background: m ? e : "#fff",
+            background: m ? e : C.card,
             color: m ? "#fff" : C.inkSoft,
             fontSize: 12,
             fontWeight: 700,
@@ -8145,7 +8173,7 @@ function FigureView({ figure: s, hl: r, accent: o, pulse: e = !0, height: t = 26
   return a
     ? React.createElement(
         "div",
-        { style: { height: t, display: "flex", justifyContent: "center" } },
+        { style: { height: t, display: "flex", justifyContent: "center", background: "#fff", borderRadius: 12 } },
         React.createElement(a, { hl: r, accent: o, pulse: e }),
       )
     : null;
@@ -9199,7 +9227,7 @@ function StatPill({ icon: s, value: r, color: o }) {
 function ProgressBar({ value: s, color: r }) {
   return React.createElement(
     "div",
-    { style: { flex: 1, height: 14, background: "#E4E9F2", borderRadius: 999, overflow: "hidden" } },
+    { style: { flex: 1, height: 14, background: C.mute, borderRadius: 999, overflow: "hidden" } },
     React.createElement("div", {
       style: { width: `${Math.max(4, s * 100)}%`, height: "100%", background: r, borderRadius: 999, transition: "width 0.3s ease" },
     }),
@@ -9258,7 +9286,7 @@ function LessonRow({ lesson: s, index: r, best: o, color: e, onOpen: t, locked: 
         textAlign: "left",
         padding: "11px 12px",
         marginBottom: 6,
-        background: a ? "#F4F6FA" : C.card,
+        background: a ? C.mute : C.card,
         cursor: a ? "default" : "pointer",
         opacity: a ? 0.75 : 1,
         border: `1.5px solid ${n ? e : C.line}`,
@@ -9277,7 +9305,7 @@ function LessonRow({ lesson: s, index: r, best: o, color: e, onOpen: t, locked: 
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: n ? e : "#EDF0F6",
+          background: n ? e : C.mute,
           color: n ? "#fff" : C.inkSoft,
           fontSize: 13,
           fontWeight: 700,
@@ -9350,7 +9378,7 @@ function SpineBone({ done: s, first: r, last: o }) {
         top: "calc(45% - 8px)",
         height: 16,
         borderRadius: 6,
-        background: s ? e : "#E9EDF4",
+        background: s ? e : C.mute,
         border: `1.5px solid ${s ? "rgba(30,40,54,0.18)" : "#D3DAE6"}`,
         boxShadow: s ? "0 1px 3px rgba(30,40,54,0.18)" : "none",
       },
@@ -9677,13 +9705,147 @@ const BM_FULL = { x: -8, y: 4, w: 256, h: 414 },
       o.sort((e, t) => t.score - e.score || levelOf(e.lesson) - levelOf(t.lesson)).map((e) => e.lesson)
     );
   };
-function BodyArt() {
+const BM_BACK_TORSO =
+    "M 106,74 L 134,74 C 140,76 148,77 154,80 C 159,83 162,87 162,91 C 162,97 159,103 157,108 C 155,119 155,130 154,140 C 153,148 151,154 151,160 C 151,170 155,180 156,190 C 157,198 157,206 156,214 L 84,214 C 83,206 83,198 84,190 C 85,180 89,170 89,160 C 89,154 87,148 86,140 C 85,130 85,119 83,108 C 81,103 78,97 78,91 C 78,87 81,83 86,80 C 92,77 100,76 106,74 Z",
+  BM_SPINE_Y = [64, 69.5, 75, 80.5, 86, 92, 98, 104, 110, 116, 122, 128, 134, 140, 146, 152, 158.5, 165, 172, 179, 186],
+  BM_SCAPULA = "M 131.5,88 C 139,86 149,85.5 155,88 C 153,99 147,111 140.5,122 C 137,118 134.5,108 133,99 C 132,95 131.5,91 131.5,88 Z",
+  BM_KIDNEY_BACK = "M 141,166 C 146.5,165.5 149.5,171 149,178 C 148.5,184.5 145,188.5 141,188 C 137.5,187.5 136.5,184 138,180 C 139,177 138,173.5 137,171.5 C 136.5,168 138,166 141,166 Z",
+  BM_PELVIS_BACK = "M 124,192 C 130,185 146,183 155.5,189 C 156,199 151,208 142,212.5 C 134,212 127.5,206 125,199 Z",
+  BM_SACRUM = "M 112.5,190 L 127.5,190 C 127,200 124.5,210 120,218 C 115.5,210 113,200 112.5,190 Z",
+  BM_GLUTE = "M 120,197 C 110,193.5 98,195 90.5,203 C 86,211 86.5,222 90.5,231 C 100,236 112,234.5 120,227 Z",
+  BM_BACK_EXTRA = [
+    {
+      id: "nacken", de: "Nacken & Halswirbels\xE4ule", la: "Regio cervicalis posterior", region: "ruecken", color: "#C9584C",
+      fact: "Sieben Halswirbel tragen den Kopf; Atlas und Axis erm\xF6glichen Nicken und Drehen. Kurze und lange Nackenmuskeln halten den Kopf aufrecht.",
+      kw: /nacken|halswirbel|atlas|axis|kopfgelenk/i,
+      it: /vertebra(e)? cervical|atlas|axis|dens axis|splenius|semispinalis capitis|suboccipital|lig\. nuchae|rectus capitis|obliquus capitis/i,
+      back: ["M 110.5,58 L 129.5,58 C 129.5,64 130,70 134,74 L 106,74 C 110,70 110.5,64 110.5,58 Z"],
+    },
+    {
+      id: "wirbelsaeule", de: "Wirbels\xE4ule", la: "Columna vertebralis", region: "ruecken", color: "#C9B27C",
+      fact: "33–34 Wirbel in f\xFCnf Abschnitten mit doppelter S-Form; dazwischen liegen 23 Bandscheiben, im Wirbelkanal das R\xFCckenmark.",
+      kw: /wirbel|bandscheib|kreuzbein|stei\xDFbein|r\xFCckenmark|columna/i,
+      it: /vertebr|discus intervertebralis|sacr|coccy|proc(essus)?\.? spinos|medulla spinalis|canalis vertebralis|lig\. (longitudinale|flavum|interspinale|supraspinale)/i,
+      back: ["M 116.5,62 L 123.5,62 L 124.5,190 L 127.5,190 C 127,200 124.5,210 120,218 C 115.5,210 113,200 112.5,190 L 115.5,190 Z"],
+    },
+    {
+      id: "rueckenmuskeln", de: "R\xFCckenmuskeln", la: "Musculi dorsi", region: "ruecken", color: "#C9584C",
+      fact: "Oberfl\xE4chlich liegen Trapezius und Latissimus dorsi, darunter der R\xFCckenstrecker (M. erector spinae), der die Wirbels\xE4ule aufrichtet.",
+      kw: /r\xFCckenmusk|r\xFCcken- und|nacken- und r\xFCcken|r\xFCckenmuskulatur/i,
+      it: /trapez|latissim|rhomboid|erector|longissim|iliocostal|spinalis|multifid|splenius|semispinal|levator scapulae|serratus posterior|quadratus lumborum|rotator(es)? (brevis|longus)/i,
+      back: [
+        "M 120,48 C 114,52 110.5,60 109,69 C 101,75 93,77.5 86.5,80 C 92,86 99,92 104.5,100 C 111,114 116.5,134 120,152 Z",
+        "M 120,152 L 120,190 C 110,191 99,192 90,190 C 88.5,177 86.5,160 85.5,141 C 84.5,127 84,115 84,108 C 92,111 99.5,117 105.5,123 C 111.5,133 116,143 120,152 Z",
+      ],
+    },
+    {
+      id: "gesaess", de: "Ges\xE4\xDF", la: "Regio glutealis", region: "bein", color: "#C9584C",
+      fact: "Der M. gluteus maximus streckt die H\xFCfte beim Treppensteigen und Aufstehen; Gluteus medius und minimus halten das Becken im Einbeinstand.",
+      kw: /ges\xE4\xDF|glute/i,
+      it: /glute|piriformis|gemell|obturatorius|quadratus femoris|n\. ischiadicus|tuber ischiadicum/i,
+      back: [BM_GLUTE],
+    },
+  ],
+  BM_BACK_HITS = {
+    gehirn: ["M 120,15.5 C 130.5,15 138,22 138,30.5 C 138,34.5 137,37 135.5,38.5 C 131,45.5 109,45.5 104.5,38.5 C 103,37 102,34.5 102,30.5 C 102,22 109.5,15 120,15.5 Z"],
+    brustkorb: ["M 124.5,90 C 136,89 150,92 157,100 C 157,118 155,136 152.5,152 C 143,156 132,156 124.5,154 Z"],
+    schulter: [BM_SCAPULA, "M 86,79 C 78,78 71,84 70,94 C 69.5,101 70.5,106 72,110 C 75,106 78,99 81,93 C 83,88 86,84 86,79 Z", bmMirror("M 86,79 C 78,78 71,84 70,94 C 69.5,101 70.5,106 72,110 C 75,106 78,99 81,93 C 83,88 86,84 86,79 Z")],
+    niere: [BM_KIDNEY_BACK],
+    becken: [BM_PELVIS_BACK],
+  },
+  BM_REGIONS_BACK = null,
+  BM_BADGES_BACK = [
+    ["neuro", 214, 22, 137, 27],
+    ["kopf", 214, 56, 139, 46],
+    ["ruecken", 218, 140, 150, 140],
+    ["arm", 18, 168, 60, 168],
+    ["bein", 22, 286, 92, 284],
+  ];
+function BodyArtBack() {
   const s = React.createElement,
     r = (e, t) => s("path", { d: e, ...t }),
-    o = (e, t) => bmPair(e).map((a, n) => s("path", { key: n, d: a, ...t }));
+    o = (e, t) => bmPair(e).map((a, n) => s("path", { key: n, d: a, ...t })),
+    M = { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.55 },
+    F = (e) => ({ stroke: "#F2B3A8", strokeWidth: 0.45, fill: "none", opacity: e || 0.65 }),
+    B = { fill: "url(#bmBoneG)", stroke: "#B8A274", strokeWidth: 0.6 };
   return s(
     "g",
     { pointerEvents: "none" },
+    s("ellipse", { cx: 120, cy: 411, rx: 34, ry: 4.5, fill: "url(#bmShadowG)" }),
+    s("path", { d: BM_BODY, fill: "url(#bmSkinG)", stroke: "#B9876C", strokeWidth: 0.9, strokeLinejoin: "round" }),
+    o(BM_ARM, { fill: "url(#bmLimbG)", stroke: "#B9876C", strokeWidth: 0.9, strokeLinejoin: "round" }),
+    o(BM_THUMB, { fill: "url(#bmLimbG)", stroke: "#B9876C", strokeWidth: 0.8 }),
+    o("M 52,242 L 52.5,250 M 55,243 L 55.5,251 M 58,242 L 58.5,248.5", { stroke: "#C99A80", strokeWidth: 0.55, fill: "none" }),
+    o("M 100.5,37 C 96.5,36.5 95.2,42 96,46.5 C 96.8,50.5 99,52 101.5,51", { fill: "#EFC7AE", stroke: "#B9876C", strokeWidth: 0.8 }),
+    // ---- brain from behind: occipital lobes and cerebellum ----
+    r("M 120,15.5 C 130.5,15 138,22 138,30.5 C 138,34 136.5,36.5 134,37.5 L 106,37.5 C 103.5,36.5 102,34 102,30.5 C 102,22 109.5,15 120,15.5 Z", { fill: "url(#bmBrainG)", stroke: "#A65A71", strokeWidth: 0.7 }),
+    r("M 120,16 L 120,37.5", { stroke: "#A65A71", strokeWidth: 0.7 }),
+    s("g", { stroke: "#B76A80", strokeWidth: 0.5, fill: "none", opacity: 0.85 },
+      [21, 26, 31].map((e, t) => s("g", { key: t },
+        r(`M ${105 + t},${e} C 108,${e - 2.5} 112,${e + 2} 115,${e - 1} C 116.5,${e - 2.5} 118,${e} 119,${e - 1}`),
+        r(`M ${135 - t},${e} C 132,${e - 2.5} 128,${e + 2} 125,${e - 1} C 123.5,${e - 2.5} 122,${e} 121,${e - 1}`)))),
+    r("M 105.5,38 C 109,44.5 131,44.5 134.5,38 C 130,36.6 110,36.6 105.5,38 Z", { fill: "#D98BA0", stroke: "#A65A71", strokeWidth: 0.6 }),
+    s("g", { stroke: "#A65A71", strokeWidth: 0.35, fill: "none", opacity: 0.8 },
+      [39.2, 40.6, 42].map((e) => r(`M ${108 + (e - 39) * 1.6},${e} C 113,${e + 0.8} 127,${e + 0.8} ${132 - (e - 39) * 1.6},${e}`, { key: e }))),
+    r("M 120,38 L 120,43.8", { stroke: "#A65A71", strokeWidth: 0.6 }),
+    // ---- skeleton on the right half (viewer's right) ----
+    s("g", { opacity: 0.9 },
+      [92, 99, 106, 113, 120, 127, 134, 141, 148].map((e, t) => r(`M 123,${e} C 133,${e - 3} 147,${e - 1} 154,${e + 8 + t * 0.4}`, { key: t, stroke: "url(#bmBoneG)", strokeWidth: 2.4, fill: "none", strokeLinecap: "round" })),
+      [92, 99, 106, 113, 120, 127, 134, 141, 148].map((e, t) => r(`M 123,${e} C 133,${e - 3} 147,${e - 1} 154,${e + 8 + t * 0.4}`, { key: "o" + t, stroke: "#B8A274", strokeWidth: 0.4, fill: "none", opacity: 0.7 }))),
+    r(BM_KIDNEY_BACK, { fill: "url(#bmKidneyG)", stroke: "#5E2224", strokeWidth: 0.6 }),
+    r(BM_SCAPULA, B),
+    r("M 133,94.5 C 140,92 150,90 158,90", { stroke: "#E9DDC0", strokeWidth: 2.4, fill: "none", strokeLinecap: "round" }),
+    r("M 133,94.5 C 140,92 150,90 158,90", { stroke: "#B8A274", strokeWidth: 0.4, fill: "none" }),
+    r("M 154,88 C 158,86 161,88 160.5,92 C 158,95 155,94 153.5,91.5 Z", B),
+    r("M 121,82 C 132,80.5 144,82 153.5,82.5", { stroke: "url(#bmBoneG)", strokeWidth: 3.2, fill: "none", strokeLinecap: "round" }),
+    r(BM_PELVIS_BACK, B),
+    r("M 140,212 C 139,240 137,270 135.5,296", { stroke: "url(#bmBoneG)", strokeWidth: 5.5, fill: "none", strokeLinecap: "round" }),
+    r("M 140,212 C 139,240 137,270 135.5,296", { stroke: "#B8A274", strokeWidth: 0.4, fill: "none" }),
+    s("circle", { cx: 141, cy: 211, r: 4.2, ...B }),
+    r("M 129.5,296 C 133,293 139.5,293 142,297 C 141,301 131,301 129.5,296 Z", B),
+    r("M 134.5,301 C 134,326 134,356 135,386", { stroke: "url(#bmBoneG)", strokeWidth: 4, fill: "none", strokeLinecap: "round" }),
+    r("M 142,303 C 143,330 143,360 142.5,388", { stroke: "url(#bmBoneG)", strokeWidth: 2.2, fill: "none", strokeLinecap: "round" }),
+    r("M 160,94 C 162,112 164,130 166,152", { stroke: "url(#bmBoneG)", strokeWidth: 4, fill: "none", strokeLinecap: "round" }),
+    r("M 168,164 C 172,180 176,196 180,212 M 172,162 C 176,178 181,194 185,210", { stroke: "url(#bmBoneG)", strokeWidth: 2.2, fill: "none", strokeLinecap: "round" }),
+    // ---- spine (both halves) ----
+    BM_SPINE_Y.map((e, t) => {
+      const a = 2.2 + t * 0.12;
+      return s("g", { key: "v" + t },
+        r(`M ${120 - a * 2.6},${e + 1.2} L ${120 + a * 2.6},${e + 1.2}`, { stroke: "#E2D4B4", strokeWidth: 1.6, strokeLinecap: "round" }),
+        s("rect", { x: 120 - a, y: e - 1.6, width: a * 2, height: 4.6, rx: 1.4, ...B }));
+    }),
+    r(BM_SACRUM, B),
+    r("M 116,196 L 117,196 M 123,196 L 124,196 M 116.5,202 L 117.5,202 M 122.5,202 L 123.5,202", { stroke: "#B8A274", strokeWidth: 1.2, strokeLinecap: "round" }),
+    // ---- muscles on the left half (viewer's left) ----
+    r("M 120,48 C 114,52 110.5,60 109,69 C 101,75 93,77.5 86.5,80 C 92,86 99,92 104.5,100 C 111,114 116.5,134 120,152 L 120,48 Z", { ...M, opacity: 0.9 }),
+    r("M 117,60 C 112,72 104,80 94,82 M 118,80 C 112,88 106,94 100,96 M 119,104 C 116,110 112,112 108,110 M 119.5,128 C 118,120 114,112 110,108", F()),
+    r("M 120,152 L 120,190 C 110,191 99,192 90,190 C 88.5,177 86.5,160 85.5,141 C 84.5,127 84,115 84,108 C 92,111 99.5,117 105.5,123 C 111.5,133 116,143 120,152 Z", { ...M, opacity: 0.86 }),
+    r("M 119.5,160 C 108,152 96,138 88,118 M 119.5,174 C 106,166 94,150 87,132 M 115,189 C 102,180 92,164 87,146", F(0.55)),
+    r("M 120,156 L 120,190 C 116,190 113,189 111,188 C 111,178 112,166 114,156 Z", { fill: "#E9D8C8", opacity: 0.75 }),
+    r("M 86,79 C 78,78 71,84 70,94 C 69.5,101 70.5,106 72,110 C 75,106 78,99 81,93 C 83,88 86,84 86,79 Z", { ...M, opacity: 0.88 }),
+    r("M 72,110 C 68.5,122 66,136 64.5,152 C 66,158 70,159 72,154 C 74,140 77,124 80,112 C 77.5,108 74,107 72,110 Z", { ...M, opacity: 0.86 }),
+    r("M 67,150 C 66.5,154 66,157 65.5,160 M 71.5,150 C 70.5,154 70,157 69.5,161", { stroke: "#F1E3CF", strokeWidth: 1.6, fill: "none", opacity: 0.9 }),
+    r("M 62,163 C 59,175 56.5,187 55,199 C 56,202 58,202.5 59,200 C 61.5,188 64,176 67.5,164 Z", { ...M, opacity: 0.82 }),
+    r("M 66,164 C 64.5,176 62.5,188 60.5,200 C 61,203.5 63.5,203.5 64.5,200 C 66,188 68,176 70,164 Z", { ...M, opacity: 0.76 }),
+    r("M 88,192 C 94,186 104,185.5 111,191.5 C 105,197 97,200.5 90.5,203.5 Z", { ...M, opacity: 0.75 }),
+    r(BM_GLUTE, { ...M, opacity: 0.92 }),
+    r("M 118,201 C 108,204 98,212 92,224 M 118.5,212 C 109,214 100,220 94,230 M 119,222 C 112,224 105,228 100,233", F()),
+    r("M 88.5,236 C 88,256 91.5,278 96.5,296 L 104,296 C 104,276 103,256 102,236 C 97,234 92,234 88.5,236 Z", { ...M, opacity: 0.88 }),
+    r("M 103,236 C 104,256 105,276 105,296 L 114.5,296 C 116,276 117,256 117.5,238 C 112,234 107,234 103,236 Z", { ...M, opacity: 0.84 }),
+    r("M 95,240 C 96,258 98,276 100,292 M 110,240 C 110,258 110,276 110,292", F(0.5)),
+    r("M 94.5,296 C 96,304 98,310 99,316 M 114,296 C 112.5,304 111.5,310 111,316", { stroke: "#F1E3CF", strokeWidth: 1.4, fill: "none", opacity: 0.9 }),
+    r("M 95,318 C 91,330 91.5,346 96,356 C 99.5,360 104,359 104.5,351 L 104.5,318 C 101,315.5 97.5,315.5 95,318 Z", { ...M, opacity: 0.9 }),
+    r("M 105.5,318 L 105.5,351 C 106,359 110.5,360.5 112.5,355 C 115.5,346 115,330 113,318 C 110.5,315.5 107.5,315.5 105.5,318 Z", { ...M, opacity: 0.86 }),
+    r("M 100,322 C 99,334 99,344 100,352 M 109.5,322 C 110,334 110,344 109.5,352", F(0.55)),
+    r("M 102,357 C 103.5,368 104.5,380 105,392", { stroke: "#F1E3CF", strokeWidth: 2.6, fill: "none", strokeLinecap: "round", opacity: 0.95 }),
+    r("M 101,394 C 103,397 107,397 109,394", { stroke: "#E9C8B4", strokeWidth: 3, fill: "none", strokeLinecap: "round", opacity: 0.8 }),
+    s("ellipse", { cx: 104, cy: 120, rx: 9, ry: 30, fill: "#FFFFFF", opacity: 0.06 }),
+  );
+}
+
+function BodyDefs() {
+  const s = React.createElement;
+  return (
     s(
       "defs",
       null,
@@ -9728,7 +9890,15 @@ function BodyArt() {
       s("radialGradient", { id: "bmShadowG", cx: "0.5", cy: "0.5", r: "0.5" },
         s("stop", { offset: "0%", stopColor: "#1E2836", stopOpacity: "0.22" }),
         s("stop", { offset: "100%", stopColor: "#1E2836", stopOpacity: "0" })),
-    ),
+    ));
+}
+function BodyArt() {
+  const s = React.createElement,
+    r = (e, t) => s("path", { d: e, ...t }),
+    o = (e, t) => bmPair(e).map((a, n) => s("path", { key: n, d: a, ...t }));
+  return s(
+    "g",
+    { pointerEvents: "none" },
     // floor shadow
     s("ellipse", { cx: 120, cy: 411, rx: 34, ry: 4.5, fill: "url(#bmShadowG)" }),
     // skin
@@ -9855,6 +10025,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
     [t, a] = useState(BM_FULL),
     [n, i] = useState(null),
     [l, d] = useState(!1),
+    [sd, setSd] = useState("front"),
     c = useRef(null),
     m = useRef(t),
     h = useRef(new Map()),
@@ -9863,7 +10034,18 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
     x = useRef(0),
     S = useRef(null);
   m.current = t;
-  const B = BM_FULL.w / t.w,
+  const BK = sd === "back",
+    OL = BK
+      ? ["gehirn", "ohr", "nacken", "brustkorb", "rueckenmuskeln", "niere", "becken", "schulter", "oberarm", "unterarm", "hand", "oberschenkel", "gesaess", "knie", "unterschenkel", "fuss", "wirbelsaeule"].map((v) => {
+          const W = BM_BACK_EXTRA.find((E) => E.id === v);
+          if (W) return { ...W, hit: W.back };
+          const E = BM_ORGANS.find((N) => N.id === v);
+          return { ...E, hit: BM_BACK_HITS[v] || E.hit };
+        })
+      : BM_ORGANS,
+    RG = BK ? { neuro: BM_REGIONS.neuro, kopf: BM_REGIONS.kopf, ruecken: BM_BACK_TORSO, arm: BM_REGIONS.arm, bein: BM_REGIONS.bein } : BM_REGIONS,
+    BG = BK ? BM_BADGES_BACK : BM_BADGES,
+    B = BM_FULL.w / t.w,
     A = {};
   REGIONS.filter((u) => u.id !== "alle").forEach((u) => {
     const p = (ls || ALL_LESSONS).filter((f) => regionOf(f) === u.id);
@@ -9910,7 +10092,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
       f({ x: Z.x - K * T, y: Z.y - R * ((T * BM_FULL.h) / BM_FULL.w), w: T });
     },
     g = (v) => {
-      const W = BM_ORGANS.find((E) => E.id === v);
+      const W = OL.find((E) => E.id === v);
       W && (i(v), d(!1), o(W.region));
     };
   useEffect(() => {
@@ -9970,7 +10152,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
         E - x.current < 320 ? ((x.current = 0), BM_FULL.w / m.current.w > 3.2 ? f(BM_FULL) : k(2.2, v.clientX, v.clientY)) : (x.current = E);
       }
     },
-    I = n ? BM_ORGANS.find((v) => v.id === n) : null,
+    I = n ? OL.find((v) => v.id === n) || null : null,
     F = I ? bmLessonsFor(I, ls || ALL_LESSONS).map((v, W) => ({ v, W, o: io ? io(v.id) : !0 })).sort((v, W) => W.o - v.o || v.W - W.W).map((v) => v.v) : [],
     H = l ? F : F.slice(0, 5),
     D = (REGIONS.find((v) => v.id === (I && I.region)) || {}).label,
@@ -9979,7 +10161,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
       height: 34,
       borderRadius: 10,
       border: `1.5px solid ${C.line}`,
-      background: "rgba(255,255,255,0.92)",
+      background: C.card,
       color: C.ink,
       fontSize: 18,
       fontWeight: 700,
@@ -10015,11 +10197,12 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
             b.current && (v.stopPropagation(), v.preventDefault());
           },
         },
-        e(BodyArt, null),
+        e(BodyDefs, null),
+        e(BK ? BodyArtBack : BodyArt, null),
         r &&
-          BM_REGIONS[r] &&
+          RG[r] &&
           e("path", {
-            d: BM_REGIONS[r],
+            d: RG[r],
             fill: (I && I.region === r ? "#FFFFFF" : "#1C7ED6"),
             fillOpacity: I && I.region === r ? 0 : 0.1,
             stroke: "#1C7ED6",
@@ -10030,10 +10213,10 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
         e(
           "g",
           null,
-          Object.entries(BM_REGIONS).map(([v, W]) =>
+          Object.entries(RG).map(([v, W]) =>
             e("path", { key: v, d: W, fill: "#000", fillOpacity: 0, onClick: () => (i(null), o(v)), style: { cursor: "pointer" } }),
           ),
-          BM_ORGANS.map((v) =>
+          OL.map((v) =>
             v.hit.map((W, E) =>
               e(
                 "path",
@@ -10059,7 +10242,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
         e(
           "g",
           { pointerEvents: "none", opacity: B > 1.6 ? 0 : 1 },
-          BM_BADGES.map(([v, W, E, N, Z]) => {
+          BG.map(([v, W, E, N, Z]) => {
             const T = A[v] || { total: 0, done: 0 },
               K = r === v;
             return e(
@@ -10071,6 +10254,23 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
               e("text", { x: W, y: E + 3.5, textAnchor: "middle", className: "ana-display", fontSize: "10", fontWeight: "700", fill: K ? "#FFFFFF" : "#3A4453" }, T.done, "/", T.total),
             );
           }),
+        ),
+      ),
+      e(
+        "div",
+        { style: { position: "absolute", top: 4, left: 0, display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${C.line}`, boxShadow: "0 1px 3px rgba(30,40,54,0.12)" } },
+        [["front", "Vorne"], ["back", "Hinten"]].map(([v, W]) =>
+          e(
+            "button",
+            {
+              key: v,
+              onClick: () => (setSd(v), i(null)),
+              "aria-pressed": sd === v ? "true" : "false",
+              className: "ana-display",
+              style: { padding: "6px 11px", border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", background: sd === v ? C.ink : C.card, color: sd === v ? C.paper : C.inkSoft },
+            },
+            W,
+          ),
         ),
       ),
       e(
@@ -10100,7 +10300,12 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
             "div",
             { style: { flex: 1, minWidth: 0 } },
             e("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink, lineHeight: 1.15 } }, I.de),
-            e("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, fontStyle: "italic" } }, I.la),
+            e(
+              "div",
+              { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, fontStyle: "italic", display: "flex", alignItems: "center", gap: 6, marginTop: 2 } },
+              I.la,
+              e(SpeakBtn, { text: I.la, color: I.color, size: 26 }),
+            ),
           ),
           e(
             "button",
@@ -10133,7 +10338,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
                 marginBottom: 5,
                 borderRadius: 10,
                 border: `1.5px solid ${E ? v.color : C.line}`,
-                background: W ? C.card : "#F4F6FA",
+                background: W ? C.card : C.mute,
                 cursor: W ? "pointer" : "default",
                 opacity: W ? 1 : 0.75,
               },
@@ -10149,7 +10354,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  background: E ? v.color : "#EDF0F6",
+                  background: E ? v.color : C.mute,
                 },
               },
               E
@@ -10407,7 +10612,7 @@ function FigureScreen({ src: s, onExit: r, onQuiz: o, q: e = "" }) {
             padding: "6px 11px",
             borderRadius: 999,
             border: `1.5px solid ${C.line}`,
-            background: "#fff",
+            background: C.card,
             color: C.inkSoft,
             fontSize: 12.5,
             fontWeight: 700,
@@ -10581,13 +10786,13 @@ function FigureQuizScreen({ src: s, onExit: r, onFinish: o }) {
     h &&
       React.createElement(
         "div",
-        { style: { position: "fixed", left: 0, right: 0, bottom: 0, background: y ? "#E4F6E9" : "#FBE4E4", padding: "14px 16px 22px" } },
+        { style: { position: "fixed", left: 0, right: 0, bottom: 0, background: y ? C.okBg : C.badBg, padding: "14px 16px 22px" } },
         React.createElement(
           "div",
           { style: { maxWidth: 480, margin: "0 auto" } },
           React.createElement(
             "div",
-            { className: "ana-display", style: { fontSize: 16, fontWeight: 700, color: y ? C.goodDark : C.badDark, marginBottom: 8 } },
+            { className: "ana-display", style: { fontSize: 16, fontWeight: 700, color: y ? C.okText : C.badText, marginBottom: 8 } },
             y ? "Richtig." : `Gesucht war: ${m.la}`,
           ),
           React.createElement(
@@ -11041,7 +11246,7 @@ function StackViewer({ sid: s, onExit: r, onOpenLesson: o }) {
                 marginTop: 4,
                 borderRadius: 10,
                 border: `1.5px solid ${C.line}`,
-                background: "#fff",
+                background: C.card,
                 color: C.ink,
                 fontSize: 14,
                 fontWeight: 600,
@@ -11073,6 +11278,10 @@ function HomeScreen({
   onStacks: l,
   onAtlas: d,
   onLevel: lvSet,
+  onExam: goExam,
+  onMnemo: goMnemo,
+  onStats: goStats,
+  onDark: tgDark,
 }) {
   const lv = s.level || "alle",
     VU = levelUnits(UNITS, lv),
@@ -11149,6 +11358,28 @@ function HomeScreen({
           s.avatar ? React.createElement("span", { style: { marginRight: 6 } }, s.avatar) : null,
           "Anatomia",
           React.createElement("span", { style: { color: C.artery } }, "."),
+          React.createElement(
+            "button",
+            {
+              onClick: tgDark,
+              "aria-label": s.dark ? "Hellen Modus einschalten" : "Dunkelmodus einschalten",
+              title: s.dark ? "Heller Modus" : "Dunkelmodus",
+              style: {
+                marginLeft: 8,
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                border: `1.5px solid ${C.line}`,
+                background: C.card,
+                fontSize: 15,
+                lineHeight: "26px",
+                cursor: "pointer",
+                verticalAlign: "middle",
+                padding: 0,
+              },
+            },
+            s.dark ? "\u2600\uFE0F" : "\u{1F319}",
+          ),
         ),
         React.createElement(
           "div",
@@ -11188,7 +11419,7 @@ function HomeScreen({
               padding: "3px 10px 4px",
               borderRadius: 14,
               border: `1.5px solid ${C.gold}`,
-              background: "#FFFBEE",
+              background: C.goldBg,
               color: "#C29204",
               fontWeight: 700,
               lineHeight: 1.05,
@@ -11243,7 +11474,7 @@ function HomeScreen({
               fontWeight: 700,
               border: `1.5px solid ${lv === v.id ? C.ink : C.line}`,
               background: lv === v.id ? C.ink : C.card,
-              color: lv === v.id ? "#fff" : C.ink,
+              color: lv === v.id ? C.paper : C.ink,
               whiteSpace: "nowrap",
             },
           },
@@ -11307,7 +11538,7 @@ function HomeScreen({
                   textAlign: "left",
                   padding: "10px 12px",
                   marginBottom: 8,
-                  background: "#EEF4FB",
+                  background: C.blueBg,
                   border: `1.5px solid ${C.line}`,
                   borderLeft: `4px solid ${ATLAS_COLOR}`,
                   borderRadius: 12,
@@ -11341,7 +11572,7 @@ function HomeScreen({
                   textAlign: "left",
                   padding: "10px 12px",
                   marginBottom: 6,
-                  background: g(v.id) ? C.card : "#F4F6FA",
+                  background: g(v.id) ? C.card : C.mute,
                   border: `1.5px solid ${C.line}`,
                   borderLeft: `4px solid ${v.color}`,
                   borderRadius: 12,
@@ -11473,6 +11704,27 @@ function HomeScreen({
               sub: `${figuresData().figures.length} Abbildungen`,
               onClick: d,
             }),
+            React.createElement(ModeTile, {
+              color: EXAM_COLOR,
+              icon: React.createElement("span", { style: { fontSize: 15 } }, "\u{1F4DD}"),
+              title: "Pr\xFCfung",
+              sub: "selbst zusammenstellen",
+              onClick: goExam,
+            }),
+            React.createElement(ModeTile, {
+              color: "#F08C00",
+              icon: React.createElement("span", { style: { fontSize: 15 } }, "\u{1F4A1}"),
+              title: "Eselsbr\xFCcken",
+              sub: `${MNEMONICS.length} Merkhilfen`,
+              onClick: goMnemo,
+            }),
+            React.createElement(ModeTile, {
+              color: "#1C7ED6",
+              icon: React.createElement("span", { style: { fontSize: 15 } }, "\u{1F4CA}"),
+              title: "Statistik",
+              sub: "St\xE4rken & Verlauf",
+              onClick: goStats,
+            }),
           ),
           React.createElement(
             "div",
@@ -11509,7 +11761,7 @@ function HomeScreen({
                       fontSize: 13,
                       border: `1.5px solid ${N ? C.ink : C.line}`,
                       background: N ? C.ink : C.card,
-                      color: N ? "#fff" : C.ink,
+                      color: N ? C.paper : C.ink,
                     },
                   },
                   v.icon,
@@ -11671,7 +11923,7 @@ function HomeScreen({
                         width: "100%",
                         textAlign: "left",
                         padding: "11px 12px",
-                        background: Z ? "#FFF8E1" : C.card,
+                        background: Z ? C.goldBg : C.card,
                         border: `1.5px solid ${Z ? C.gold : C.line}`,
                         borderRadius: 13,
                         cursor: "pointer",
@@ -11799,7 +12051,7 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
               gap: 11,
               padding: "10px 13px",
               marginBottom: 8,
-              background: b.done && !b.claimed ? "#FFF8E1" : C.card,
+              background: b.done && !b.claimed ? C.goldBg : C.card,
               border: `1.5px solid ${b.done && !b.claimed ? C.gold : C.line}`,
               borderRadius: 14,
               opacity: b.claimed ? 0.7 : 1,
@@ -11987,7 +12239,7 @@ function ErrorBookScreen({ progress: s, onExit: r, onTrain: o, onOpenLesson: e }
                       gap: 10,
                       padding: "10px 12px",
                       marginBottom: 6,
-                      background: "#fff",
+                      background: C.card,
                       border: `1.5px solid ${C.line}`,
                       borderRadius: 12,
                       cursor: "pointer",
@@ -12047,7 +12299,7 @@ function VignetteScreen({ cases: s, onExit: r, onFinish: o, onAnswer: e }) {
       { key: t, className: "ana-pop", style: { flex: 1, paddingBottom: 200 } },
       React.createElement(
         "div",
-        { style: { background: "#EAF4F7", border: "1.5px solid #B7D8E2", borderRadius: 16, padding: 14, margin: "6px 0 12px" } },
+        { style: { background: C.tealBg, border: `1.5px solid ${C.line}`, borderRadius: 16, padding: 14, margin: "6px 0 12px" } },
         React.createElement(
           "div",
           { className: "ana-display", style: { fontSize: 12.5, fontWeight: 700, color: "#0B7285", letterSpacing: 1 } },
@@ -12070,10 +12322,10 @@ function VignetteScreen({ cases: s, onExit: r, onFinish: o, onAnswer: e }) {
         c.options.map((x, S) => {
           const B = m ? (x.correct ? "right" : S === n ? "wrong" : "dim") : "idle",
             A = {
-              idle: { bg: "#fff", bd: C.line, tx: C.ink },
-              right: { bg: "#E4F6E9", bd: C.good, tx: C.goodDark },
-              wrong: { bg: "#FBE4E4", bd: C.bad, tx: C.badDark },
-              dim: { bg: "#F2F4F9", bd: C.line, tx: "#9AA3B2" },
+              idle: { bg: C.card, bd: C.line, tx: C.ink },
+              right: { bg: C.okBg, bd: C.good, tx: C.okText },
+              wrong: { bg: C.badBg, bd: C.bad, tx: C.badText },
+              dim: { bg: C.mute, bd: C.line, tx: "#9AA3B2" },
             }[B];
           return React.createElement(
             "button",
@@ -12110,7 +12362,7 @@ function VignetteScreen({ cases: s, onExit: r, onFinish: o, onAnswer: e }) {
             left: 0,
             right: 0,
             bottom: 0,
-            background: h ? "#DFF5E5" : "#FBE3E3",
+            background: h ? C.okBg : C.badBg,
             borderTop: `3px solid ${h ? C.good : C.bad}`,
             padding: "14px 16px calc(16px + env(safe-area-inset-bottom))",
           },
@@ -12120,12 +12372,12 @@ function VignetteScreen({ cases: s, onExit: r, onFinish: o, onAnswer: e }) {
           { style: { maxWidth: 480, margin: "0 auto" } },
           React.createElement(
             "div",
-            { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: h ? C.goodDark : C.badDark } },
+            { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: h ? C.okText : C.badText } },
             h ? "Richtig!" : "Nicht ganz.",
           ),
           React.createElement(
             "div",
-            { className: "ana-body", style: { fontSize: 13.5, color: h ? "#245F36" : "#7A2E2E", margin: "4px 0 10px", lineHeight: 1.45 } },
+            { className: "ana-body", style: { fontSize: 13.5, color: h ? C.okText2 : C.badText2, margin: "4px 0 10px", lineHeight: 1.45 } },
             c.explain,
           ),
           React.createElement(Btn, { color: h ? C.good : C.bad, dark: h ? C.goodDark : C.badDark, onClick: b }, "Weiter"),
@@ -12212,7 +12464,7 @@ function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
               padding: "9px 12px",
               borderRadius: 999,
               border: `2px solid ${B ? "#7048E8" : C.line}`,
-              background: B ? "#7048E8" : "#fff",
+              background: B ? "#7048E8" : C.card,
               color: B ? "#fff" : C.ink,
               fontSize: 13.5,
               fontWeight: 700,
@@ -12247,7 +12499,7 @@ function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
               padding: "9px 15px",
               borderRadius: 999,
               border: `2px solid ${S ? C.gold : C.line}`,
-              background: S ? C.gold : "#fff",
+              background: S ? C.gold : C.card,
               color: S ? "#fff" : C.ink,
               fontSize: 14,
               fontWeight: 700,
@@ -12272,7 +12524,7 @@ function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
           padding: "11px 13px",
           borderRadius: 14,
           border: `2px solid ${i ? "#7048E8" : C.line}`,
-          background: "#fff",
+          background: C.card,
           cursor: "pointer",
           marginBottom: 18,
         },
@@ -12285,7 +12537,7 @@ function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
             height: 22,
             borderRadius: 7,
             border: `2px solid ${i ? "#7048E8" : C.line}`,
-            background: i ? "#7048E8" : "#fff",
+            background: i ? "#7048E8" : C.card,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -12414,8 +12666,9 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
               null,
               React.createElement(
                 "div",
-                { className: "ana-display", style: { fontSize: 24, fontWeight: 700, color: C.ink, lineHeight: 1.15 } },
-                k.la,
+                { className: "ana-display", style: { fontSize: 24, fontWeight: 700, color: C.ink, lineHeight: 1.15, display: "flex", alignItems: "center", gap: 10 } },
+                React.createElement("span", { style: { flex: 1, minWidth: 0 } }, k.la),
+                React.createElement(SpeakBtn, { text: k.la, color: o, size: 34 }),
               ),
               React.createElement(
                 "div",
@@ -12482,6 +12735,69 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
     ),
   );
 }
+const LA_ABBR = [
+    [/\bMm\./g, "Musculi"], [/\bM\./g, "Musculus"], [/\bAa\./g, "Arteriae"], [/\bA\./g, "Arteria"], [/\bVv\./g, "Venae"], [/\bV\./g, "Vena"],
+    [/\bNn\./g, "Nervi"], [/\bN\./g, "Nervus"], [/\bLigg\./g, "Ligamenta"], [/\bLig\./g, "Ligamentum"], [/\bProcc\./g, "Processus"], [/\bProc\./g, "Processus"],
+    [/\bGll\./g, "Glandulae"], [/\bGl\./g, "Glandula"], [/\bRr\./g, "Rami"], [/\bR\./g, "Ramus"], [/\bTr\./g, "Truncus"], [/\bFor\./g, "Foramen"],
+  ],
+  speechOk = () => {
+    try {
+      return typeof window < "u" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance < "u";
+    } catch {
+      return !1;
+    }
+  },
+  speakTerm = (s, r = "de-DE") => {
+    if (!speechOk() || !s) return;
+    let o = String(s).replace(/\([^)]*\)/g, " ").replace(/[–—/]/g, ", ").replace(/:/g, " ");
+    LA_ABBR.forEach(([t, a]) => (o = o.replace(t, a)));
+    o = o.replace(/\s+/g, " ").trim();
+    try {
+      const e = window.speechSynthesis;
+      e.cancel();
+      const t = new SpeechSynthesisUtterance(o);
+      t.lang = r;
+      t.rate = 0.82;
+      const a = (e.getVoices() || []).filter((n) => (n.lang || "").toLowerCase().startsWith(r.slice(0, 2)));
+      a.length && (t.voice = a.find((n) => /google|anna|petra|markus|helena|katja/i.test(n.name)) || a[0]);
+      e.speak(t);
+    } catch {}
+  };
+function SpeakBtn({ text: s, color: r = C.inkSoft, size: o = 30, lang: e = "de-DE", label: t = "Aussprechen" }) {
+  return speechOk()
+    ? React.createElement(
+        "button",
+        {
+          onClick: (a) => {
+            (a.stopPropagation(), speakTerm(s, e));
+          },
+          "aria-label": `${t}: ${s}`,
+          title: t,
+          style: {
+            width: o,
+            height: o,
+            flex: `0 0 ${o}px`,
+            borderRadius: o / 2,
+            border: `1.5px solid ${C.line}`,
+            background: C.card,
+            color: r,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 0,
+            verticalAlign: "middle",
+          },
+        },
+        React.createElement(
+          "svg",
+          { width: o * 0.55, height: o * 0.55, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.2, strokeLinecap: "round", strokeLinejoin: "round" },
+          React.createElement("path", { d: "M11 5 6 9H2v6h4l5 4V5z", fill: "currentColor" }),
+          React.createElement("path", { d: "M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" }),
+        ),
+      )
+    : null;
+}
 function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) {
   const [a, n] = useState(0),
     i = s.items[a],
@@ -12526,8 +12842,9 @@ function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) 
         ),
         React.createElement(
           "div",
-          { className: "ana-display", style: { fontSize: 25, fontWeight: 700, color: C.ink, lineHeight: 1.15, marginTop: 10 } },
-          i.la,
+          { className: "ana-display", style: { fontSize: 25, fontWeight: 700, color: C.ink, lineHeight: 1.15, marginTop: 10, display: "flex", alignItems: "center", gap: 10 } },
+          React.createElement("span", { style: { flex: 1, minWidth: 0 } }, i.la),
+          React.createElement(SpeakBtn, { text: i.la, color: r.color, size: 34 }),
         ),
         React.createElement(
           "div",
@@ -12536,6 +12853,7 @@ function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) 
         ),
         React.createElement("div", { style: { height: 1.5, background: C.line, margin: "0 0 14px" } }),
         React.createElement("div", { className: "ana-body", style: { fontSize: 16, color: C.ink, lineHeight: 1.55 } }, i.fact),
+        mnemonicsFor(s).map((v) => React.createElement(MnemonicCard, { key: v.id, m: v, color: r.color })),
       ),
       React.createElement(
         "div",
@@ -12553,7 +12871,7 @@ function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) 
                 fontSize: 12.5,
                 cursor: "pointer",
                 border: `1.5px solid ${c === a ? r.color : C.line}`,
-                background: c === a ? r.color : "#fff",
+                background: c === a ? r.color : C.card,
                 color: c === a ? "#fff" : C.inkSoft,
               },
             },
@@ -12637,7 +12955,7 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) {
                       fontWeight: 600,
                       cursor: "pointer",
                       border: `2px solid ${h === b.id ? r.color : C.line}`,
-                      background: h === b.id ? r.color : "#fff",
+                      background: h === b.id ? r.color : C.card,
                       color: h === b.id ? "#fff" : C.inkSoft,
                     },
                   },
@@ -12675,8 +12993,9 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) {
           { style: { flex: 1 } },
           React.createElement(
             "div",
-            { className: "ana-display", style: { fontSize: 23, fontWeight: 700, color: C.ink, lineHeight: 1.15 } },
-            i.la,
+            { className: "ana-display", style: { fontSize: 23, fontWeight: 700, color: C.ink, lineHeight: 1.15, display: "flex", alignItems: "center", gap: 10 } },
+            React.createElement("span", { style: { flex: 1, minWidth: 0 } }, i.la),
+            React.createElement(SpeakBtn, { text: i.la, color: r.color, size: 34 }),
           ),
           React.createElement(
             "div",
@@ -12684,6 +13003,7 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) {
             i.de,
           ),
           React.createElement("div", { className: "ana-body", style: { fontSize: 15.5, color: C.ink, lineHeight: 1.5 } }, i.fact),
+          mnemonicsFor(s).map((v) => React.createElement(MnemonicCard, { key: v.id, m: v, color: r.color })),
         ),
         React.createElement(
           "div",
@@ -12850,7 +13170,7 @@ function TypeAnswer({ q: s, color: r, onResult: o, done: e, right: t }) {
         borderRadius: 14,
         border: `2px solid ${e ? (t ? C.good : C.bad) : C.line}`,
         borderBottom: `4px solid ${e ? (t ? C.good : C.bad) : C.line}`,
-        background: e ? (t ? "#E4F6E9" : "#FBE4E4") : "#fff",
+        background: e ? (t ? C.okBg : C.badBg) : C.card,
         color: C.ink,
       },
     }),
@@ -12968,7 +13288,7 @@ function QuizScreen({
               padding: "9px 14px",
               borderRadius: 999,
               border: `2px solid ${C.gold}`,
-              background: "#FFFBEE",
+              background: C.goldBg,
               color: C.ink,
               fontSize: 13.5,
               fontWeight: 700,
@@ -12986,10 +13306,10 @@ function QuizScreen({
           if (x.includes(N)) return null;
           const Z = I ? (E.correct ? "right" : N === u ? "wrong" : "dim") : "idle",
             T = {
-              idle: { bg: "#fff", bd: C.line, tx: C.ink },
-              right: { bg: "#E4F6E9", bd: C.good, tx: C.goodDark },
-              wrong: { bg: "#FBE4E4", bd: C.bad, tx: C.badDark },
-              dim: { bg: "#F2F4F9", bd: C.line, tx: "#9AA3B2" },
+              idle: { bg: C.card, bd: C.line, tx: C.ink },
+              right: { bg: C.okBg, bd: C.good, tx: C.okText },
+              wrong: { bg: C.badBg, bd: C.bad, tx: C.badText },
+              dim: { bg: C.mute, bd: C.line, tx: "#9AA3B2" },
             }[Z];
           return React.createElement(
             "button",
@@ -13026,7 +13346,7 @@ function QuizScreen({
             left: 0,
             right: 0,
             bottom: 0,
-            background: F ? "#DFF5E5" : "#FBE3E3",
+            background: F ? C.okBg : C.badBg,
             borderTop: `3px solid ${F ? C.good : C.bad}`,
             padding: "14px 16px calc(16px + env(safe-area-inset-bottom))",
           },
@@ -13038,24 +13358,24 @@ function QuizScreen({
             "div",
             { style: { display: "flex", alignItems: "center", gap: 8 } },
             F
-              ? React.createElement(Check, { size: 22, color: C.goodDark, strokeWidth: 3 })
-              : React.createElement(X, { size: 22, color: C.badDark, strokeWidth: 3 }),
+              ? React.createElement(Check, { size: 22, color: C.okText, strokeWidth: 3 })
+              : React.createElement(X, { size: 22, color: C.badText, strokeWidth: 3 }),
             React.createElement(
               "span",
-              { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: F ? C.goodDark : C.badDark } },
+              { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: F ? C.okText : C.badText } },
               F ? "Richtig!" : "Nicht ganz.",
             ),
           ),
           !F &&
             React.createElement(
               "div",
-              { className: "ana-body", style: { fontSize: 14, fontWeight: 700, color: C.badDark, marginTop: 4 } },
+              { className: "ana-body", style: { fontSize: 14, fontWeight: 700, color: C.badText, marginTop: 4 } },
               "Richtig w\xE4re: ",
               z ? (M.kind === "point" ? "die gr\xFCn markierte Stelle" : M.item.la) : M.options.find((E) => E.correct).label,
             ),
           React.createElement(
             "div",
-            { className: "ana-body", style: { fontSize: 13.5, color: F ? "#245F36" : "#7A2E2E", margin: "4px 0 10px", lineHeight: 1.4 } },
+            { className: "ana-body", style: { fontSize: 13.5, color: F ? C.okText2 : C.badText2, margin: "4px 0 10px", lineHeight: 1.4 } },
             M.explain,
           ),
           React.createElement(Btn, { color: F ? C.good : C.bad, dark: F ? C.goodDark : C.badDark, onClick: W }, "Weiter"),
@@ -13122,7 +13442,7 @@ function ResultScreen({ kind: s, pct: r, xpGain: o, passed: e, color: t, dark: a
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: c ? t : "#E9EDF4",
+          background: c ? t : C.mute,
           border: `6px solid ${c ? a : "#C9D0DC"}`,
           marginBottom: 14,
         },
@@ -13212,6 +13532,662 @@ function FailScreen({ color: s, dark: r, onRetry: o, onHome: e }) {
     ),
   );
 }
+// ---------- topics for the exam filter ----------
+const TOPICS = [
+    { id: "grund", label: "Grundbegriffe", icon: "\u{1F9ED}" },
+    { id: "knochen", label: "Knochen & Gelenke", icon: "\u{1F9B4}" },
+    { id: "muskeln", label: "Muskeln", icon: "\u{1F4AA}" },
+    { id: "gefaesse", label: "Herz & Gef\xE4\xDFe", icon: "\u{1FAC0}" },
+    { id: "nerven", label: "Gehirn & Nerven", icon: "\u{1F9E0}" },
+    { id: "organe", label: "Organe", icon: "\u{1FAC1}" },
+    { id: "sinne", label: "Sinnesorgane", icon: "\u{1F441}️" },
+    { id: "bild", label: "Bildgebung", icon: "\u{1FA7B}" },
+  ],
+  TOPIC_CACHE = new Map(),
+  topicsOf = (s) => {
+    if (TOPIC_CACHE.has(s.id)) return TOPIC_CACHE.get(s.id);
+    const r = new Set(),
+      o = s.title || "",
+      e = s.unitId || "",
+      t = s.items || [],
+      a = (i) => t.filter((l) => i.test(l.la || "")).length / Math.max(1, t.length);
+    e === "grundlagen" && r.add("grund");
+    (/radiolog|ct-echt|mrt-schnitte|schnittbilder/.test(e) || /\bCT\b|MRT|R\xF6ntgen|Sono|Bildgeb|Angiograf|Kontrastmittel|Strahlen/i.test(o)) && r.add("bild");
+    (/knochen|skelett|sch\xE4del|wirbel|rippe|becken|gelenk|b\xE4nder|band|femur|tibia|fibula|humerus|elle|speiche|schulterblatt|kiefer|zahn|z\xE4hne|zungenbein|brustkorb|brustbein|kreuzbein|keilbein|siebbein|schl\xE4fenbein|oberkiefer|augenh\xF6hle|fontanell|sch\xE4delgrube|knie|h\xFCfte|sprunggelenk|ellenbogen|fu\xDFwurzel|handwurzel|handskelett|fu\xDFskelett|patella/i.test(o) ||
+      a(/^(Os|Ossa|Lig|Ligg|Articulatio|Proc|Procc|Processus|Costa|Vertebra|Sutura|Foramen|Fossa|Condylus|Tuber|Spina|Crista|Incisura|Facies)\b/) >= 0.4) && r.add("knochen");
+    (/muskel|musk|zwerchfell|beckenboden|damm|mimik|kaumusk|rotatoren|bizeps|wade|ges\xE4\xDF/i.test(o) || a(/^(M|Mm)\./) >= 0.4) && r.add("muskeln");
+    (/arter|vene|venen|gef\xE4\xDF|aorta|koronar|kreislauf|herz|pfortader|hirnsinus|sinus durae|willis|puls|truncus coeliacus|hohlvenen/i.test(o) || a(/^(A|Aa|V|Vv|Sinus|Truncus|Arcus)\b/) >= 0.4) && r.add("gefaesse");
+    (/nerv|hirn|gehirn|r\xFCckenmark|plexus|bahn|kortex|rinde|dermatom|limbisch|kleinhirn|sehbahn|basalgang|brodmann|zwischenhirn|liquor|hirnh\xE4ut|ventrikel|mrt axial|mrt sagittal|mrt koronar/i.test(o) || a(/^(N|Nn|Plexus|Tractus|Gyrus|Sulcus|Nucleus|Lobus (frontalis|parietalis|temporalis|occipitalis))\b/) >= 0.4) && r.add("nerven");
+    /organ|lunge|leber|magen|darm|niere|harn|blase|milz|pankreas|dr\xFCse|schilddr\xFCse|lymph|thymus|verdau|atem|peritone|bauchfell|beckenorgane|endokrin|hormon|speiser\xF6hre|rachen|kehlkopf|luftr\xF6hre|bronch|mundh\xF6hle|zunge|gallen|nephron|mandel|fortpflanzung|tonsill/i.test(o) && r.add("organe");
+    /auge|augen|ohr|nase|riech|cochlea|seh|geh\xF6r|bogeng\xE4ng|orbita/i.test(o) && r.add("sinne");
+    r.size || r.add("organe");
+    return (TOPIC_CACHE.set(s.id, r), r);
+  },
+  EXAM_REGIONS = [{ id: "alle", label: "Allgemein", icon: "\u{1F9CD}" }, ...REGIONS.filter((s) => s.id !== "alle")],
+  EXAM_COLOR = "#1864AB",
+  gradeFor = (s) => (s >= 0.9 ? 1 : s >= 0.8 ? 2 : s >= 0.7 ? 3 : s >= 0.6 ? 4 : 5),
+  GRADE_TEXT = { 1: "sehr gut", 2: "gut", 3: "befriedigend", 4: "ausreichend", 5: "nicht bestanden" },
+  fmtTime = (s) => {
+    const r = Math.max(0, Math.round(s));
+    return `${Math.floor(r / 60)}:${String(r % 60).padStart(2, "0")}`;
+  },
+  examPool = (s, r) =>
+    ALL_LESSONS.filter(
+      (o) =>
+        r.regions.includes(regionOf(o)) &&
+        [...topicsOf(o)].some((e) => r.topics.includes(e)) &&
+        inLevel(o, r.level) &&
+        (!r.learnedOnly || s.best[o.id] != null),
+    ),
+  buildExam = (s, r) => {
+    const o = shuffle(s.flatMap((t) => t.items.map((a) => ({ item: a, lesson: t })))),
+      e = [],
+      t = new Set();
+    for (const a of o) {
+      if (e.length >= r) break;
+      const n = a.lesson.id + "/" + a.item.la;
+      t.has(n) || (t.add(n), e.push(a));
+    }
+    return shuffle(e).map(({ item: a, lesson: n }, i) => {
+      const l = (marksFor(n.id) || {})[a.id],
+        d = platesFor(n.id),
+        c = i % 6;
+      return c === 2 && l && l.li != null && d.length
+        ? makeTypeQuestion(a, n, l, d)
+        : c === 4 && l && d.length
+          ? makePointQuestion(a, n, l, d)
+          : makeQuestion(a, n, ["fig", "fact", "term-de", "fig", "term-la", "fact"][c]);
+    });
+  };
+function ChipToggle({ on: s, onClick: r, children: o, color: e = EXAM_COLOR }) {
+  return React.createElement(
+    "button",
+    {
+      onClick: r,
+      "aria-pressed": s ? "true" : "false",
+      className: "ana-body",
+      style: {
+        padding: "7px 11px",
+        borderRadius: 999,
+        cursor: "pointer",
+        fontSize: 13.5,
+        fontWeight: 600,
+        border: `1.5px solid ${s ? e : C.line}`,
+        background: s ? e : C.card,
+        color: s ? "#fff" : C.ink,
+      },
+    },
+    o,
+  );
+}
+function SectionLabel({ children: s, right: r }) {
+  return React.createElement(
+    "div",
+    {
+      className: "ana-display",
+      style: { display: "flex", alignItems: "center", fontSize: 12.5, fontWeight: 700, color: C.inkSoft, letterSpacing: 0.8, padding: "14px 2px 7px" },
+    },
+    React.createElement("span", { style: { flex: 1 } }, s),
+    r,
+  );
+}
+function ExamSetupScreen({ progress: s, onExit: r, onStart: o }) {
+  const e = s.examCfg || {},
+    [t, a] = useState(e.regions || EXAM_REGIONS.map((v) => v.id)),
+    [n, i] = useState(e.topics || TOPICS.map((v) => v.id)),
+    [l, d] = useState(e.level || s.level || "alle"),
+    [c, m] = useState(!!e.learnedOnly),
+    [h, y] = useState(e.count || 20),
+    [b, x] = useState(e.minutes == null ? 20 : e.minutes),
+    S = { regions: t, topics: n, level: l, learnedOnly: c, count: h, minutes: b },
+    B = useMemo(() => examPool(s, S), [t.join(), n.join(), l, c]),
+    A = B.reduce((v, W) => v + W.items.length, 0),
+    u = (v, W, E) => W(v.includes(E) ? v.filter((N) => N !== E) : [...v, E]),
+    p = (v, W, E) =>
+      React.createElement(
+        "button",
+        {
+          onClick: () => W(v.length === E.length ? [] : E.map((N) => N.id)),
+          className: "ana-body",
+          style: { background: "none", border: "none", color: EXAM_COLOR, fontSize: 12.5, fontWeight: 700, cursor: "pointer", padding: 0 },
+        },
+        v.length === E.length ? "keine" : "alle",
+      ),
+    f = A >= 4;
+  return React.createElement(
+    "div",
+    { style: { minHeight: "100vh", paddingBottom: 30 } },
+    React.createElement(
+      TopBar,
+      { onBack: r },
+      React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, "Pr\xFCfungsmodus"),
+    ),
+    React.createElement(
+      "div",
+      { className: "ana-body", style: { color: C.inkSoft, fontSize: 13.5, padding: "0 4px 4px", lineHeight: 1.45 } },
+      "Stell dir deine Pr\xFCfung zusammen: Regionen, Fachrichtungen, Lernstufe, Anzahl der Fragen und Zeit. Am Ende gibt es eine Note und eine Auswertung.",
+    ),
+    React.createElement(SectionLabel, { right: p(t, a, EXAM_REGIONS) }, "REGIONEN"),
+    React.createElement(
+      "div",
+      { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+      EXAM_REGIONS.map((v) => React.createElement(ChipToggle, { key: v.id, on: t.includes(v.id), onClick: () => u(t, a, v.id) }, v.icon, " ", v.label)),
+    ),
+    React.createElement(SectionLabel, { right: p(n, i, TOPICS) }, "FACHRICHTUNGEN"),
+    React.createElement(
+      "div",
+      { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+      TOPICS.map((v) => React.createElement(ChipToggle, { key: v.id, on: n.includes(v.id), onClick: () => u(n, i, v.id) }, v.icon, " ", v.label)),
+    ),
+    React.createElement(SectionLabel, null, "LERNSTUFE"),
+    React.createElement(
+      "div",
+      { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+      LEVELS.map((v) => React.createElement(ChipToggle, { key: v.id, on: l === v.id, onClick: () => d(v.id) }, v.icon, " ", v.label)),
+    ),
+    React.createElement(
+      "div",
+      { style: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 } },
+      React.createElement(ChipToggle, { on: c, onClick: () => m(!c) }, c ? "✓ " : "", "nur Lektionen, die ich schon gelernt habe"),
+    ),
+    React.createElement(SectionLabel, null, "ANZAHL FRAGEN"),
+    React.createElement(
+      "div",
+      { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+      [10, 20, 30, 50].map((v) => React.createElement(ChipToggle, { key: v, on: h === v, onClick: () => y(v) }, v)),
+    ),
+    React.createElement(SectionLabel, null, "ZEITLIMIT"),
+    React.createElement(
+      "div",
+      { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+      [0, 10, 20, 30, 45, 60].map((v) => React.createElement(ChipToggle, { key: v, on: b === v, onClick: () => x(v) }, v ? `${v} Min.` : "ohne")),
+    ),
+    React.createElement(
+      "div",
+      {
+        className: "ana-body",
+        style: {
+          margin: "18px 0 12px",
+          padding: "10px 12px",
+          borderRadius: 12,
+          border: `1.5px solid ${f ? C.line : C.bad}`,
+          background: C.card,
+          fontSize: 13.5,
+          color: f ? C.ink : C.bad,
+          lineHeight: 1.45,
+        },
+      },
+      f
+        ? `Passend: ${B.length} Lektionen mit ${A} Lernkarten. ${A < h ? `Es gibt nur ${A} passende Karten, die Pr\xFCfung wird entsprechend k\xFCrzer.` : ""}`
+        : c
+          ? "Zu dieser Auswahl hast du noch keine Lektion abgeschlossen. W\xE4hle mehr aus oder schalte „nur gelernte Lektionen“ aus."
+          : "Zu dieser Auswahl gibt es zu wenige Lernkarten. W\xE4hle mehr Regionen oder Fachrichtungen aus.",
+    ),
+    React.createElement(Btn, { color: EXAM_COLOR, dark: "#0F4C8A", disabled: !f, onClick: () => f && o(S, B) }, "Pr\xFCfung starten"),
+  );
+}
+function ExamScreen({ questions: s, cfg: r, onExit: o, onAnswer: e, onDone: t }) {
+  const a = useRef([]),
+    n = useRef(Date.now()),
+    i = useRef(!1),
+    dn = useRef(t),
+    [, l] = useState(0),
+    d = r.minutes ? n.current + r.minutes * 6e4 : null,
+    c = (h) => {
+      if (i.current) return;
+      i.current = !0;
+      const y = a.current;
+      dn.current({ answers: y, total: s.length, correct: y.filter((b) => b.ok).length, seconds: (Date.now() - n.current) / 1e3, timedOut: !!h });
+    };
+  useEffect(() => {
+    if (!d) return;
+    const h = setInterval(() => {
+      (l((y) => y + 1), Date.now() >= d && (clearInterval(h), c(!0)));
+    }, 1e3);
+    return () => clearInterval(h);
+  }, []);
+  dn.current = t;
+  const m = d ? Math.max(0, (d - Date.now()) / 1e3) : null;
+  return React.createElement(
+    "div",
+    null,
+    React.createElement(QuizScreen, {
+      questions: s,
+      unit: { color: EXAM_COLOR, dark: "#0F4C8A" },
+      heartsEnabled: !1,
+      title: m != null ? `⏱ ${fmtTime(m)}` : `Pr\xFCfung \xB7 ${s.length} Fragen`,
+      onAnswer: (h, y, b) => {
+        const x = findItem(cardKey(h, y));
+        (a.current.push({ lessonId: h, itemId: y, ok: b, item: x && x.item, lesson: x && x.lesson }), e && e(h, y, b));
+      },
+      jokers: 0,
+      onExit: o,
+      onFinish: () => c(!1),
+      onFail: () => c(!1),
+    }),
+    m != null &&
+      m < 60 &&
+      React.createElement(
+        "div",
+        {
+          className: "ana-display",
+          style: {
+            position: "fixed",
+            top: 8,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: C.bad,
+            color: "#fff",
+            borderRadius: 999,
+            padding: "4px 12px",
+            fontSize: 13,
+            fontWeight: 700,
+            zIndex: 40,
+          },
+        },
+        "Noch ",
+        fmtTime(m),
+      ),
+  );
+}
+function BarRow({ label: s, right: r, value: o, color: e }) {
+  return React.createElement(
+    "div",
+    { style: { marginBottom: 9 } },
+    React.createElement(
+      "div",
+      { className: "ana-body", style: { display: "flex", fontSize: 13.5, color: C.ink, marginBottom: 3 } },
+      React.createElement("span", { style: { flex: 1 } }, s),
+      React.createElement("span", { style: { color: C.inkSoft } }, r),
+    ),
+    React.createElement(ProgressBar, { value: o, color: e }),
+  );
+}
+function ExamResultScreen({ result: s, cfg: r, xpGain: o, coins: e, onAgain: t, onHome: a, onErrors: n }) {
+  const i = s.total ? s.correct / s.total : 0,
+    l = gradeFor(i),
+    d = l <= 4,
+    c = (y) => {
+      const b = {};
+      return (
+        s.answers.forEach((x) => {
+          x.lesson && y(x.lesson).forEach((S) => {
+            (b[S] = b[S] || [0, 0]), (b[S][1] += 1), x.ok && (b[S][0] += 1);
+          });
+        }),
+        b
+      );
+    },
+    m = c((y) => [regionOf(y)]),
+    h = c((y) => [...topicsOf(y)]),
+    y = s.answers.filter((b) => !b.ok && b.item);
+  return React.createElement(
+    "div",
+    { style: { minHeight: "100vh", paddingBottom: 30 } },
+    d && s.correct > 0 && React.createElement(FxRain, { kind: "konfetti" }),
+    React.createElement(
+      "div",
+      { style: { textAlign: "center", padding: "26px 0 8px" } },
+      React.createElement(
+        "div",
+        {
+          className: "ana-display ana-pop",
+          style: {
+            width: 116,
+            height: 116,
+            margin: "0 auto 10px",
+            borderRadius: "50%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            background: d ? EXAM_COLOR : C.mute,
+            border: `6px solid ${d ? "#0F4C8A" : C.line}`,
+            color: d ? "#fff" : C.inkSoft,
+          },
+        },
+        React.createElement("span", { style: { fontSize: 13, fontWeight: 600 } }, "Note"),
+        React.createElement("span", { style: { fontSize: 44, fontWeight: 700, lineHeight: 1 } }, l),
+      ),
+      React.createElement("div", { className: "ana-display", style: { fontSize: 22, fontWeight: 700, color: C.ink } }, d ? `Bestanden – ${GRADE_TEXT[l]}` : "Nicht bestanden"),
+      React.createElement(
+        "div",
+        { className: "ana-body", style: { fontSize: 15, color: C.inkSoft, marginTop: 4 } },
+        s.correct,
+        " von ",
+        s.total,
+        " richtig (",
+        Math.round(i * 100),
+        " %) \xB7 ",
+        fmtTime(s.seconds),
+        " Min.",
+        s.timedOut ? " \xB7 Zeit abgelaufen" : "",
+      ),
+      React.createElement(
+        "div",
+        { className: "ana-display", style: { fontSize: 18, fontWeight: 700, color: "#C29204", marginTop: 8 } },
+        "+",
+        o,
+        " XP \xB7 \u{1FA99} +",
+        e,
+      ),
+      React.createElement("div", { className: "ana-body", style: { fontSize: 12, color: C.inkSoft, marginTop: 4 } }, "Bestanden ab 60 %"),
+    ),
+    React.createElement(SectionLabel, null, "NACH REGION"),
+    Object.entries(m).map(([b, [x, S]]) =>
+      React.createElement(BarRow, {
+        key: b,
+        label: (EXAM_REGIONS.find((B) => B.id === b) || { label: b }).label,
+        right: `${x}/${S}`,
+        value: x / S,
+        color: x / S >= 0.6 ? C.good : C.bad,
+      }),
+    ),
+    React.createElement(SectionLabel, null, "NACH FACHRICHTUNG"),
+    Object.entries(h).map(([b, [x, S]]) =>
+      React.createElement(BarRow, {
+        key: b,
+        label: (TOPICS.find((B) => B.id === b) || { label: b }).label,
+        right: `${x}/${S}`,
+        value: x / S,
+        color: x / S >= 0.6 ? C.good : C.bad,
+      }),
+    ),
+    y.length > 0 &&
+      React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(SectionLabel, null, "FALSCH BEANTWORTET \xB7 ", y.length),
+        y.map((b, x) =>
+          React.createElement(
+            "div",
+            {
+              key: x,
+              className: "ana-body",
+              style: { padding: "8px 11px", marginBottom: 6, borderRadius: 11, background: C.card, border: `1.5px solid ${C.line}`, borderLeft: `4px solid ${C.bad}` },
+            },
+            React.createElement("div", { className: "ana-display", style: { fontSize: 14.5, fontWeight: 700, color: C.ink } }, b.item.la),
+            React.createElement("div", { style: { fontSize: 12.5, color: C.inkSoft } }, b.item.de, " \xB7 ", b.lesson.title),
+          ),
+        ),
+      ),
+    React.createElement(
+      "div",
+      { style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 18 } },
+      React.createElement(Btn, { color: EXAM_COLOR, dark: "#0F4C8A", onClick: t }, "Neue Pr\xFCfung"),
+      y.length > 0 && React.createElement(Btn, { ghost: !0, color: C.bad, onClick: n }, "Fehler im Fehlerbuch \xFCben"),
+      React.createElement(Btn, { ghost: !0, color: C.inkSoft, onClick: a }, "Zur \xDCbersicht"),
+    ),
+  );
+}
+// ---------- mnemonics ----------
+const MNEMONICS = [
+    { id: "carpus", region: "arm", title: "Handwurzelknochen", text: "Ein Schiffchen fuhr im Mondenschein dreieckig um das Erbsenbein, Vieleck gro\xDF, Vieleck klein, der Kopf, der muss beim Haken sein.", explain: "Proximale Reihe von radial: Os scaphoideum (Kahnbein), lunatum (Mondbein), triquetrum (Dreiecksbein), pisiforme (Erbsenbein). Distale Reihe von radial: trapezium (gro\xDFes Vieleckbein), trapezoideum (kleines Vieleckbein), capitatum (Kopfbein), hamatum (Hakenbein).", kw: /handwurzel|handskelett|scaphoid|lunatum|hamatum|capitatum|karpal/i },
+    { id: "tarsus", region: "bein", title: "Fu\xDFwurzelknochen", text: "Tiger Cubs Need MILC", explain: "Talus, Calcaneus, Naviculare, Cuneiforme Mediale, Intermedium und Laterale, Cuboideum – die sieben Fu\xDFwurzelknochen.", kw: /fu\xDFwurzel|fu\xDFskelett|tars|calcane|navicular|cuboid/i },
+    { id: "wirbel", region: "ruecken", title: "Anzahl der Wirbel", text: "Fr\xFChst\xFCck um 7, Mittagessen um 12, Abendbrot um 5.", explain: "7 Halswirbel, 12 Brustwirbel, 5 Lendenwirbel – darunter Kreuzbein (5 verschmolzene) und Stei\xDFbein.", kw: /wirbels\xE4ule|abschnitte der wirbel|vertebrae (cervicales|thoracicae|lumbales)/i },
+    { id: "hn-namen", region: "neuro", title: "Hirnnerven der Reihe nach", text: "Onkel Otto orgelt t\xE4glich, Tante Anna feiert viele ganz verr\xFCckte Abende hier.", explain: "I Olfactorius, II Opticus, III Oculomotorius, IV Trochlearis, V Trigeminus, VI Abducens, VII Facialis, VIII Vestibulocochlearis, IX Glossopharyngeus, X Vagus, XI Accessorius, XII Hypoglossus.", kw: /hirnnerv|n\. (olfactorius|opticus|oculomotorius|trochlearis|trigeminus|abducens|facialis|vagus|accessorius|hypoglossus)/i },
+    { id: "hn-qual", region: "neuro", title: "Hirnnerven: sensorisch oder motorisch?", text: "Some Say Marry Money, But My Brother Says Big Brains Matter More.", explain: "S = sensorisch, M = motorisch, B = beides (both), in der Reihenfolge I bis XII: I S, II S, III M, IV M, V B, VI M, VII B, VIII S, IX B, X B, XI M, XII M.", kw: /hirnnerv/i },
+    { id: "augenmuskeln", region: "kopf", title: "Innervation der Augenmuskeln", text: "LR6 SO4, Rest 3", explain: "M. rectus lateralis – N. abducens (VI), M. obliquus superior – N. trochlearis (IV), alle \xFCbrigen \xE4u\xDFeren Augenmuskeln – N. oculomotorius (III).", kw: /augenmuskel|rectus lateralis|obliquus superior/i },
+    { id: "trigeminus", region: "kopf", title: "Austritt der Trigeminus-\xC4ste", text: "Standing Room Only", explain: "V1 durch die Fissura orbitalis Superior, V2 durch das Foramen Rotundum, V3 durch das Foramen Ovale.", kw: /sch\xE4delbasis|trigeminus|foramen (rotundum|ovale)|fissura orbitalis superior|keilbein/i },
+    { id: "facialis", region: "kopf", title: "\xC4ste des N. facialis im Gesicht", text: "To Zanzibar By Motor Car", explain: "Rr. Temporales, Rr. Zygomatici, Rr. Buccales, R. Marginalis mandibulae, R. Colli (Cervicalis) – von oben nach unten.", kw: /mimik|facialis|mimische/i },
+    { id: "scalp", region: "kopf", title: "Schichten der Kopfhaut", text: "SCALP", explain: "Skin (Haut), Connective tissue (Unterhaut mit Gef\xE4\xDFen), Aponeurosis (Galea aponeurotica), Loose tissue (lockeres Bindegewebe), Pericranium (Knochenhaut).", kw: /galea|aponeurosis epicranialis|kopfhaut|mimische muskulatur/i },
+    { id: "meningen", region: "neuro", title: "Hirnh\xE4ute von innen nach au\xDFen", text: "PAD", explain: "Pia mater (liegt dem Gehirn direkt auf), Arachnoidea (Spinnengewebshaut), Dura mater (harte Hirnhaut).", kw: /hirnh\xE4ut|meningeal|liquor|dura mater|arachnoid/i },
+    { id: "plexus", region: "arm", title: "Gliederung des Plexus brachialis", text: "Randy Travis Drinks Cold Beer", explain: "Roots (Wurzeln C5–Th1), Trunks (Trunci superior, medius, inferior), Divisions (Divisiones), Cords (Fasciculi lateralis, posterior, medialis), Branches (End\xE4ste).", kw: /plexus brachialis|armgeflecht|fasciculus (lateralis|medialis|posterior)/i },
+    { id: "sits", region: "arm", title: "Rotatorenmanschette", text: "SITS", explain: "M. Supraspinatus, M. Infraspinatus, M. Teres minor, M. Subscapularis – sie zentrieren den Oberarmkopf in der Pfanne.", kw: /rotatoren|supraspinatus|infraspinatus|subscapularis|schultergelenk/i },
+    { id: "mat", region: "arm", title: "Ellenbeuge von medial nach lateral", text: "MAT", explain: "N. Medianus, A. brachialis (Arterie), Bizepssehne (Tendo) – von innen nach au\xDFen in der Fossa cubitalis.", kw: /ellenbogen|ellenbeuge|arm-arterien|arterien des arms|a\. brachialis/i },
+    { id: "supination", region: "arm", title: "Supination und Pronation", text: "Bei der Supination tr\xE4gt man die Suppe.", explain: "Supination: Handfl\xE4che nach oben (wie beim Tragen eines Suppentellers). Pronation: Handfl\xE4che nach unten. Hauptsupinator ist der M. biceps brachii, wichtigster Pronator der M. pronator quadratus.", kw: /unterarm|pronator|supinator|bewegungen der gelenke/i },
+    { id: "thenar", region: "arm", title: "Daumenballenmuskeln", text: "A-O-F-A", explain: "M. Abductor pollicis brevis, M. Opponens pollicis, M. Flexor pollicis brevis, M. Adductor pollicis.", kw: /handbinnen|kurze handmuskeln|thenar|daumen|opponens pollicis/i },
+    { id: "interossei", region: "arm", title: "Mm. interossei", text: "PAD und DAB", explain: "Palmare Interossei ADduzieren die Finger, Dorsale Interossei ABduzieren sie (jeweils bezogen auf den Mittelfinger).", kw: /interossei|handbinnen|kurze handmuskeln|kurze fu\xDFmuskeln/i },
+    { id: "ivan", region: "bein", title: "Leiste: Gef\xE4\xDFe und Nerv", text: "IVAN", explain: "Von Innen (medial) nach au\xDFen: V. femoralis, A. femoralis, N. femoralis. Wichtig f\xFCr Punktionen in der Leiste.", kw: /leiste|femoral|oberschenkel vorn|arterien des beins|bein-arterien|venen des beins/i },
+    { id: "pes", region: "bein", title: "Pes anserinus", text: "Say Grace before Tea", explain: "M. Sartorius, M. Gracilis, M. semiTendinosus – ihre Sehnen setzen gemeinsam als G\xE4nsefu\xDF innen unterhalb des Knies an (von vorn nach hinten).", kw: /pes anserinus|gracilis|sartorius|semitendinosus|knie/i },
+    { id: "van", region: "thorax", title: "Zwischenrippenraum", text: "VAN von oben", explain: "Am Unterrand jeder Rippe liegen von oben nach unten Vene, Arterie und Nerv. Deshalb punktiert man am Oberrand der unteren Rippe.", kw: /zwischenrippen|interkostal|intercostal|brustwand/i },
+    { id: "auskultation", region: "thorax", title: "Auskultationspunkte des Herzens", text: "Anton Pulmonalis trinkt Milch um 22:45.", explain: "Aortenklappe 2. ICR rechts parasternal, Pulmonalklappe 2. ICR links parasternal, Trikuspidalklappe 4. ICR rechts parasternal, Mitralklappe 5. ICR links medioklavikul\xE4r.", kw: /herzklappe|klappenebene|auskultation|valva/i },
+    { id: "klappen", region: "thorax", title: "Reihenfolge der Herzklappen im Blutfluss", text: "Try Pulling My Aorta", explain: "Trikuspidalklappe → Pulmonalklappe → Mitralklappe → Aortenklappe.", kw: /herz & klappen|herz im frontalschnitt|herzklappe|lungen- und k\xF6rperkreislauf/i },
+    { id: "zwerchfell", region: "thorax", title: "Durchtritte durch das Zwerchfell", text: "I 8 10 Eggs At 12", explain: "V. cava Inferior auf H\xF6he Th8, Esophagus (\xD6sophagus) auf Th10, Aorta auf Th12.", kw: /zwerchfell|diaphragm|hiatus/i },
+    { id: "phrenicus", region: "thorax", title: "N. phrenicus", text: "C3, 4, 5 h\xE4lt das Zwerchfell am Leben.", explain: "Der N. phrenicus entspringt aus C3–C5 (Plexus cervicalis) und ist der einzige motorische Nerv des Zwerchfells.", kw: /zwerchfell|phrenicus|plexus cervicalis|spinalnervenplexus/i },
+    { id: "abc", region: "thorax", title: "Abg\xE4nge des Aortenbogens", text: "ABC'S", explain: "Aortenbogen → Brachiocephalicus (Truncus), linke Carotis communis, linke Subclavia – von rechts nach links.", kw: /aortenbogen|aorta & |arcus aortae|aorta und ihre/i },
+    { id: "carotis", region: "kopf", title: "\xC4ste der A. carotis externa", text: "Some Anatomists Like Freaking Out Poor Medical Students", explain: "A. thyroidea Superior, A. pharyngea Ascendens, A. Lingualis, A. Facialis, A. Occipitalis, A. auricularis Posterior, A. Maxillaris, A. temporalis Superficialis.", kw: /carotis externa|hals-?gef\xE4\xDF|a\. carotis und ihre/i },
+    { id: "lunge", region: "thorax", title: "Lungenlappen", text: "Rechts drei, links zwei – links braucht das Herz Platz.", explain: "Die rechte Lunge hat Ober-, Mittel- und Unterlappen, die linke nur Ober- und Unterlappen; daf\xFCr hat sie die Incisura cardiaca f\xFCr das Herz.", kw: /lunge|lungenlappen|bronchialbaum|atemwege/i },
+    { id: "sadpucker", region: "abdomen", title: "Retroperitoneale Organe", text: "SAD PUCKER", explain: "Suprarenale Dr\xFCsen (Nebennieren), Aorta und V. cava, Duodenum (Teil 2–4), Pankreas (au\xDFer Schwanz), Ureter, Colon ascendens und descendens, Kidneys (Nieren), Esophagus (Bauchteil), Rectum.", kw: /bauchfell|peritone|retroperitone|lage der organe/i },
+    { id: "dermatome", region: "neuro", title: "Wichtige Dermatome", text: "C6 Daumen, C7 Mittelfinger, C8 Kleinfinger – L5 Gro\xDFzehe, S1 Sohlenrand.", explain: "Bei Bandscheibenvorf\xE4llen hilft das, die betroffene Wurzel einzugrenzen: L4 zieht \xFCber das Knie zur Innenseite des Unterschenkels, L5 zur Gro\xDFzehe, S1 zum \xE4u\xDFeren Fu\xDFrand und zur Fu\xDFsohle.", kw: /dermatom|spinalnerv|r\xFCckenmark & spinal/i },
+  ],
+  mnemonicsFor = (s) => {
+    const r = (s.title || "") + " | " + (s.items || []).map((o) => o.la).join(" | ");
+    return MNEMONICS.filter((o) => o.kw.test(r)).slice(0, 2);
+  };
+function MnemonicCard({ m: s, color: r = "#F59F00", open: o = !1 }) {
+  const [e, t] = useState(o);
+  return React.createElement(
+    "div",
+    {
+      style: { marginTop: 12, borderRadius: 14, background: C.card, border: `1.5px solid ${C.line}`, borderLeft: `5px solid ${r}`, padding: "10px 12px" },
+    },
+    React.createElement(
+      "button",
+      {
+        onClick: () => t(!e),
+        className: "ana-display",
+        style: { display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", color: C.ink, fontSize: 14.5, fontWeight: 700 },
+      },
+      React.createElement("span", null, "\u{1F4A1}"),
+      React.createElement("span", { style: { flex: 1 } }, "Eselsbr\xFCcke: ", s.title),
+      React.createElement("span", { style: { color: C.inkSoft, transform: e ? "rotate(90deg)" : "none", transition: "transform .15s" } }, "›"),
+    ),
+    e &&
+      React.createElement(
+        "div",
+        { className: "ana-body" },
+        React.createElement("div", { className: "ana-display", style: { fontSize: 16.5, fontWeight: 700, color: r, margin: "8px 0 6px", lineHeight: 1.3 } }, "„", s.text, "“"),
+        React.createElement("div", { style: { fontSize: 14, color: C.ink, lineHeight: 1.5 } }, s.explain),
+      ),
+  );
+}
+function MnemonicScreen({ onExit: s }) {
+  const [r, o] = useState(""),
+    [e, t] = useState("alle"),
+    a = r.trim().toLowerCase(),
+    n = MNEMONICS.filter((l) => (e === "alle" || l.region === e) && (!a || (l.title + " " + l.text + " " + l.explain).toLowerCase().includes(a))),
+    i = EXAM_REGIONS.filter((l) => l.id !== "alle" && MNEMONICS.some((d) => d.region === l.id));
+  return React.createElement(
+    "div",
+    { style: { minHeight: "100vh", paddingBottom: 30 } },
+    React.createElement(
+      TopBar,
+      { onBack: s },
+      React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, "Eselsbr\xFCcken"),
+    ),
+    React.createElement(
+      "div",
+      { className: "ana-body", style: { color: C.inkSoft, fontSize: 13.5, padding: "0 4px 10px", lineHeight: 1.45 } },
+      MNEMONICS.length,
+      " Merkhilfen f\xFCr typische Pr\xFCfungsthemen. Passende Eselsbr\xFCcken erscheinen auch direkt in den Lektionen.",
+    ),
+    React.createElement("input", {
+      value: r,
+      onChange: (l) => o(l.target.value),
+      placeholder: "Eselsbr\xFCcke suchen …",
+      className: "ana-body",
+      style: { width: "100%", boxSizing: "border-box", padding: "10px 13px", fontSize: 14.5, borderRadius: 12, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, marginBottom: 10 },
+    }),
+    React.createElement(
+      "div",
+      { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 } },
+      React.createElement(ChipToggle, { on: e === "alle", onClick: () => t("alle"), color: "#F08C00" }, "Alle"),
+      i.map((l) => React.createElement(ChipToggle, { key: l.id, on: e === l.id, onClick: () => t(l.id), color: "#F08C00" }, l.icon, " ", l.label)),
+    ),
+    n.map((l) => React.createElement(MnemonicCard, { key: l.id, m: l, open: !0, color: "#F08C00" })),
+    n.length === 0 && React.createElement("div", { className: "ana-body", style: { color: C.inkSoft, padding: 16, textAlign: "center" } }, "Keine Eselsbr\xFCcke gefunden."),
+  );
+}
+// ---------- statistics ----------
+function StatTile({ icon: s, value: r, label: o }) {
+  return React.createElement(
+    "div",
+    { style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 14, padding: "10px 10px", textAlign: "center" } },
+    React.createElement("div", { style: { fontSize: 18 } }, s),
+    React.createElement("div", { className: "ana-display", style: { fontSize: 19, fontWeight: 700, color: C.ink, lineHeight: 1.2 } }, r),
+    React.createElement("div", { className: "ana-body", style: { fontSize: 11.5, color: C.inkSoft, lineHeight: 1.25 } }, o),
+  );
+}
+function StatsScreen({ progress: s, onExit: r }) {
+  const o = ALL_LESSONS.filter((v) => s.best[v.id] != null),
+    e = Object.values(s.best || {}).filter((v) => v >= 0.999).length,
+    t = Object.values(s.srs || {}),
+    a = t.filter((v) => (v.box || 0) >= 4).length,
+    n = s.ans || {},
+    i = EXAM_REGIONS.map((v) => {
+      const W = ALL_LESSONS.filter((Z) => regionOf(Z) === v.id),
+        E = W.filter((Z) => s.best[Z.id] != null).length,
+        N = n[v.id] || [0, 0];
+      return { ...v, total: W.length, done: E, right: N[0], answered: N[1], rate: N[1] ? N[0] / N[1] : null };
+    }).filter((v) => v.total),
+    l = i.filter((v) => v.answered >= 8).sort((v, W) => W.rate - v.rate),
+    d = l.slice(0, 3),
+    c = l.length > 3 ? l.slice(-3).reverse() : [],
+    m = (() => {
+      const v = [];
+      for (let W = 13; W >= 0; W--) {
+        const E = new Date(Date.now() - W * 864e5),
+          N = `${E.getFullYear()}-${String(E.getMonth() + 1).padStart(2, "0")}-${String(E.getDate()).padStart(2, "0")}`;
+        v.push({ day: N, label: ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][E.getDay()], xp: (s.log || {})[N] || 0 });
+      }
+      return v;
+    })(),
+    h = Math.max(50, ...m.map((v) => v.xp)),
+    y = m.reduce((v, W) => v + W.xp, 0),
+    b = [0, 1, 2, 3, 4, 5, 6].map((v) => t.filter((W) => (W.box || 0) === v).length),
+    x = Math.max(1, ...b),
+    S = (s.exams || []).slice(-8).reverse(),
+    B = Object.values(n).reduce((v, W) => [v[0] + W[0], v[1] + W[1]], [0, 0]);
+  return React.createElement(
+    "div",
+    { style: { minHeight: "100vh", paddingBottom: 30 } },
+    React.createElement(
+      TopBar,
+      { onBack: r },
+      React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, "Statistik"),
+    ),
+    React.createElement(
+      "div",
+      { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 } },
+      React.createElement(StatTile, { icon: "\u{1F4D8}", value: `${o.length}`, label: `von ${ALL_LESSONS.length} Lektionen` }),
+      React.createElement(StatTile, { icon: "⭐", value: e, label: "mit 3 Sternen" }),
+      React.createElement(StatTile, { icon: "⚡", value: s.xp || 0, label: "XP gesamt" }),
+      React.createElement(StatTile, { icon: "\u{1F525}", value: s.streak || 0, label: `Tage Serie \xB7 Rekord ${Math.max(s.bestStreak || 0, s.streak || 0)}` }),
+      React.createElement(StatTile, { icon: "\u{1F9E0}", value: a, label: "Karten sicher im Langzeitged\xE4chtnis" }),
+      React.createElement(StatTile, { icon: "\u{1F3AF}", value: B[1] ? `${Math.round((B[0] / B[1]) * 100)} %` : "–", label: `Trefferquote (${B[1]} Antworten)` }),
+    ),
+    React.createElement(SectionLabel, null, "XP DER LETZTEN 14 TAGE \xB7 ", y),
+    React.createElement(
+      "div",
+      { style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 14, padding: "12px 10px 8px" } },
+      React.createElement(
+        "div",
+        { style: { display: "flex", alignItems: "flex-end", gap: 4, height: 110 } },
+        m.map((v) =>
+          React.createElement(
+            "div",
+            { key: v.day, title: `${v.day}: ${v.xp} XP`, style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" } },
+            v.xp > 0 && React.createElement("div", { className: "ana-body", style: { fontSize: 9, color: C.inkSoft, marginBottom: 2 } }, v.xp),
+            React.createElement("div", { style: { width: "100%", maxWidth: 18, height: `${Math.max(v.xp ? 4 : 2, (v.xp / h) * 88)}%`, background: v.xp ? C.gold : C.line, borderRadius: 4 } }),
+          ),
+        ),
+      ),
+      React.createElement(
+        "div",
+        { style: { display: "flex", gap: 4, marginTop: 4 } },
+        m.map((v) => React.createElement("div", { key: v.day, className: "ana-body", style: { flex: 1, textAlign: "center", fontSize: 10, color: C.inkSoft } }, v.label)),
+      ),
+    ),
+    React.createElement(SectionLabel, null, "FORTSCHRITT JE REGION"),
+    i.map((v) =>
+      React.createElement(BarRow, {
+        key: v.id,
+        label: `${v.icon} ${v.label}`,
+        right: `${v.done}/${v.total}${v.rate != null ? ` \xB7 ${Math.round(v.rate * 100)} % richtig` : ""}`,
+        value: v.done / v.total,
+        color: "#1C7ED6",
+      }),
+    ),
+    React.createElement(SectionLabel, null, "ST\xC4RKEN & SCHW\xC4CHEN"),
+    l.length < 2
+      ? React.createElement(
+          "div",
+          { className: "ana-body", style: { fontSize: 13.5, color: C.inkSoft, lineHeight: 1.45, padding: "0 2px" } },
+          "Beantworte noch ein paar Fragen in Quiz, Karteikarten oder Pr\xFCfung – ab 8 Antworten pro Region erscheint hier deine Auswertung.",
+        )
+      : React.createElement(
+          "div",
+          { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 } },
+          React.createElement(
+            "div",
+            { style: { background: C.card, border: `1.5px solid ${C.line}`, borderTop: `4px solid ${C.good}`, borderRadius: 12, padding: "8px 10px" } },
+            React.createElement("div", { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: C.good, marginBottom: 4 } }, "\u{1F4AA} St\xE4rken"),
+            d.map((v) => React.createElement("div", { key: v.id, className: "ana-body", style: { fontSize: 13, color: C.ink } }, v.label, " ", Math.round(v.rate * 100), " %")),
+          ),
+          React.createElement(
+            "div",
+            { style: { background: C.card, border: `1.5px solid ${C.line}`, borderTop: `4px solid ${C.bad}`, borderRadius: 12, padding: "8px 10px" } },
+            React.createElement("div", { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: C.bad, marginBottom: 4 } }, "\u{1F3AF} \xDCben"),
+            (c.length ? c : l.slice(-1)).map((v) => React.createElement("div", { key: v.id, className: "ana-body", style: { fontSize: 13, color: C.ink } }, v.label, " ", Math.round(v.rate * 100), " %")),
+          ),
+        ),
+    React.createElement(SectionLabel, null, "WIEDERHOLUNGSSTUFEN (LEITNER)"),
+    React.createElement(
+      "div",
+      { style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 14, padding: "10px 12px" } },
+      b.map((v, W) =>
+        React.createElement(
+          "div",
+          { key: W, style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 5 } },
+          React.createElement("span", { className: "ana-body", style: { width: 64, fontSize: 12, color: C.inkSoft } }, W === 0 ? "neu" : `Stufe ${W}`),
+          React.createElement(
+            "div",
+            { style: { flex: 1, height: 10, background: C.mute, borderRadius: 999, overflow: "hidden" } },
+            React.createElement("div", { style: { width: `${(v / x) * 100}%`, height: "100%", background: W >= 4 ? C.good : W >= 2 ? C.gold : "#1C7ED6", borderRadius: 999 } }),
+          ),
+          React.createElement("span", { className: "ana-body", style: { width: 36, textAlign: "right", fontSize: 12, color: C.ink } }, v),
+        ),
+      ),
+      React.createElement("div", { className: "ana-body", style: { fontSize: 11.5, color: C.inkSoft, marginTop: 4 } }, "Ab Stufe 4 gilt eine Karte als sicher gelernt (Abfrage erst wieder nach 8 Tagen oder mehr)."),
+    ),
+    React.createElement(SectionLabel, null, "PR\xDCFUNGEN"),
+    S.length === 0
+      ? React.createElement("div", { className: "ana-body", style: { fontSize: 13.5, color: C.inkSoft, padding: "0 2px" } }, "Noch keine Pr\xFCfung abgelegt.")
+      : S.map((v, W) =>
+          React.createElement(
+            "div",
+            {
+              key: W,
+              className: "ana-body",
+              style: { display: "flex", alignItems: "center", gap: 10, padding: "8px 11px", marginBottom: 6, background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 11 },
+            },
+            React.createElement(
+              "span",
+              {
+                className: "ana-display",
+                style: { width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", background: v.grade <= 4 ? EXAM_COLOR : C.bad, color: "#fff", fontWeight: 700 },
+              },
+              v.grade,
+            ),
+            React.createElement("span", { style: { flex: 1, fontSize: 13.5, color: C.ink } }, v.correct, "/", v.total, " richtig \xB7 ", Math.round(v.pct * 100), " %"),
+            React.createElement("span", { style: { fontSize: 12, color: C.inkSoft } }, v.date.split("-").reverse().join(".")),
+          ),
+        ),
+  );
+}
+const withMeta = (s, r) => {
+  const o = { ...r, bestStreak: Math.max(r.bestStreak || 0, r.streak || 0) },
+    e = (r.xp || 0) - ((s && s.xp) || 0);
+  if (e > 0) {
+    const t = todayStr(),
+      a = { ...(r.log || {}) };
+    a[t] = (a[t] || 0) + e;
+    const n = Object.keys(a).sort();
+    (n.length > 60 && n.slice(0, n.length - 60).forEach((i) => delete a[i]), (o.log = a));
+  }
+  return o;
+};
 function AnatomiaApp() {
   const [s, r] = useState(null),
     [o, e] = useState({ name: "home" });
@@ -13220,8 +14196,9 @@ function AnatomiaApp() {
   }, []),
     useEffect(() => {
       if (!s) return;
-      const u = THEMES[s.theme] || THEMES.papier;
-      ((C.paper = u.paper),
+      const u = s.dark ? DARK_TOKENS : THEMES[s.theme] || THEMES.papier;
+      (Object.assign(C, LIGHT_TOKENS, s.dark ? DARK_TOKENS : {}),
+        (C.paper = u.paper),
         (C.card = u.card),
         (C.line = u.line),
         (C.pathColor = (PATH_SKINS[s.pathSkin] || PATH_SKINS.knochen).color),
@@ -13229,9 +14206,13 @@ function AnatomiaApp() {
       try {
         document.body.style.background = u.paper;
       } catch {}
-    }, [s && s.theme, s && s.pathSkin]));
+      try {
+        const p = document.querySelector('meta[name="theme-color"]');
+        (p && p.setAttribute("content", s.dark ? "#11161E" : "#1E2836"), (document.documentElement.style.colorScheme = s.dark ? "dark" : "light"));
+      } catch {}
+    }, [s && s.theme, s && s.pathSkin, s && s.dark]));
   const t = (u) => {
-      ((u = { ...u, bestStreak: Math.max(u.bestStreak || 0, u.streak || 0) }), r(u), saveProgress(u));
+      ((u = withMeta(s, u)), r(u), saveProgress(u));
     },
     [, a] = useState(0),
     n = (u) => {
@@ -13276,11 +14257,38 @@ function AnatomiaApp() {
         return (saveProgress(f), f);
       });
     },
+    toggleDark = () => {
+      r((p) => {
+        const f = { ...p, dark: !p.dark };
+        return (saveProgress(f), f);
+      });
+    },
     setLevel = (u) => {
       r((p) => {
         const f = { ...p, level: u };
         return (saveProgress(f), f);
       });
+    };
+  const goExam = () => e({ name: "examsetup" }),
+    goMnemo = () => e({ name: "mnemo" }),
+    goStats = () => e({ name: "stats" }),
+    examDone = (u, p) => {
+      const f = u.total ? u.correct / u.total : 0,
+        k = gradeFor(f),
+        g = u.correct * 8 * xm,
+        w = u.correct * 2 + (k <= 4 ? 50 : 0);
+      (r((M) => {
+        const z = withMeta(M, {
+          ...M,
+          ...n(M),
+          xp: (M.xp || 0) + g,
+          coins: (M.coins || 0) + w,
+          examCfg: p,
+          exams: [...(M.exams || []), { date: todayStr(), pct: f, correct: u.correct, total: u.total, grade: k }].slice(-30),
+        });
+        return (saveProgress(z), z);
+      }),
+        e({ name: "examresult", result: u, cfg: p, xpGain: g, coins: w }));
     };
   const i = (u) => e({ name: "learn", lessonId: u }),
     l = (u) => {
@@ -13328,7 +14336,11 @@ function AnatomiaApp() {
       r((g) => {
         const w = { ...(g.errors || {}) };
         f ? delete w[k] : (w[k] = { n: ((w[k] && w[k].n) || 0) + 1, last: dayNum() });
-        const M = { ...g, srs: srsUpdate(g.srs || {}, k, f), errors: w };
+        const L = findLesson(u),
+          R = L ? regionOf(L) : null,
+          Q = { ...(g.ans || {}) };
+        R && (Q[R] = [((Q[R] || [0, 0])[0] || 0) + (f ? 1 : 0), ((Q[R] || [0, 0])[1] || 0) + 1]);
+        const M = { ...g, srs: srsUpdate(g.srs || {}, k, f), errors: w, ans: Q };
         return (saveProgress(M), M);
       });
     },
@@ -13384,7 +14396,44 @@ function AnatomiaApp() {
       onStacks: () => e({ name: "stacks" }),
       onAtlas: (u) => e({ name: "figatlas", q: typeof u == "string" ? u : "" }),
       onLevel: setLevel,
+      onExam: goExam,
+      onMnemo: goMnemo,
+      onStats: goStats,
+      onDark: toggleDark,
     });
+  else if (o.name === "examsetup")
+    A = React.createElement(ExamSetupScreen, {
+      progress: s,
+      onExit: () => e({ name: "home" }),
+      onStart: (u, p) => {
+        (r((f) => {
+          const k = { ...f, examCfg: u };
+          return (saveProgress(k), k);
+        }),
+          e({ name: "exam", cfg: u, questions: buildExam(p, u.count), key: Date.now() }));
+      },
+    });
+  else if (o.name === "exam")
+    A = React.createElement(ExamScreen, {
+      key: o.key,
+      questions: o.questions,
+      cfg: o.cfg,
+      onAnswer: y,
+      onExit: () => e({ name: "examsetup" }),
+      onDone: (u) => examDone(u, o.cfg),
+    });
+  else if (o.name === "examresult")
+    A = React.createElement(ExamResultScreen, {
+      result: o.result,
+      cfg: o.cfg,
+      xpGain: o.xpGain,
+      coins: o.coins,
+      onAgain: () => e({ name: "examsetup" }),
+      onHome: () => e({ name: "home" }),
+      onErrors: () => e({ name: "errors" }),
+    });
+  else if (o.name === "mnemo") A = React.createElement(MnemonicScreen, { onExit: () => e({ name: "home" }) });
+  else if (o.name === "stats") A = React.createElement(StatsScreen, { progress: s, onExit: () => e({ name: "home" }) });
   else if (o.name === "figatlas")
     A = React.createElement(FigureAtlasScreen, {
       initCat: o.cat,

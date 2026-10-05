@@ -4,6 +4,18 @@ ANATOMIA — OFFLINE-ANATOMIE-APP
 200 beschriftete Abbildungen im Bildatlas, 3 echte CT-/MRT-Serien zum Scrollen.
 
 NEU IN DIESER VERSION
+- Koerperkarte wie aus dem Atlas: zoomen (zwei Finger, Doppeltippen, +/-),
+  Organe und Koerperteile antippen, Umschalter "Vorne / Hinten" mit
+  Rueckenansicht (Wirbelsaeule, Rueckenmuskeln, Gesaess, Kniekehle ...).
+- Aussprache: Lautsprecher-Knopf neben lateinischen Namen.
+- Pruefungsmodus: Regionen, Fachrichtungen, Lernstufe, Fragenzahl und
+  Zeitlimit frei waehlbar; Note, Auswertung und Liste der Fehler.
+- 28 Eselsbruecken, eigener Bildschirm und Hinweis in passenden Lektionen.
+- Statistik: Fortschritt je Region, Trefferquote, Staerken und Schwaechen,
+  XP der letzten 14 Tage, Wiederholungsstufen, Pruefungsverlauf.
+- Dunkelmodus: Mond-Knopf neben "Anatomia".
+- Updates erscheinen sofort beim naechsten Oeffnen mit Internet.
+
 - 381 neue Bildatlas-Lektionen in 22 Einheiten: Jede beschriftete Struktur
   auf jeder der 200 Abbildungen hat jetzt eine eigene Lernkarte mit
   Erklaerung, Quizfragen und Karteikarte.
