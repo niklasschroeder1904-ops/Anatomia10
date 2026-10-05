@@ -7632,7 +7632,8 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
     h = useRef(null),
     y = useRef({ time: 0, x: 0, y: 0 }),
     b = useRef(null),
-    x = useRef(d);
+    x = useRef(d),
+    zb = useBoxSize(b);
   x.current = d;
   const S = (k, g, w) => {
       const M = b.current,
@@ -7717,12 +7718,13 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
         }
       );
     }, []),
+    ReactDOM.createPortal(
     React.createElement(
       "div",
-      { style: { position: "fixed", inset: 0, zIndex: 50, background: "#fff", display: "flex", flexDirection: "column" } },
+      { className: "ana-body", style: { position: "fixed", inset: 0, zIndex: 60, background: "#fff", display: "flex", flexDirection: "column", height: "100dvh" } },
       React.createElement(
         "div",
-        { style: { display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderBottom: `1px solid ${C.line}` } },
+        { style: { display: "flex", alignItems: "center", gap: 8, padding: "calc(10px + env(safe-area-inset-top)) 12px 10px", borderBottom: `1px solid ${C.line}`, background: "#fff" } },
         React.createElement(
           "button",
           { onClick: n, "aria-label": "Schlie\xDFen", style: { background: "none", border: "none", padding: 4, cursor: "pointer" } },
@@ -7730,9 +7732,19 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
         ),
         React.createElement(
           "div",
-          { className: "ana-display", style: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: C.ink, lineHeight: 1.2 } },
+          { className: "ana-display", style: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: "#1E2836", lineHeight: 1.2 } },
           r,
         ),
+        d.s > 1 &&
+          React.createElement(
+            "button",
+            {
+              onClick: () => c({ s: 1, x: 0, y: 0 }),
+              className: "ana-body",
+              style: { padding: "5px 10px", borderRadius: 999, border: "1.5px solid #DDE3EE", background: "#fff", color: "#5B6B80", fontSize: 12, fontWeight: 700, cursor: "pointer" },
+            },
+            "Ganzes Bild",
+          ),
       ),
       React.createElement(
         "div",
@@ -7744,12 +7756,14 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
           onPointerCancel: f,
           style: {
             flex: 1,
+            minHeight: 0,
             position: "relative",
             overflow: "hidden",
             touchAction: "none",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            padding: 8,
           },
         },
         React.createElement(
@@ -7762,7 +7776,7 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
               transition: h.current ? "none" : "transform 0.18s ease-out",
             },
           },
-          React.createElement(LabeledImage, { src: s, mode: i, hl: t, color: a, maxHeight: "calc(100vh - 120px)" }),
+          React.createElement(LabeledImage, { src: s, mode: i, hl: t, color: a, maxHeight: zb.h > 40 ? zb.h - 16 : 360 }),
         ),
       ),
       React.createElement(
@@ -7773,19 +7787,22 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
             alignItems: "center",
             justifyContent: "space-between",
             gap: 8,
-            padding: "8px 12px 14px",
+            padding: "8px 12px calc(14px + env(safe-area-inset-bottom))",
             borderTop: `1px solid ${C.line}`,
+            background: "#fff",
           },
         },
         React.createElement(ModeSwitch, { mode: i, setMode: l, color: a }),
         React.createElement(
           "span",
           { className: "ana-body", style: { textAlign: "right", fontSize: 11, color: "#9AA3B2", lineHeight: 1.3 } },
-          "Zwei Finger zoomen",
+          "Zwei Finger oder doppelt tippen",
           React.createElement("br", null),
-          "doppelt tippen",
+          "zum Zoomen, dann verschieben",
         ),
       ),
+    ),
+    document.body,
     )
   );
 }
@@ -8812,9 +8829,14 @@ function makeQuestion(s, r, o) {
         options: shuffle([{ label: s.de, correct: !0 }, ...pickD(a, s, (i) => i.de).map((i) => ({ label: i.de, correct: !1 }))]),
       };
 }
-const normAnswer = (s) =>
-    (s || "")
-      .toLowerCase()
+const ABBR_FULL = [
+    [/\bmm\./g, "musculi "], [/\bm\./g, "musculus "], [/\baa\./g, "arteriae "], [/\ba\./g, "arteria "], [/\bvv\./g, "venae "], [/\bv\./g, "vena "],
+    [/\bnn\./g, "nervi "], [/\bn\./g, "nervus "], [/\bligg\./g, "ligamenta "], [/\blig\./g, "ligamentum "], [/\bprocc\./g, "processus "], [/\bproc\./g, "processus "],
+    [/\bgll\./g, "glandulae "], [/\bgl\./g, "glandula "], [/\brr\./g, "rami "], [/\br\./g, "ramus "], [/\btr\./g, "truncus "], [/\bfor\./g, "foramen "],
+  ],
+  normAnswer = (s) =>
+    ABBR_FULL.reduce((r, [o, e]) => r.replace(o, e), (s || "").toLowerCase())
+      .replace(/^\s*(musculi|musculus|muskel|arteriae|arteria|arterie|venae|vena|vene|nervi|nervus|nerv|ligamenta|ligamentum|band|processus|glandulae|glandula|rami|ramus|truncus|os|ossa)\s+/, "")
       .replace(/[äÄ]/g, "a")
       .replace(/[öÖ]/g, "o")
       .replace(/[üÜ]/g, "u")
@@ -13696,6 +13718,32 @@ function TypeAnswer({ q: s, color: r, onResult: o, done: e, right: t }) {
       ),
   );
 }
+function AnswerPicture({ q: s, color: r }) {
+  if (!s || !s.item || !s.lesson || s.kind === "point" || ((s.kind === "ringpick" || s.kind === "type") && s.mark) || (s.showFig && s.figure)) return null;
+  const o = (marksFor(s.lesson.id) || {})[s.item.id],
+    e = platesFor(s.lesson.id),
+    t = o && e.length ? e[Math.min(o.i || 0, e.length - 1)] : null,
+    a = t && labelsFor(t.src),
+    n = hasSchema(s.lesson);
+  let i = null;
+  if (t && a && o.li != null)
+    i = React.createElement(LabeledImage, { src: t.src, mode: "la", hl: o.li, color: r, maxHeight: 230, crop: focusRect(a, o.li, o.a) });
+  else if (t && o) i = React.createElement(BlindImage, { src: t.src, mark: o, color: r, height: 230 });
+  else if (n) i = React.createElement(FigureView, { figure: s.lesson.figure, hl: s.item.hl, accent: r, height: 215 });
+  return i
+    ? React.createElement(
+        "div",
+        { className: "ana-pop", style: { background: "#fff", borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
+        i,
+        React.createElement(
+          "div",
+          { className: "ana-body", style: { fontSize: 12.5, color: "#5B6B80", padding: "6px 4px 2px", textAlign: "center" } },
+          "Richtige Antwort im Bild: ",
+          React.createElement("b", { style: { color: "#1E2836" } }, s.item.la),
+        ),
+      )
+    : null;
+}
 function QuizScreen({
   questions: s,
   unit: r,
@@ -13761,6 +13809,7 @@ function QuizScreen({
       ),
       M.sub &&
         React.createElement("div", { className: "ana-body", style: { fontSize: 14, color: C.inkSoft, padding: "2px 2px 4px" } }, M.sub),
+      I && React.createElement(AnswerPicture, { q: M, color: r.color }),
       M.showFig &&
         M.figure &&
         React.createElement(
