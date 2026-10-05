@@ -9403,459 +9403,782 @@ function Ring({ value: s, color: r, size: o = 38 }) {
     }),
   );
 }
-function BodyMap({ progress: s, selected: r, onSelect: o }) {
-  const e = {};
-  REGIONS.filter((l) => l.id !== "alle").forEach((l) => {
-    const d = ALL_LESSONS.filter((c) => regionOf(c) === l.id && inLevel(c, s.level));
-    e[l.id] = { total: d.length, done: d.filter((c) => s.best[c.id] != null).length };
-  });
-  const t = (l) => {
-      const d = e[l] || { total: 1, done: 0 };
-      return d.total ? d.done / d.total : 0;
+const BM_FULL = { x: -8, y: 4, w: 256, h: 414 },
+  BM_MAXZOOM = 6,
+  bmMirror = (d) => {
+    let n = 0;
+    return d.replace(/-?\d+(?:\.\d+)?/g, (m) => (n++ % 2 === 0 ? String(+(240 - +m).toFixed(2)) : m));
+  },
+  bmPair = (d) => [d, bmMirror(d)],
+  // half outline: start point + cubic segments [c1x,c1y,c2x,c2y,x,y]; full outline is the half plus its mirror image
+  bmOutline = (s, r) => {
+    const o = [s, ...r.map((t) => [t[4], t[5]])];
+    let e = `M ${s[0]},${s[1]}`;
+    r.forEach((t) => (e += ` C ${t[0]},${t[1]} ${t[2]},${t[3]} ${t[4]},${t[5]}`));
+    for (let t = r.length - 1; t >= 0; t--) {
+      const [a, n, i, l] = r[t],
+        d = o[t];
+      e += ` C ${240 - i},${l} ${240 - a},${n} ${240 - d[0]},${d[1]}`;
+    }
+    return e + " Z";
+  },
+  BM_BODY = bmOutline(
+    [120, 12],
+    [
+      [110, 12, 104, 17, 102, 25],
+      [100.5, 31, 100.5, 39, 102, 45],
+      [103.5, 51, 106, 55, 109, 58],
+      [110, 61, 110.5, 64, 110.5, 67],
+      [110.5, 70, 109, 72, 106, 74],
+      [100, 76, 92, 77, 86, 80],
+      [81, 82.5, 78.5, 86, 78, 91],
+      [78, 97, 81, 103, 83, 108],
+      [85, 119, 85, 130, 86, 140],
+      [87, 148, 89, 153, 89, 160],
+      [89, 170, 85, 180, 84, 190],
+      [83, 198, 83, 206, 84, 214],
+      [85, 232, 88, 248, 90, 262],
+      [92, 276, 93, 290, 93, 300],
+      [93, 306, 92, 312, 92, 318],
+      [90, 326, 89, 336, 90.5, 346],
+      [92.5, 358, 96.5, 372, 97.5, 384],
+      [98, 390, 95, 394, 94, 399],
+      [92.5, 404, 95, 409.5, 100, 410],
+      [105, 410.5, 111, 410.5, 113, 408],
+      [115, 402, 113, 396, 112, 390],
+      [112, 378, 114, 366, 114, 352],
+      [115, 340, 114, 328, 114, 318],
+      [114, 312, 115, 306, 115, 300],
+      [116, 282, 117, 260, 118, 240],
+      [119, 228, 120, 220, 120, 216],
+    ],
+  ),
+  BM_ARM =
+    "M 86,79 C 78,78 71,84 70,94 C 68,104 67,114 66,124 C 65,136 62,150 61,160 C 60,170 57,180 55,190 C 53,200 51.5,207 51,214 C 49,222 47.5,232 48,243 C 50,251 57,252 60,246 C 62,236 62,224 61,216 C 61,206 64,196 66,188 C 67,178 69,168 70,160 C 71,150 73,138 76,128 C 78,120 80,112 82,106 C 84,98 86,88 86,79 Z",
+  BM_THUMB = "M 51,221 C 46,223 42.5,229 42,235.5 C 42.5,239 46,239 47.5,235 C 48.5,230.5 50.5,227.5 52.5,226 Z",
+  BM_ORGANS = [
+    {
+      id: "gehirn", de: "Gehirn", la: "Encephalon", region: "neuro", color: "#E58FA6",
+      fact: "Steuerzentrale des K\xF6rpers: Gro\xDFhirn, Zwischenhirn, Hirnstamm und Kleinhirn mit rund 86 Milliarden Nervenzellen.",
+      kw: /hirn|cerebr|encephal|cortex|zerebr|limbisch|basalgang|ventrikel|hirnh\xE4ut|liquor|brodmann|thalam|hypothal|sinus durae|willis|mrt /i,
+      it: /cerebr|encephal|gyrus|sulcus|lobus (frontalis|parietalis|temporalis|occipitalis)|thalamus|cerebell|pons|mesenceph|ventricul/i,
+      hit: ["M 120,15.5 C 130.5,15 138,22 138,30.5 C 138,36 135.5,39.5 131,40.5 L 109,40.5 C 104.5,39.5 102,36 102,30.5 C 102,22 109.5,15 120,15.5 Z"],
     },
-    a = (l, d, c, m) => {
-      const h = r === l;
-      return React.createElement("path", {
-        key: l,
-        d: c,
-        "aria-label": m,
-        onClick: () => o(h ? null : l),
-        fill: d,
-        fillOpacity: h ? 0.34 : 0.05 + t(l) * 0.14,
-        stroke: h ? d : "#9AA4B4",
-        strokeWidth: h ? 2.6 : 0.9,
-        strokeLinejoin: "round",
-        style: { cursor: "pointer" },
-      });
+    {
+      id: "auge", de: "Auge", la: "Oculus", region: "kopf", color: "#4F86C6",
+      fact: "Der Augapfel liegt gesch\xFCtzt in der Orbita und wird von sechs \xE4u\xDFeren Augenmuskeln bewegt; die Netzhaut ist ein vorgeschobener Teil des Gehirns.",
+      kw: /auge|augen|orbita|seh|oculi|oculus|bulbus/i,
+      it: /bulb|retina|cornea|sclera|iris|lens|oculi|orbit|choroid|ciliar|pupill|rectus (superior|inferior|medialis|lateralis)|obliquus (superior|inferior)$/i,
+      hit: ["M 112,41.5 A 5.2,5.2 0 1 0 112.01,41.5 Z", "M 128,41.5 A 5.2,5.2 0 1 0 128.01,41.5 Z"],
     },
-    n = (l, d, c, m, h) => {
-      const y = e[l] || { total: 0, done: 0 },
-        b = r === l;
-      return React.createElement(
-        "g",
-        { key: "n" + l, pointerEvents: "none" },
-        React.createElement("path", { d: `M ${d},${c} L ${m},${h}`, stroke: b ? "#5B6B80" : "#CCD3DF", strokeWidth: 1.1 }),
-        React.createElement("rect", {
-          x: d - 17,
-          y: c - 9,
-          width: 34,
-          height: 17,
-          rx: 8.5,
-          fill: b ? "#3A4453" : "#FFFFFF",
-          stroke: b ? "#3A4453" : "#DBE1EA",
-          strokeWidth: 1.1,
-        }),
-        React.createElement(
-          "text",
-          {
-            x: d,
-            y: c + 3.5,
-            textAnchor: "middle",
-            className: "ana-display",
-            fontSize: "10.5",
-            fontWeight: "700",
-            fill: b ? "#FFFFFF" : "#3A4453",
-          },
-          y.done,
-          "/",
-          y.total,
-        ),
-      );
+    {
+      id: "ohr", de: "Ohr", la: "Auris", region: "kopf", color: "#C98A6B",
+      fact: "Au\xDFen-, Mittel- und Innenohr: Das Innenohr im Felsenbein enth\xE4lt die H\xF6rschnecke und das Gleichgewichtsorgan.",
+      kw: /ohr|cochlea|geh\xF6r|bogeng\xE4ng|innenohr/i,
+      it: /auris|cochlea|tympan|malleus|incus|stapes|vestibul|semicircular|ossicula|meatus acusticus/i,
+      hit: ["M 99.5,36 C 95,36 94,42 95,47 C 96,52 99,53.5 101.5,52 L 102,37 Z", bmMirror("M 99.5,36 C 95,36 94,42 95,47 C 96,52 99,53.5 101.5,52 L 102,37 Z")],
     },
-    i = { fill: "url(#bmSkin)", stroke: "#BE8D74", strokeWidth: 1.25, strokeLinejoin: "round" };
-  return React.createElement(
-    "svg",
-    { viewBox: "-10 8 260 368", width: "100%", height: "320", role: "img", "aria-label": "K\xF6rperkarte zur Auswahl der Region" },
-    React.createElement(
+    {
+      id: "nase", de: "Nase", la: "Nasus", region: "kopf", color: "#D9967F",
+      fact: "\xC4u\xDFere Nase und Nasenh\xF6hle mit Muscheln und Nebenh\xF6hlen erw\xE4rmen, befeuchten und reinigen die Atemluft; oben liegt die Riechschleimhaut.",
+      kw: /nase|nasen|nasal|riech|nebenh\xF6hl/i,
+      it: /nasi|nasal|concha|olfact|sinus (maxillaris|frontalis|sphenoidalis)|ethmoid|septum nasi/i,
+      hit: ["M 120,43.5 C 117.5,47 116,51 116,53.5 C 117,55.5 123,55.5 124,53.5 C 124,51 122.5,47 120,43.5 Z"],
+    },
+    {
+      id: "mund", de: "Mund & Z\xE4hne", la: "Cavitas oris", region: "kopf", color: "#C7605E",
+      fact: "Mundh\xF6hle mit Z\xE4hnen, Zunge und Speicheldr\xFCsen: hier beginnt die Verdauung, und hier entstehen die Laute der Sprache.",
+      kw: /mund|zahn|z\xE4hne|zunge|speichel|kiefer|gaumen|mandel|tonsill/i,
+      it: /dens|dentes|lingua|linguae|palat|gl\. (parotidea|submandibularis|sublingualis)|mandibul|maxill|tonsill|labium|oris/i,
+      hit: ["M 113.5,57.5 C 117,55.8 123,55.8 126.5,57.5 C 124,60.8 116,60.8 113.5,57.5 Z"],
+    },
+    {
+      id: "schaedel", de: "Sch\xE4del", la: "Cranium", region: "kopf", color: "#C9B27C",
+      fact: "22 Knochen bilden Hirn- und Gesichtssch\xE4del; bis auf den Unterkiefer sind sie durch N\xE4hte fest verbunden.",
+      kw: /sch\xE4del|cranii|cranium|keilbein|siebbein|schl\xE4fenbein|fontanell|kiefergelenk/i,
+      it: /^os (frontale|parietale|temporale|occipitale|sphenoidale|ethmoidale|zygomaticum|nasale|lacrimale)|sutura|foramen (magnum|ovale|rotundum|spinosum)|fossa cranii/i,
+      hit: [
+        "M 102,25 C 104,17 110,12.5 120,12.5 C 130,12.5 136,17 138,25 L 134,22 C 130,16.5 110,16.5 106,22 Z",
+        "M 101,38 C 100.6,44 103,51 108,56.5 L 110,57 C 107,51 105,45 104.5,39 Z",
+        bmMirror("M 101,38 C 100.6,44 103,51 108,56.5 L 110,57 C 107,51 105,45 104.5,39 Z"),
+      ],
+    },
+    {
+      id: "hals", de: "Kehlkopf & Schilddr\xFCse", la: "Larynx et Gl. thyroidea", region: "kopf", color: "#C4677E",
+      fact: "Der Kehlkopf sch\xFCtzt die Atemwege und bildet die Stimme; darunter liegt die schmetterlingsf\xF6rmige Schilddr\xFCse vor der Luftr\xF6hre.",
+      kw: /kehlkopf|larynx|schilddr\xFCse|nebenschild|rachen|pharynx|hals|stimm/i,
+      it: /larynx|laryng|thyr|cricoid|arytaen|epiglott|glottis|plica vocalis|pharyn|parathyr/i,
+      hit: ["M 113,61 L 127,61 L 128,77 C 124,79 116,79 112,77 Z"],
+    },
+    {
+      id: "lunge", de: "Lunge", la: "Pulmo", region: "thorax", color: "#E59AA3",
+      fact: "Die rechte Lunge hat drei, die linke zwei Lappen; in rund 300 Millionen Alveolen tauscht das Blut Sauerstoff und Kohlendioxid.",
+      kw: /lunge|atem|bronch|alveol|pleura|trachea|luftr\xF6hre|pulmo/i,
+      it: /pulmo|bronch|alveol|pleura|trache|lobus (superior|medius|inferior)|hilum pulmonis|carina/i,
+      hit: [
+        "M 111,86 C 104,86 96,92 92,102 C 88,114 88,130 90,146 C 96,149 104,149 112,146 C 114,132 115,112 115,96 C 115,90 114,86 111,86 Z",
+        "M 129,86 C 136,86 144,92 148,102 C 152,114 152,130 150,146 C 144,149 137,149 131,147 C 133,141 135,136 133,129 C 129,125 126,118 126,108 L 125,96 C 125,90 126,86 129,86 Z",
+      ],
+    },
+    {
+      id: "herz", de: "Herz", la: "Cor", region: "thorax", color: "#C8383C",
+      fact: "Faustgro\xDFer Hohlmuskel im Mediastinum: zwei Vorh\xF6fe, zwei Kammern und vier Klappen pumpen t\xE4glich rund 7.000 Liter Blut.",
+      kw: /herz|koronar|klappe|reizleit|kardi|cardi|fetaler kreislauf|lungenkreislauf/i,
+      it: /^cor$|cordis|atrium|ventricul(us|i) (dexter|sinister)|valva|coronari|myocard|pericard|endocard|nodus (sinuatrialis|atrioventricularis)|aorta|truncus pulmonalis|septum interventriculare/i,
+      hit: ["M 117,112 C 124,106 134,108 139,116 C 144,124 142,136 136,145 C 133,148 130,148 128,146 C 122,141 115,135 112,128 C 109,121 111,115 117,112 Z"],
+    },
+    {
+      id: "brustkorb", de: "Brustkorb", la: "Cavea thoracis", region: "thorax", color: "#C9B27C",
+      fact: "12 Rippenpaare, Brustbein und Brustwirbel umschlie\xDFen Herz und Lunge; die Zwischenrippenmuskeln bewegen ihn bei der Atmung.",
+      kw: /brustkorb|brustwand|rippe|thorax-knochen|knochen des thorax|sternum|brustbein|zwerchfell|zwischenrippen/i,
+      it: /costa|costae|stern|manubrium|xiphoid|intercostal|diaphragma|cartilago costalis/i,
+      hit: ["M 116.5,84 L 123.5,84 L 123,108 L 117,108 Z", "M 116,78 C 108,77 96,79 87,81 L 87,84.5 C 96,83 108,81.5 116.5,82 Z", bmMirror("M 116,78 C 108,77 96,79 87,81 L 87,84.5 C 96,83 108,81.5 116.5,82 Z")],
+    },
+    {
+      id: "leber", de: "Leber & Gallenblase", la: "Hepar et Vesica biliaris", region: "abdomen", color: "#8E4A3C",
+      fact: "Gr\xF6\xDFte Dr\xFCse des K\xF6rpers im rechten Oberbauch: entgiftet, speichert Zucker, bildet Galle und Bluteiwei\xDFe.",
+      kw: /leber|galle|hepat|pfortader/i,
+      it: /hepa|hepar|bili|choledoch|cystic|portae|v\. portae|lobus (caudatus|quadratus)/i,
+      hit: ["M 88,150 C 96,146 112,146 128,150 C 133,151 135,154 132,158 C 126,164 116,169 104,172 C 96,173.5 90,168 88,160 Z"],
+    },
+    {
+      id: "magen", de: "Magen", la: "Gaster", region: "abdomen", color: "#D7837A",
+      fact: "J-f\xF6rmiger Hohlmuskel im linken Oberbauch; Salzs\xE4ure und Pepsin beginnen die Eiwei\xDFverdauung, der Pf\xF6rtner dosiert den Weitertransport.",
+      kw: /magen|gastr|speiser\xF6hre|\xF6sophag/i,
+      it: /gast|pylor|fundus gastricus|cardia|curvatura|oesophag/i,
+      hit: ["M 128,151 C 138,147 150,153 150,164 C 150,174 142,182 132,182 C 126,182 121,180 120,176 C 124,173.5 132,171.5 136,166 C 138,162 134,158 128,158 Z"],
+    },
+    {
+      id: "milz", de: "Milz", la: "Splen (Lien)", region: "abdomen", color: "#7E4A6B",
+      fact: "Lymphatisches Organ im linken Oberbauch unter dem Zwerchfell: filtert das Blut und baut alte rote Blutk\xF6rperchen ab.",
+      kw: /milz|lymph|thymus/i,
+      it: /splen|lien|lymph|thymus|pulpa/i,
+      hit: ["M 147,150 C 152,150 155,156 154.5,163 C 154,169 150.5,172 147.5,170 C 145,166 145,156 147,150 Z"],
+    },
+    {
+      id: "pankreas", de: "Bauchspeicheldr\xFCse", la: "Pancreas", region: "abdomen", color: "#E3B26E",
+      fact: "Liegt quer hinter dem Magen: bildet Verdauungsenzyme f\xFCr den D\xFCnndarm und in den Langerhans-Inseln Insulin und Glukagon.",
+      kw: /pankreas|bauchspeichel/i,
+      it: /pancrea|langerhans|insula pancreatica/i,
+      hit: ["M 106,185 C 116,181.5 130,180.5 141,178.5 C 145.5,178 146.5,182 143,183.5 C 133,186.5 120,188.5 110,189 C 104.5,189.5 103.5,186.5 106,185 Z"],
+    },
+    {
+      id: "niere", de: "Niere", la: "Ren (Nephros)", region: "abdomen", color: "#9C4B4B",
+      fact: "Die bohnenf\xF6rmigen Nieren liegen hinter dem Bauchfell neben der Wirbels\xE4ule und filtern t\xE4glich rund 180 Liter Prim\xE4rharn.",
+      kw: /niere|harnwege|harnleiter|nephron|nebenniere/i,
+      it: /^ren|renal|renis|nephr|ureter|pelvis renalis|calix|glomerul|suprarenal/i,
+      hit: [
+        "M 95,170 C 90,170 88,176 88.5,182 C 89,188 92,191.5 96,191 C 99,190.5 100,187 98.5,183 C 97.5,180 98.5,177 99.5,175 C 100,172 98,170 95,170 Z",
+        "M 145,166 C 150,166 152,172 151.5,178 C 151,184 148,187.5 144,187 C 141,186.5 140,183 141.5,179 C 142.5,176 141.5,173 140.5,171 C 140,168 142,166 145,166 Z",
+      ],
+    },
+    {
+      id: "darm", de: "Darm", la: "Intestinum", region: "abdomen", color: "#D69A7F",
+      fact: "D\xFCnndarm (3–5 m) zur Aufnahme der N\xE4hrstoffe und Dickdarm (1,5 m), der dem Stuhl Wasser entzieht – eingerahmt vom Kolon.",
+      kw: /darm|kolon|colon|intestin|bauchfell|peritone|rektum|mastdarm/i,
+      it: /intestin|colon|coli|jejun|ileum|ileal|duoden|caecum|appendix|rect|sigmoid|mesenter|haustr|taeni/i,
+      hit: ["M 91,190 C 104,187 136,187 149,190 L 149,212 C 146,216 138,216 132,215 C 126,214 114,214 108,215 C 100,216 93,215 91,212 Z"],
+    },
+    {
+      id: "becken", de: "Becken & Harnblase", la: "Pelvis et Vesica urinaria", region: "abdomen", color: "#B98AA8",
+      fact: "Der knöcherne Beckenring tr\xE4gt den Rumpf; im kleinen Becken liegen Harnblase, Mastdarm und die inneren Geschlechtsorgane.",
+      kw: /becken|harnblase|blase|beckenboden|damm|fortpflanzung|uterus|prostata|geschlecht/i,
+      it: /pelvi|vesica urinaria|urethr|os coxae|ilium|ischii|pubis|sacr|uter|ovar|prostat|testis|levator ani|perine/i,
+      hit: [
+        "M 84,190 C 86,184 92,182 97,185 C 99,191 101,200 106,208 C 104,213 99,214 94,212 C 89,208 85,201 84,195 Z",
+        bmMirror("M 84,190 C 86,184 92,182 97,185 C 99,191 101,200 106,208 C 104,213 99,214 94,212 C 89,208 85,201 84,195 Z"),
+        "M 113,213 C 113,207 127,207 127,213 C 127,216.5 124,218 120,218 C 116,218 113,216.5 113,213 Z",
+      ],
+    },
+    {
+      id: "schulter", de: "Schulter", la: "Regio deltoidea", region: "arm", color: "#C9584C",
+      fact: "Das Schultergelenk ist das beweglichste Gelenk des K\xF6rpers; der Deltamuskel und die Rotatorenmanschette f\xFChren und sichern es.",
+      kw: /schulter|rotatoren|deltoid|schl\xFCsselbein|clavicul/i,
+      it: /scapul|clavicul|acromi|deltoid|supraspinat|infraspinat|subscapular|teres|glenoid|coracoid|humeri$/i,
+      hit: ["M 86,79 C 78,78 71,84 70,94 C 69.5,101 70.5,106 72,110 C 75,106 78,99 81,93 C 83,88 86,84 86,79 Z", bmMirror("M 86,79 C 78,78 71,84 70,94 C 69.5,101 70.5,106 72,110 C 75,106 78,99 81,93 C 83,88 86,84 86,79 Z")],
+    },
+    {
+      id: "oberarm", de: "Oberarm & Ellenbogen", la: "Brachium et Cubitus", region: "arm", color: "#C9584C",
+      fact: "Bizeps beugt den Ellenbogen und dreht den Unterarm nach au\xDFen, der Trizeps streckt ihn; dazwischen liegt der Humerus.",
+      kw: /oberarm|ellenbogen|bizeps|biceps|humerus/i,
+      it: /humer|biceps|triceps|brachialis|brachii|cubit|olecran|epicondyl/i,
+      hit: ["M 72,110 C 69,122 66,134 64,146 L 61,160 C 62,166 67,168 70,162 C 71,150 73,138 76,128 C 78,120 80,112 82,106 C 78,104 74,106 72,110 Z", bmMirror("M 72,110 C 69,122 66,134 64,146 L 61,160 C 62,166 67,168 70,162 C 71,150 73,138 76,128 C 78,120 80,112 82,106 C 78,104 74,106 72,110 Z")],
+    },
+    {
+      id: "unterarm", de: "Unterarm", la: "Antebrachium", region: "arm", color: "#C9584C",
+      fact: "Elle und Speiche erm\xF6glichen das Drehen der Hand; die Beuger liegen innen, die Strecker au\xDFen am Unterarm.",
+      kw: /unterarm|elle|speiche/i,
+      it: /radi(us|i)|ulna|antebrach|pronator|supinator|flexor (carpi|digitorum)|extensor (carpi|digitorum)|brachioradialis|palmaris/i,
+      hit: ["M 61,160 C 60,170 57,180 55,190 C 53,200 51.5,207 51,214 L 61,216 C 61,206 64,196 66,188 C 67,178 69,168 70,160 Z", bmMirror("M 61,160 C 60,170 57,180 55,190 C 53,200 51.5,207 51,214 L 61,216 C 61,206 64,196 66,188 C 67,178 69,168 70,160 Z")],
+    },
+    {
+      id: "hand", de: "Hand", la: "Manus", region: "arm", color: "#E0A88C",
+      fact: "27 Knochen, viele kleine Muskeln und der gegen\xFCberstellbare Daumen machen die Hand zum feinsten Greifwerkzeug.",
+      kw: /hand|finger|daumen|karpal|handwurzel/i,
+      it: /manus|carp|metacarp|phalan|pollic|digit|scaphoid|lunat|hamat|pisiform|thenar|interosse/i,
+      hit: ["M 51,214 C 49,222 47.5,232 48,243 C 50,251 57,252 60,246 C 62,236 62,224 61,216 Z " + BM_THUMB, bmMirror("M 51,214 C 49,222 47.5,232 48,243 C 50,251 57,252 60,246 C 62,236 62,224 61,216 Z " + BM_THUMB)],
+    },
+    {
+      id: "oberschenkel", de: "H\xFCfte & Oberschenkel", la: "Femur", region: "bein", color: "#C9584C",
+      fact: "Der Oberschenkelknochen ist der l\xE4ngste Knochen; vorn streckt der Quadrizeps das Knie, hinten beugen es die ischiocruralen Muskeln.",
+      kw: /oberschenkel|h\xFCft|ges\xE4\xDF|femur|quadri|adduktor/i,
+      it: /femor|femur|glute|quadriceps|vastus|rectus femoris|sartorius|adductor|gracilis|iliopsoas|trochanter|acetabul|biceps femoris|semitend|semimembr/i,
+      hit: [
+        "M 84,214 C 85,232 88,248 90,262 C 92,276 93,290 93,296 L 115,296 C 116,280 117,260 118,240 C 119,228 120,220 120,216 C 110,215 96,214 84,214 Z",
+        bmMirror("M 84,214 C 85,232 88,248 90,262 C 92,276 93,290 93,296 L 115,296 C 116,280 117,260 118,240 C 119,228 120,220 120,216 C 110,215 96,214 84,214 Z"),
+      ],
+    },
+    {
+      id: "knie", de: "Knie", la: "Genu", region: "bein", color: "#C9B27C",
+      fact: "Gr\xF6\xDFtes Gelenk des K\xF6rpers: Menisken, Kreuz- und Seitenb\xE4nder stabilisieren es, die Kniescheibe liegt in der Quadrizepssehne.",
+      kw: /knie|genu|patell|menisk/i,
+      it: /genu|patell|menisc|cruciat|collaterale (tibiale|fibulare)|condyl(us)? (medialis|lateralis) (femoris|tibiae)|popliteus|tibiofemoral/i,
+      hit: ["M 93,296 L 115,296 C 115,304 114.5,312 114,318 L 92,318 C 92.5,312 93,304 93,296 Z", bmMirror("M 93,296 L 115,296 C 115,304 114.5,312 114,318 L 92,318 C 92.5,312 93,304 93,296 Z")],
+    },
+    {
+      id: "unterschenkel", de: "Unterschenkel", la: "Crus", region: "bein", color: "#C9584C",
+      fact: "Schienbein und Wadenbein tragen das Gewicht; die Wadenmuskulatur setzt \xFCber die Achillessehne an der Ferse an.",
+      kw: /unterschenkel|wade|tibia|fibula/i,
+      it: /tibia|fibula|crur|gastrocnem|soleus|achill|calcane(us|i)$|peroneus|fibularis|tibialis/i,
+      hit: ["M 92,318 C 90,326 89,336 90.5,346 C 92.5,358 96.5,372 97.5,384 L 112,384 C 112,374 114,364 114,352 C 115,340 114,328 114,318 Z", bmMirror("M 92,318 C 90,326 89,336 90.5,346 C 92.5,358 96.5,372 97.5,384 L 112,384 C 112,374 114,364 114,352 C 115,340 114,328 114,318 Z")],
+    },
+    {
+      id: "fuss", de: "Fu\xDF", la: "Pes", region: "bein", color: "#E0A88C",
+      fact: "26 Knochen bilden L\xE4ngs- und Quergew\xF6lbe; das obere und untere Sprunggelenk erlauben Heben, Senken und Kanten des Fu\xDFes.",
+      kw: /fu\xDF|fuss|zehe|sprunggelenk|fu\xDFwurzel|knöchel/i,
+      it: /ped(is)?|tars|metatars|talus|calcane|navicular|cuboid|cuneiform|halluc|plantar|malleol/i,
+      hit: ["M 97.5,384 C 98,390 95,394 94,399 C 92.5,404 95,409.5 100,410 C 105,410.5 111,410.5 113,408 C 115,402 113,396 112,390 L 112,384 Z", bmMirror("M 97.5,384 C 98,390 95,394 94,399 C 92.5,404 95,409.5 100,410 C 105,410.5 111,410.5 113,408 C 115,402 113,396 112,390 L 112,384 Z")],
+    },
+  ],
+  BM_REGIONS = {
+    neuro: "M 120,15 C 131,15 138.5,22 138.5,31 C 138.5,36.5 135.5,40 131,41 L 109,41 C 104.5,40 101.5,36.5 101.5,31 C 101.5,22 109,15 120,15 Z",
+    kopf: "M 120,12 C 130,12 136,17 138,25 C 139.5,31 139.5,39 138,45 C 136.5,51 134,55 131,58 C 130,61 129.5,64 129.5,67 C 129.5,70 131,72 134,74 L 106,74 C 109,72 110.5,70 110.5,67 C 110.5,64 110,61 109,58 C 106,55 103.5,51 102,45 C 100.5,39 100.5,31 102,25 C 104,17 110,12 120,12 Z",
+    thorax: "M 106,74 L 134,74 C 140,76 148,77 154,80 C 159,83 162,87 162,91 C 162,97 159,103 157,108 C 155,119 155,130 154,140 C 153,145 152,148 151.5,150 L 88.5,150 C 88,148 87,145 86,140 C 85,130 85,119 83,108 C 81,103 78,97 78,91 C 78,87 81,83 86,80 C 92,77 100,76 106,74 Z",
+    abdomen: "M 88.5,150 L 151.5,150 C 151,155 151,158 151,160 C 151,170 155,180 156,190 C 157,198 157,206 156,214 L 84,214 C 83,206 83,198 84,190 C 85,180 89,170 89,160 C 89,158 89,155 88.5,150 Z",
+    arm: BM_ARM + " " + bmMirror(BM_ARM),
+    bein: "M 84,214 L 156,214 C 155,232 152,248 150,262 C 148,276 147,290 147,300 C 147,312 148,318 148,318 C 150,326 151,336 149.5,346 C 147.5,358 143.5,372 142.5,384 C 142,390 145,394 146,399 C 147.5,404 145,409.5 140,410 C 135,410.5 129,410.5 127,408 C 125,402 127,396 128,390 C 128,378 126,366 126,352 C 125,340 126,328 126,318 C 126,312 125,306 125,300 C 124,282 123,260 122,240 L 120,218 L 118,240 C 117,260 116,282 115,300 C 115,306 114,312 114,318 C 114,328 115,340 114,352 C 114,366 112,378 112,390 C 113,396 115,402 113,408 C 111,410.5 105,410.5 100,410 C 95,409.5 92.5,404 94,399 C 95,394 98,390 97.5,384 C 96.5,372 92.5,358 90.5,346 C 89,336 90,326 92,318 C 92,318 93,312 93,300 C 93,290 92,276 90,262 C 88,248 85,232 84,214 Z",
+  },
+  BM_BADGES = [
+    ["neuro", 214, 22, 137, 27],
+    ["kopf", 214, 56, 135, 51],
+    ["thorax", 218, 112, 149, 118],
+    ["abdomen", 218, 176, 152, 182],
+    ["arm", 18, 168, 60, 168],
+    ["bein", 22, 286, 92, 284],
+  ],
+  bmLessonsFor = (s, r) => {
+    const o = [];
+    return (
+      r.forEach((e) => {
+        const t = s.kw.test(e.title),
+          a = e.items.filter((n) => s.it.test(n.la || "") || s.kw.test(n.de || "")).length;
+        (t || a >= 2) && o.push({ lesson: e, score: (t ? 100 : 0) + a });
+      }),
+      o.sort((e, t) => t.score - e.score || levelOf(e.lesson) - levelOf(t.lesson)).map((e) => e.lesson)
+    );
+  };
+function BodyArt() {
+  const s = React.createElement,
+    r = (e, t) => s("path", { d: e, ...t }),
+    o = (e, t) => bmPair(e).map((a, n) => s("path", { key: n, d: a, ...t }));
+  return s(
+    "g",
+    { pointerEvents: "none" },
+    s(
       "defs",
       null,
-      React.createElement(
-        "linearGradient",
-        { id: "bmSkin", x1: "0.15", y1: "0", x2: "0.85", y2: "1" },
-        React.createElement("stop", { offset: "0%", stopColor: "#F9E6D8" }),
-        React.createElement("stop", { offset: "55%", stopColor: "#EFCDB6" }),
-        React.createElement("stop", { offset: "100%", stopColor: "#D6AA90" }),
-      ),
-      React.createElement(
-        "linearGradient",
-        { id: "bmMus", x1: "0", y1: "0", x2: "1", y2: "1" },
-        React.createElement("stop", { offset: "0%", stopColor: "#D98C80" }),
-        React.createElement("stop", { offset: "100%", stopColor: "#A85C50" }),
-      ),
-      React.createElement(
-        "linearGradient",
-        { id: "bmBone2", x1: "0", y1: "0", x2: "0.6", y2: "1" },
-        React.createElement("stop", { offset: "0%", stopColor: "#FAF4E4" }),
-        React.createElement("stop", { offset: "100%", stopColor: "#D9C69B" }),
-      ),
-      React.createElement(
-        "radialGradient",
-        { id: "bmSheen", cx: "0.34", cy: "0.22", r: "0.8" },
-        React.createElement("stop", { offset: "0%", stopColor: "#FFFFFF", stopOpacity: "0.42" }),
-        React.createElement("stop", { offset: "70%", stopColor: "#FFFFFF", stopOpacity: "0" }),
-      ),
+      s("linearGradient", { id: "bmSkinG", x1: "0", y1: "0", x2: "1", y2: "0" },
+        s("stop", { offset: "0%", stopColor: "#E2B497" }),
+        s("stop", { offset: "22%", stopColor: "#F3D5C0" }),
+        s("stop", { offset: "50%", stopColor: "#F8E2D2" }),
+        s("stop", { offset: "78%", stopColor: "#F3D5C0" }),
+        s("stop", { offset: "100%", stopColor: "#E2B497" })),
+      s("linearGradient", { id: "bmLimbG", x1: "0", y1: "0", x2: "1", y2: "0" },
+        s("stop", { offset: "0%", stopColor: "#E0AF92" }),
+        s("stop", { offset: "45%", stopColor: "#F6DCCA" }),
+        s("stop", { offset: "100%", stopColor: "#E3B79C" })),
+      s("linearGradient", { id: "bmMuscleG", x1: "0", y1: "0", x2: "1", y2: "0" },
+        s("stop", { offset: "0%", stopColor: "#A8433B" }),
+        s("stop", { offset: "45%", stopColor: "#D9786B" }),
+        s("stop", { offset: "100%", stopColor: "#B24C42" })),
+      s("linearGradient", { id: "bmBoneG", x1: "0", y1: "0", x2: "1", y2: "1" },
+        s("stop", { offset: "0%", stopColor: "#FBF5E6" }),
+        s("stop", { offset: "100%", stopColor: "#D8C394" })),
+      s("radialGradient", { id: "bmLungG", cx: "0.45", cy: "0.35", r: "0.75" },
+        s("stop", { offset: "0%", stopColor: "#F6C3C6" }),
+        s("stop", { offset: "100%", stopColor: "#D9868F" })),
+      s("radialGradient", { id: "bmHeartG", cx: "0.35", cy: "0.3", r: "0.8" },
+        s("stop", { offset: "0%", stopColor: "#E8595A" }),
+        s("stop", { offset: "100%", stopColor: "#9E1F25" })),
+      s("radialGradient", { id: "bmLiverG", cx: "0.4", cy: "0.3", r: "0.85" },
+        s("stop", { offset: "0%", stopColor: "#B8634F" }),
+        s("stop", { offset: "100%", stopColor: "#6E3226" })),
+      s("radialGradient", { id: "bmStomachG", cx: "0.4", cy: "0.35", r: "0.8" },
+        s("stop", { offset: "0%", stopColor: "#F0B2A6" }),
+        s("stop", { offset: "100%", stopColor: "#C4675E" })),
+      s("radialGradient", { id: "bmBrainG", cx: "0.4", cy: "0.3", r: "0.85" },
+        s("stop", { offset: "0%", stopColor: "#FAD3DC" }),
+        s("stop", { offset: "100%", stopColor: "#D98BA0" })),
+      s("radialGradient", { id: "bmGutG", cx: "0.5", cy: "0.4", r: "0.8" },
+        s("stop", { offset: "0%", stopColor: "#F7CDB9" }),
+        s("stop", { offset: "100%", stopColor: "#D99A80" })),
+      s("radialGradient", { id: "bmKidneyG", cx: "0.35", cy: "0.35", r: "0.8" },
+        s("stop", { offset: "0%", stopColor: "#C86B66" }),
+        s("stop", { offset: "100%", stopColor: "#7D2F31" })),
+      s("radialGradient", { id: "bmShadowG", cx: "0.5", cy: "0.5", r: "0.5" },
+        s("stop", { offset: "0%", stopColor: "#1E2836", stopOpacity: "0.22" }),
+        s("stop", { offset: "100%", stopColor: "#1E2836", stopOpacity: "0" })),
     ),
-    React.createElement(
-      "g",
-      { ...i },
-      React.createElement("path", {
-        d: "M 101,42 C 101,23 139,23 139,42 C 139,54 135,63 129,68 C 125,72 115,72 111,68 C 105,63 101,54 101,42 Z",
-      }),
-      React.createElement("ellipse", { cx: 99, cy: 45, rx: 3.4, ry: 5 }),
-      React.createElement("ellipse", { cx: 141, cy: 45, rx: 3.4, ry: 5 }),
-      React.createElement("path", { d: "M 112,68 L 128,68 C 129,76 131,81 133,85 L 107,85 C 109,81 111,76 112,68 Z" }),
-      React.createElement("path", {
-        d: `M 110,84 C 98,88 86,95 80,105 C 75,116 74,128 76,140 C 78,150 80,157 82,164
-                 C 84,172 84,180 86,187 C 88,196 92,203 97,208 L 143,208 C 148,203 152,196 154,187
-                 C 156,180 156,172 158,164 C 160,157 162,150 164,140 C 166,128 165,116 160,105
-                 C 154,95 142,88 130,84 Z`,
-      }),
-      React.createElement("path", {
-        d: `M 79,104 C 68,110 62,124 59,141 C 56,158 54,175 53,190 C 52,200 52,208 53,216
-                 L 65,216 C 65,208 65,200 66,192 C 67,176 69,159 72,144 C 74,130 76,116 79,108 Z`,
-      }),
-      React.createElement("path", {
-        d: `M 161,104 C 172,110 178,124 181,141 C 184,158 186,175 187,190 C 188,200 188,208 187,216
-                 L 175,216 C 175,208 175,200 174,192 C 173,176 171,159 168,144 C 166,130 164,116 161,108 Z`,
-      }),
-      React.createElement("path", { d: "M 53,218 C 48,224 47,235 50,243 C 56,249 64,247 67,240 C 68,232 68,223 67,218 Z" }),
-      React.createElement("path", { d: "M 187,218 C 192,224 193,235 190,243 C 184,249 176,247 173,240 C 172,232 172,223 173,218 Z" }),
-      React.createElement("path", {
-        d: `M 96,208 C 93,232 93,254 95,272 C 97,296 100,322 101,344 L 117,344 C 117,322 117,296 118,272
-                 C 120,254 120,232 119,208 Z`,
-      }),
-      React.createElement("path", {
-        d: `M 144,208 C 147,232 147,254 145,272 C 143,296 140,322 139,344 L 123,344 C 123,322 123,296 122,272
-                 C 120,254 120,232 121,208 Z`,
-      }),
-      React.createElement("path", { d: "M 101,344 L 117,344 C 119,354 114,362 105,362 C 97,362 96,354 101,344 Z" }),
-      React.createElement("path", { d: "M 139,344 L 123,344 C 121,354 126,362 135,362 C 143,362 144,354 139,344 Z" }),
+    // floor shadow
+    s("ellipse", { cx: 120, cy: 411, rx: 34, ry: 4.5, fill: "url(#bmShadowG)" }),
+    // skin
+    s("path", { d: BM_BODY, fill: "url(#bmSkinG)", stroke: "#B9876C", strokeWidth: 0.9, strokeLinejoin: "round" }),
+    o(BM_ARM, { fill: "url(#bmLimbG)", stroke: "#B9876C", strokeWidth: 0.9, strokeLinejoin: "round" }),
+    o(BM_THUMB, { fill: "url(#bmLimbG)", stroke: "#B9876C", strokeWidth: 0.8 }),
+    // fingers
+    o("M 52,242 L 52.5,250 M 55,243 L 55.5,251 M 58,242 L 58.5,248.5", { stroke: "#C99A80", strokeWidth: 0.55, fill: "none" }),
+    // ears
+    o("M 100.5,37 C 96.5,36.5 95.2,42 96,46.5 C 96.8,50.5 99,52 101.5,51", { fill: "#EFC7AE", stroke: "#B9876C", strokeWidth: 0.8 }),
+    o("M 99.2,40 C 97.8,42 98,46 99.6,48", { fill: "none", stroke: "#C99A80", strokeWidth: 0.6 }),
+    // ---- limb muscles (atlas style) ----
+    o("M 86,80 C 78,79 71,85 70.5,95 C 70.5,102 71.5,107 73,110 C 76,106 79,99 81.5,93 C 83.5,88 86,84 86,80 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.6, opacity: 0.88 }),
+    o("M 78,83 C 75,90 73.5,98 73,106 M 82,84 C 79,90 77,96 76,102", { stroke: "#F2B3A8", strokeWidth: 0.45, fill: "none", opacity: 0.7 }),
+    o("M 74,108 C 70,118 68,132 67,146 C 67,153 69,157 71,155 C 73,145 75,128 78,113 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.6, opacity: 0.85 }),
+    o("M 72,116 C 70,128 69,140 69,150", { stroke: "#F2B3A8", strokeWidth: 0.45, fill: "none", opacity: 0.7 }),
+    o("M 61.5,161 C 58.5,172 56,184 54.5,196 C 55,199.5 57,200 58,197 C 59.5,186 62,174 65,163 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.85 }),
+    o("M 65.5,163 C 63.5,175 61,187 59,199 C 59.5,203 62,203.5 63,200 C 65,188 67,176 69.5,163 C 68,160.5 66.5,160.5 65.5,163 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.8 }),
+    o("M 57,197 C 55.5,203 54.5,208 54,214 M 60,200 C 59,206 58.5,210 58,215 M 62.5,200 C 61.5,206 61,211 60.5,216", { stroke: "#F1E3CF", strokeWidth: 0.7, fill: "none", opacity: 0.9 }),
+    o("M 70,112 C 68,124 66,136 64.5,148 L 66.5,148.5 C 68,136 70,124 72,114 Z", { fill: "#9E3E36", opacity: 0.75 }),
+    o("M 68,150 C 66,155 64.5,158 63.5,161 M 71,152 C 70,156 69.5,159 69.5,162", { stroke: "#F1E3CF", strokeWidth: 0.8, fill: "none", opacity: 0.85 }),
+    o("M 85.5,215 C 86.5,224 88.5,233 90.5,241 L 95,239 C 93.5,230 91.5,221 90,212.5 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.8 }),
+    o("M 88.5,240 C 87.5,258 89,276 93,292 C 96,295.5 99.5,294 99.5,288 C 98.5,270 97.5,253 95.5,239 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.55, opacity: 0.88 }),
+    o("M 101,224 C 97,242 97,266 100.5,288 C 102,292.5 106.5,292.5 108,288 C 110.5,265 110,243 105.5,224 C 104,221.5 102.5,221.5 101,224 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.55, opacity: 0.92 }),
+    o("M 103.3,226 C 102.5,246 102.6,268 104.2,289", { stroke: "#F2B3A8", strokeWidth: 0.6, fill: "none", opacity: 0.75 }),
+    o("M 111,258 C 108.5,270 108.5,282 110.5,292 C 113.5,295 115.5,291 115.5,285 L 116.5,262 C 115,257 112.5,256 111,258 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.55, opacity: 0.88 }),
+    o("M 108,221 C 112,228 115.5,238 117.5,250 L 118.5,234 C 117.5,227 114.5,222 111,219.5 Z", { fill: "#A9483F", stroke: "#8E3A33", strokeWidth: 0.45, opacity: 0.8 }),
+    o("M 88,213 C 96,238 105,266 111.5,297 L 114.5,296 C 109.5,266 100.5,236 91.5,211.5 Z", { fill: "#C9675B", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.95 }),
+    o("M 92,252 C 93,266 95,278 97,288 M 112.5,268 C 112,276 112,284 113,290", { stroke: "#F2B3A8", strokeWidth: 0.45, fill: "none", opacity: 0.6 }),
+    o("M 99,292 C 100,295 102,296 104,296.5 L 108,296.5 C 109,295.5 110,294 110.5,292", { stroke: "#F1E3CF", strokeWidth: 1.6, fill: "none", opacity: 0.9 }),
+    o("M 104,306.5 L 104.5,318", { stroke: "#F1E3CF", strokeWidth: 2.6, fill: "none", strokeLinecap: "round", opacity: 0.95 }),
+    o("M 93.5,325 C 91.5,337 92,350 94.5,362 L 97,361 C 96.5,349 96.5,337 97,325 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.8 }),
+    o("M 98.5,321 C 96.5,336 97,353 100,371 C 101.5,373 103.5,372.5 103.5,370 C 103.5,352 104,336 104.5,321 C 103,318.5 100,318.5 98.5,321 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.9 }),
+    o("M 102,371 C 102.5,378 103.5,384 105,389", { stroke: "#F1E3CF", strokeWidth: 0.9, fill: "none", opacity: 0.9 }),
+    o("M 109,321 C 113,329 114.5,341 113.5,352 C 112.5,358 110,359 109.5,352 C 109.5,342 109,331 108.5,322 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.82 }),
+    o("M 106.5,318 C 106,340 105,362 104.5,384", { stroke: "#F1E3CF", strokeWidth: 2.2, fill: "none", opacity: 0.85, strokeLinecap: "round" }),
+    [104, 136].map((e) => s("ellipse", { key: "pat" + e, cx: e, cy: 300, rx: 5.5, ry: 6.5, fill: "url(#bmBoneG)", stroke: "#B8A274", strokeWidth: 0.6 })),
+    o("M 99,386 C 100,392 101,398 103,404 M 103.5,386 C 104.5,392 106,398 108,405", { stroke: "#E8D8BF", strokeWidth: 0.8, fill: "none", opacity: 0.9 }),
+    // ---- skeleton of the trunk ----
+    s("g", { opacity: 0.85 },
+      [92, 99, 106, 113, 120, 127, 134].map((e, t) => o(`M 117,${e} C 109,${e - 3} 98,${e - 1} 91.5,${e + 7 + t * 0.6}`, { key: t, stroke: "url(#bmBoneG)", strokeWidth: 2.4, fill: "none", strokeLinecap: "round" })),
+      [92, 99, 106, 113, 120, 127, 134].map((e, t) => o(`M 117,${e} C 109,${e - 3} 98,${e - 1} 91.5,${e + 7 + t * 0.6}`, { key: "o" + t, stroke: "#B8A274", strokeWidth: 0.4, fill: "none", opacity: 0.7 })),
     ),
-    React.createElement(
-      "g",
-      { ...i },
-      [0, 1, 2, 3].map((l) => React.createElement("rect", { key: "fl" + l, x: 50 + l * 4.4, y: 242, width: 3.4, height: 9, rx: 1.7 })),
-      [0, 1, 2, 3].map((l) => React.createElement("rect", { key: "fr" + l, x: 173 + l * 4.4, y: 242, width: 3.4, height: 9, rx: 1.7 })),
-    ),
-    React.createElement(
-      "g",
-      null,
-      React.createElement("path", {
-        d: "M 106,36 C 106,25 134,25 134,36 C 134,42 132,47 129,50 L 111,50 C 108,47 106,42 106,36 Z",
-        fill: "#E4B2C3",
-        stroke: "#BC8397",
-        strokeWidth: 1,
-      }),
-      React.createElement("path", { d: "M 120,27 L 120,50", stroke: "#BC8397", strokeWidth: 0.9 }),
-      [31, 36, 41, 46].map((l, d) =>
-        React.createElement(
-          "g",
-          { key: d },
-          React.createElement("path", {
-            d: `M ${108 + d * 0.6},${l} C 111,${l - 3} 116,${l - 3} 119,${l}`,
-            fill: "none",
-            stroke: "#BC8397",
-            strokeWidth: 0.85,
+    o("M 116.5,82 C 108,80.5 97,82 87,82.5", { stroke: "url(#bmBoneG)", strokeWidth: 3.6, fill: "none", strokeLinecap: "round" }),
+    o("M 116.5,82 C 108,80.5 97,82 87,82.5", { stroke: "#B8A274", strokeWidth: 0.5, fill: "none", opacity: 0.6 }),
+    r("M 116.5,84.5 L 123.5,84.5 L 123,101 L 122.5,128 L 120,136 L 117.5,128 L 117,101 Z", { fill: "url(#bmBoneG)", stroke: "#B8A274", strokeWidth: 0.6, opacity: 0.55 }),
+    // pelvis
+    o("M 84,190 C 86,184 92,182 97,185 C 99,191 101,200 106,208 C 104,213 99,214 94,212 C 89,208 85,201 84,195 Z", { fill: "url(#bmBoneG)", stroke: "#B8A274", strokeWidth: 0.6 }),
+    o("M 106,208 C 110,210 114,211 118,212", { stroke: "url(#bmBoneG)", strokeWidth: 3, fill: "none" }),
+    [100, 140].map((e) => s("circle", { key: "fh" + e, cx: e, cy: 212, r: 4, fill: "url(#bmBoneG)", stroke: "#B8A274", strokeWidth: 0.5 })),
+    // ---- neck ----
+    r("M 117.6,64 L 117.6,96 M 122.4,64 L 122.4,96", { stroke: "#C9B7A2", strokeWidth: 0.7, fill: "none" }),
+    s("path", { d: "M 117.6,66 L 122.4,66 L 122.4,96 L 117.6,96 Z", fill: "#EADCCB", opacity: 0.9 }),
+    [70, 74, 78, 82, 86, 90, 94].map((e) => r(`M 117.6,${e} L 122.4,${e}`, { key: e, stroke: "#C9B7A2", strokeWidth: 0.6 })),
+    r("M 116.5,61 C 116.5,58.5 123.5,58.5 123.5,61 L 123,66.5 C 121,68 119,68 117,66.5 Z", { fill: "#E3C4A6", stroke: "#B8977A", strokeWidth: 0.55 }),
+    r("M 113.5,69 C 115.5,67 118.5,67.5 120,70 C 121.5,67.5 124.5,67 126.5,69 C 128,72.5 126,76 122.5,75.5 L 117.5,75.5 C 114,76 112,72.5 113.5,69 Z", { fill: "#CF7B8E", stroke: "#9E4F62", strokeWidth: 0.6 }),
+    o("M 112,62 C 114,68 116,74 117,80", { stroke: "#C98A80", strokeWidth: 1.4, fill: "none", opacity: 0.55 }),
+    // ---- lungs ----
+    r("M 111,86 C 104,86 96,92 92,102 C 88,114 88,130 90,146 C 96,149 104,149 112,146 C 114,132 115,112 115,96 C 115,90 114,86 111,86 Z", { fill: "url(#bmLungG)", stroke: "#A55962", strokeWidth: 0.7, opacity: 0.94 }),
+    r("M 129,86 C 136,86 144,92 148,102 C 152,114 152,130 150,146 C 144,149 137,149 131,147 C 133,141 135,136 133,129 C 129,125 126,118 126,108 L 125,96 C 125,90 126,86 129,86 Z", { fill: "url(#bmLungG)", stroke: "#A55962", strokeWidth: 0.7, opacity: 0.94 }),
+    r("M 90.5,124 C 98,121 106,118 114,112 M 89.5,136 C 97,134 105,132 113,134 M 150.5,124 C 144,128 138,132 133.5,134", { stroke: "#A55962", strokeWidth: 0.6, fill: "none", opacity: 0.8 }),
+    s("g", { stroke: "#B8696F", strokeWidth: 0.35, fill: "none", opacity: 0.5 },
+      r("M 98,98 C 100,104 101,110 100,118 M 104,96 C 104,104 106,112 106,120 M 96,128 C 99,134 100,140 99,146 M 142,98 C 140,104 139,110 140,118 M 136,96 C 136,104 134,112 134,120 M 144,128 C 141,134 140,140 141,146")),
+    r("M 120,96 C 118,100 116,103 113,106 M 120,96 C 122,100 124,103 127,106", { stroke: "#D9C3AE", strokeWidth: 2.2, fill: "none", strokeLinecap: "round" }),
+    // ---- heart & great vessels ----
+    r("M 121.5,96 C 123,110 126,130 128.5,152", { stroke: "#D9A296", strokeWidth: 2.2, fill: "none", strokeLinecap: "round" }),
+    r("M 116.5,112 L 116,94", { stroke: "#4A67B5", strokeWidth: 3.2, strokeLinecap: "round" }),
+    r("M 121,112 C 120,103 121,97.5 126,97 C 131,96.5 133.5,100.5 133,107 L 132.5,114", { stroke: "#C63B3B", strokeWidth: 3.6, fill: "none", strokeLinecap: "round" }),
+    r("M 123,97.5 L 122,91 M 126.5,97 L 127,90.5 M 130,97.5 L 132,91.5", { stroke: "#C63B3B", strokeWidth: 1.4, strokeLinecap: "round" }),
+    r("M 117,112 C 124,106 134,108 139,116 C 144,124 142,136 136,145 C 133,148 130,148 128,146 C 122,141 115,135 112,128 C 109,121 111,115 117,112 Z", { fill: "url(#bmHeartG)", stroke: "#7A1A1E", strokeWidth: 0.8 }),
+    r("M 127,108.5 C 126,104 128,101 131,100.5", { stroke: "#5B79C9", strokeWidth: 2.6, fill: "none", strokeLinecap: "round" }),
+    r("M 124,110 C 125,118 127,128 131,140 M 117,116 C 121,120 128,121 136,118", { stroke: "#F0C25A", strokeWidth: 0.9, fill: "none", opacity: 0.9 }),
+    s("ellipse", { cx: 125, cy: 120, rx: 6, ry: 4, fill: "#FFFFFF", opacity: 0.16 }),
+    // diaphragm
+    r("M 88.5,149 C 100,143 112,144 120,146.5 C 128,144 140,143 151.5,149", { stroke: "#C2786C", strokeWidth: 1.4, fill: "none", opacity: 0.55 }),
+    // ---- kidneys (behind) ----
+    r("M 95,170 C 90,170 88,176 88.5,182 C 89,188 92,191.5 96,191 C 99,190.5 100,187 98.5,183 C 97.5,180 98.5,177 99.5,175 C 100,172 98,170 95,170 Z", { fill: "url(#bmKidneyG)", stroke: "#5E2224", strokeWidth: 0.6 }),
+    r("M 145,166 C 150,166 152,172 151.5,178 C 151,184 148,187.5 144,187 C 141,186.5 140,183 141.5,179 C 142.5,176 141.5,173 140.5,171 C 140,168 142,166 145,166 Z", { fill: "url(#bmKidneyG)", stroke: "#5E2224", strokeWidth: 0.6 }),
+    r("M 98.5,183 C 103,192 108,202 115,210 M 141.5,179 C 137,190 132,202 125,210", { stroke: "#E9C46A", strokeWidth: 0.9, fill: "none", opacity: 0.85 }),
+    // spleen
+    r("M 147,150 C 152,150 155,156 154.5,163 C 154,169 150.5,172 147.5,170 C 145,166 145,156 147,150 Z", { fill: "#8A5277", stroke: "#5E3350", strokeWidth: 0.6 }),
+    // ---- liver, gallbladder, stomach, pancreas ----
+    r("M 88,150 C 96,146 112,146 128,150 C 133,151 135,154 132,158 C 126,164 116,169 104,172 C 96,173.5 90,168 88,160 Z", { fill: "url(#bmLiverG)", stroke: "#4E1F17", strokeWidth: 0.7 }),
+    r("M 116,149 C 114,156 112,162 110,168", { stroke: "#4E1F17", strokeWidth: 0.6, fill: "none", opacity: 0.6 }),
+    s("ellipse", { cx: 101, cy: 155, rx: 7, ry: 3, fill: "#FFFFFF", opacity: 0.12 }),
+    r("M 107.5,167 C 109.5,165 112,166.5 112,169.5 C 112,172.5 110,175 108,174.5 C 106,173.5 105.8,169 107.5,167 Z", { fill: "#6F9E52", stroke: "#456B31", strokeWidth: 0.55 }),
+    r("M 106,185 C 116,181.5 130,180.5 141,178.5 C 145.5,178 146.5,182 143,183.5 C 133,186.5 120,188.5 110,189 C 104.5,189.5 103.5,186.5 106,185 Z", { fill: "#EDC17F", stroke: "#B48641", strokeWidth: 0.6 }),
+    r("M 128,151 C 138,147 150,153 150,164 C 150,174 142,182 132,182 C 126,182 121,180 120,176 C 124,173.5 132,171.5 136,166 C 138,162 134,158 128,158 Z", { fill: "url(#bmStomachG)", stroke: "#94433C", strokeWidth: 0.7 }),
+    r("M 131,154 C 140,153 146,158 146,165 M 126,178 C 134,178 142,174 145,168", { stroke: "#B9584F", strokeWidth: 0.45, fill: "none", opacity: 0.6 }),
+    // ---- intestines ----
+    r("M 95,213 L 95,193 C 95,190 98,189.5 101,190 C 112,191.5 128,191.5 139,190 C 142,189.5 145,190 145,193 L 145,206 C 145,211 141,213 136,212.5 C 131,212 128,214 125,214.5", { stroke: "#C98266", strokeWidth: 6.4, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" }),
+    r("M 95,213 L 95,193 C 95,190 98,189.5 101,190 C 112,191.5 128,191.5 139,190 C 142,189.5 145,190 145,193 L 145,206 C 145,211 141,213 136,212.5 C 131,212 128,214 125,214.5", { stroke: "#E9B49A", strokeWidth: 4.2, fill: "none", strokeLinecap: "round", strokeLinejoin: "round", strokeDasharray: "3.2 1.1" }),
+    r("M 103,196 C 108,193.5 132,193.5 137,196 C 140,200 140,206 136,209.5 C 130,212 110,212 104,209.5 C 100,206 100,200 103,196 Z", { fill: "url(#bmGutG)", stroke: "#B9775E", strokeWidth: 0.6 }),
+    s("g", { stroke: "#C98266", strokeWidth: 0.7, fill: "none", opacity: 0.85 },
+      r("M 106,199 C 109,196.5 112,201 115,198.5 C 118,196 121,201 124,198.5 C 127,196 130,201 133,198.5"),
+      r("M 105,203.5 C 108,201 111,205.5 114,203 C 117,200.5 120,205.5 123,203 C 126,200.5 129,205.5 132,203 C 134,201.5 136,203 136.5,204"),
+      r("M 107,208 C 110,205.5 113,210 116,207.5 C 119,205 122,210 125,207.5 C 128,205 131,209.5 134,207.5")),
+    r("M 113.5,213 C 113.5,208.5 126.5,208.5 126.5,213 C 126.5,216 124,217.5 120,217.5 C 116,217.5 113.5,216 113.5,213 Z", { fill: "#E7C55E", stroke: "#B08D2C", strokeWidth: 0.6, opacity: 0.95 }),
+    // ---- head details ----
+    r("M 120,15.5 C 130.5,15 138,22 138,30.5 C 138,36 135.5,39.5 131,40.5 L 109,40.5 C 104.5,39.5 102,36 102,30.5 C 102,22 109.5,15 120,15.5 Z", { fill: "url(#bmBrainG)", stroke: "#A65A71", strokeWidth: 0.7 }),
+    r("M 120,16 L 120,40", { stroke: "#A65A71", strokeWidth: 0.7 }),
+    s("g", { stroke: "#B76A80", strokeWidth: 0.5, fill: "none", opacity: 0.85 },
+      [20, 25, 30, 35].map((e, t) => s("g", { key: t },
+        r(`M ${105 + t * 0.5},${e} C 108,${e - 2.5} 112,${e + 2} 115,${e - 1} C 116.5,${e - 2.5} 118,${e} 119,${e - 1}`),
+        r(`M ${135 - t * 0.5},${e} C 132,${e - 2.5} 128,${e + 2} 125,${e - 1} C 123.5,${e - 2.5} 122,${e} 121,${e - 1}`)))),
+    o("M 107,41.5 C 109.5,40 113.5,40 116,41.8", { stroke: "#8A6A55", strokeWidth: 0.9, fill: "none", strokeLinecap: "round" }),
+    s("ellipse", { cx: 112, cy: 46, rx: 3.9, ry: 2.4, fill: "#FFFFFF", stroke: "#9C7A64", strokeWidth: 0.5 }),
+    s("ellipse", { cx: 128, cy: 46, rx: 3.9, ry: 2.4, fill: "#FFFFFF", stroke: "#9C7A64", strokeWidth: 0.5 }),
+    s("circle", { cx: 112, cy: 46, r: 1.75, fill: "#4F86C6" }),
+    s("circle", { cx: 128, cy: 46, r: 1.75, fill: "#4F86C6" }),
+    s("circle", { cx: 112, cy: 46, r: 0.8, fill: "#1E2836" }),
+    s("circle", { cx: 128, cy: 46, r: 0.8, fill: "#1E2836" }),
+    s("circle", { cx: 112.6, cy: 45.4, r: 0.35, fill: "#FFFFFF" }),
+    s("circle", { cx: 128.6, cy: 45.4, r: 0.35, fill: "#FFFFFF" }),
+    r("M 120,44 C 119,47.5 117.6,50.5 117,52.5 C 118,54.3 122,54.3 123,52.5", { stroke: "#B9876C", strokeWidth: 0.75, fill: "none", strokeLinecap: "round" }),
+    r("M 114,57.6 C 117,56.4 123,56.4 126,57.6 C 123.5,60.2 116.5,60.2 114,57.6 Z", { fill: "#C9706A", stroke: "#9E4E49", strokeWidth: 0.45 }),
+    r("M 114,57.6 C 117,58.4 123,58.4 126,57.6", { stroke: "#9E4E49", strokeWidth: 0.45, fill: "none" }),
+    // shine
+    s("ellipse", { cx: 104, cy: 120, rx: 9, ry: 30, fill: "#FFFFFF", opacity: 0.07 }),
+  );
+}
+function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOpen: io, lessons: ls }) {
+  const e = React.createElement,
+    [t, a] = useState(BM_FULL),
+    [n, i] = useState(null),
+    [l, d] = useState(!1),
+    c = useRef(null),
+    m = useRef(t),
+    h = useRef(new Map()),
+    y = useRef(null),
+    b = useRef(!1),
+    x = useRef(0),
+    S = useRef(null);
+  m.current = t;
+  const B = BM_FULL.w / t.w,
+    A = {};
+  REGIONS.filter((u) => u.id !== "alle").forEach((u) => {
+    const p = (ls || ALL_LESSONS).filter((f) => regionOf(f) === u.id);
+    A[u.id] = { total: p.length, done: p.filter((f) => s.best[f.id] != null).length };
+  });
+  const u = (v) => {
+      const W = Math.min(BM_FULL.w, Math.max(BM_FULL.w / BM_MAXZOOM, v.w)),
+        E = (W * BM_FULL.h) / BM_FULL.w;
+      return {
+        w: W,
+        h: E,
+        x: Math.min(BM_FULL.x + BM_FULL.w - W, Math.max(BM_FULL.x, v.x)),
+        y: Math.min(BM_FULL.y + BM_FULL.h - E, Math.max(BM_FULL.y, v.y)),
+      };
+    },
+    p = (v, W, E) => {
+      const N = c.current;
+      if (!N) return { x: E.x + E.w / 2, y: E.y + E.h / 2 };
+      const Z = N.getBoundingClientRect(),
+        T = Math.min(Z.width / E.w, Z.height / E.h),
+        K = (Z.width - E.w * T) / 2,
+        R = (Z.height - E.h * T) / 2;
+      return { x: E.x + (v - Z.left - K) / T, y: E.y + (W - Z.top - R) / T, k: T };
+    },
+    f = (v) => {
+      S.current && cancelAnimationFrame(S.current);
+      const W = m.current,
+        E = u(v),
+        N = performance.now(),
+        Z = (T) => {
+          const K = Math.min(1, (T - N) / 220),
+            R = 1 - Math.pow(1 - K, 3);
+          (a({ x: W.x + (E.x - W.x) * R, y: W.y + (E.y - W.y) * R, w: W.w + (E.w - W.w) * R, h: W.h + (E.h - W.h) * R }),
+            K < 1 ? (S.current = requestAnimationFrame(Z)) : (S.current = null));
+        };
+      S.current = requestAnimationFrame(Z);
+    },
+    k = (v, W, E) => {
+      const N = m.current,
+        Z = W != null ? p(W, E, N) : { x: N.x + N.w / 2, y: N.y + N.h / 2 },
+        T = N.w / v,
+        K = (Z.x - N.x) / N.w,
+        R = (Z.y - N.y) / N.h;
+      f({ x: Z.x - K * T, y: Z.y - R * ((T * BM_FULL.h) / BM_FULL.w), w: T });
+    },
+    g = (v) => {
+      const W = BM_ORGANS.find((E) => E.id === v);
+      W && (i(v), d(!1), o(W.region));
+    };
+  useEffect(() => {
+    const v = c.current;
+    if (!v) return;
+    const W = (N) => {
+        (N.ctrlKey || N.metaKey) && (N.preventDefault(), k(N.deltaY < 0 ? 1.18 : 1 / 1.18, N.clientX, N.clientY));
+      },
+      E = (N) => N.preventDefault();
+    return (
+      v.addEventListener("wheel", W, { passive: !1 }),
+      v.addEventListener("gesturestart", E),
+      () => {
+        (v.removeEventListener("wheel", W), v.removeEventListener("gesturestart", E));
+      }
+    );
+  }, []);
+  const w = (v) => {
+      (h.current.set(v.pointerId, { x: v.clientX, y: v.clientY }), h.current.size === 1 && (b.current = !1));
+      const W = [...h.current.values()];
+      if (W.length === 1) y.current = { kind: "pan", sx: W[0].x, sy: W[0].y, vb: m.current, k: p(W[0].x, W[0].y, m.current).k || 1 };
+      else if (W.length === 2) {
+        const E = Math.hypot(W[0].x - W[1].x, W[0].y - W[1].y) || 1,
+          N = (W[0].x + W[1].x) / 2,
+          Z = (W[0].y + W[1].y) / 2;
+        (y.current = { kind: "pinch", d0: E, vb: m.current, anchor: p(N, Z, m.current) }), (b.current = !0);
+      }
+    },
+    M = (v) => {
+      if (!h.current.has(v.pointerId)) return;
+      h.current.set(v.pointerId, { x: v.clientX, y: v.clientY });
+      const W = y.current;
+      if (!W) return;
+      const E = [...h.current.values()];
+      if (W.kind === "pan" && E.length === 1) {
+        const N = E[0].x - W.sx,
+          Z = E[0].y - W.sy;
+        if ((Math.abs(N) > 6 || Math.abs(Z) > 6) && (b.current = !0), BM_FULL.w / W.vb.w < 1.02) return;
+        b.current && (S.current && (cancelAnimationFrame(S.current), (S.current = null)), a(u({ ...W.vb, x: W.vb.x - N / W.k, y: W.vb.y - Z / W.k })));
+      } else if (W.kind === "pinch" && E.length >= 2) {
+        const N = Math.hypot(E[0].x - E[1].x, E[0].y - E[1].y) || 1,
+          Z = W.vb.w / (N / W.d0),
+          T = (W.anchor.x - W.vb.x) / W.vb.w,
+          K = (W.anchor.y - W.vb.y) / W.vb.h;
+        (S.current && (cancelAnimationFrame(S.current), (S.current = null)),
+          a(u({ x: W.anchor.x - T * Z, y: W.anchor.y - K * ((Z * BM_FULL.h) / BM_FULL.w), w: Z })));
+      }
+    },
+    z = (v) => {
+      const W = y.current && y.current.kind === "pan" && !b.current && h.current.size === 1;
+      if ((h.current.delete(v.pointerId), h.current.size === 1)) {
+        const [E] = [...h.current.values()];
+        y.current = { kind: "pan", sx: E.x, sy: E.y, vb: m.current, k: p(E.x, E.y, m.current).k || 1 };
+      } else h.current.size === 0 && (y.current = null);
+      if (W && v.type === "pointerup") {
+        const E = Date.now();
+        E - x.current < 320 ? ((x.current = 0), BM_FULL.w / m.current.w > 3.2 ? f(BM_FULL) : k(2.2, v.clientX, v.clientY)) : (x.current = E);
+      }
+    },
+    I = n ? BM_ORGANS.find((v) => v.id === n) : null,
+    F = I ? bmLessonsFor(I, ls || ALL_LESSONS).map((v, W) => ({ v, W, o: io ? io(v.id) : !0 })).sort((v, W) => W.o - v.o || v.W - W.W).map((v) => v.v) : [],
+    H = l ? F : F.slice(0, 5),
+    D = (REGIONS.find((v) => v.id === (I && I.region)) || {}).label,
+    btn = {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      border: `1.5px solid ${C.line}`,
+      background: "rgba(255,255,255,0.92)",
+      color: C.ink,
+      fontSize: 18,
+      fontWeight: 700,
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 0,
+      boxShadow: "0 1px 3px rgba(30,40,54,0.12)",
+    };
+  return e(
+    "div",
+    null,
+    e(
+      "div",
+      { style: { position: "relative" } },
+      e(
+        "svg",
+        {
+          ref: c,
+          viewBox: `${t.x} ${t.y} ${t.w} ${t.h}`,
+          width: "100%",
+          height: 400,
+          role: "img",
+          "aria-label": "Anatomische K\xF6rperkarte: zoomen und Organe antippen",
+          style: { display: "block", touchAction: B > 1.02 ? "none" : "pan-y", userSelect: "none", WebkitUserSelect: "none", cursor: B > 1.02 ? "grab" : "default" },
+          onPointerDown: w,
+          onPointerMove: M,
+          onPointerUp: z,
+          onPointerCancel: z,
+          onPointerLeave: (v) => v.pointerType === "mouse" && z(v),
+          onClickCapture: (v) => {
+            b.current && (v.stopPropagation(), v.preventDefault());
+          },
+        },
+        e(BodyArt, null),
+        r &&
+          BM_REGIONS[r] &&
+          e("path", {
+            d: BM_REGIONS[r],
+            fill: (I && I.region === r ? "#FFFFFF" : "#1C7ED6"),
+            fillOpacity: I && I.region === r ? 0 : 0.1,
+            stroke: "#1C7ED6",
+            strokeWidth: 1.4 / Math.sqrt(B),
+            strokeDasharray: `${4 / Math.sqrt(B)} ${3 / Math.sqrt(B)}`,
+            pointerEvents: "none",
           }),
-          React.createElement("path", {
-            d: `M 121,${l} C 124,${l - 3} 129,${l - 3} ${132 - d * 0.6},${l}`,
-            fill: "none",
-            stroke: "#BC8397",
-            strokeWidth: 0.85,
+        e(
+          "g",
+          null,
+          Object.entries(BM_REGIONS).map(([v, W]) =>
+            e("path", { key: v, d: W, fill: "#000", fillOpacity: 0, onClick: () => (i(null), o(v)), style: { cursor: "pointer" } }),
+          ),
+          BM_ORGANS.map((v) =>
+            v.hit.map((W, E) =>
+              e(
+                "path",
+                {
+                  key: v.id + E,
+                  d: W,
+                  fill: "#1C7ED6",
+                  fillOpacity: n === v.id ? 0.1 : 0,
+                  stroke: n === v.id ? "#FFFFFF" : "none",
+                  strokeWidth: n === v.id ? 2.4 / Math.sqrt(B) : 0,
+                  onClick: () => g(v.id),
+                  style: { cursor: "pointer" },
+                },
+                e("title", null, v.de),
+              ),
+            ),
+          ),
+          I &&
+            I.hit.map((v, W) =>
+              e("path", { key: "sel" + W, d: v, fill: "none", stroke: "#1C7ED6", strokeWidth: 1.2 / Math.sqrt(B), pointerEvents: "none" }),
+            ),
+        ),
+        e(
+          "g",
+          { pointerEvents: "none", opacity: B > 1.6 ? 0 : 1 },
+          BM_BADGES.map(([v, W, E, N, Z]) => {
+            const T = A[v] || { total: 0, done: 0 },
+              K = r === v;
+            return e(
+              "g",
+              { key: v },
+              e("path", { d: `M ${W},${E} L ${N},${Z}`, stroke: K ? "#5B6B80" : "#CCD3DF", strokeWidth: 0.9 }),
+              e("circle", { cx: N, cy: Z, r: 1.5, fill: K ? "#5B6B80" : "#AEB8C7" }),
+              e("rect", { x: W - 18, y: E - 9, width: 36, height: 17, rx: 8.5, fill: K ? "#3A4453" : "#FFFFFF", stroke: K ? "#3A4453" : "#DBE1EA", strokeWidth: 1 }),
+              e("text", { x: W, y: E + 3.5, textAnchor: "middle", className: "ana-display", fontSize: "10", fontWeight: "700", fill: K ? "#FFFFFF" : "#3A4453" }, T.done, "/", T.total),
+            );
           }),
         ),
       ),
-      React.createElement("path", {
-        d: "M 111,51 C 115,55 125,55 129,51 C 127,56 124,58 120,58 C 116,58 113,56 111,51 Z",
-        fill: "#D69FB3",
-        stroke: "#BC8397",
-        strokeWidth: 0.9,
-      }),
-      React.createElement("path", {
-        d: "M 117,51 L 117,66 C 117,69 123,69 123,66 L 123,51 Z",
-        fill: "#D69FB3",
-        stroke: "#BC8397",
-        strokeWidth: 0.9,
-      }),
+      e(
+        "div",
+        { style: { position: "absolute", top: 4, right: 0, display: "flex", flexDirection: "column", gap: 6 } },
+        e("button", { "aria-label": "Hineinzoomen", onClick: () => k(1.6), style: btn }, "+"),
+        e("button", { "aria-label": "Herauszoomen", onClick: () => k(1 / 1.6), style: btn }, "−"),
+        B > 1.02 && e("button", { "aria-label": "Ganze Figur", onClick: () => f(BM_FULL), style: { ...btn, fontSize: 15 } }, "↺"),
+      ),
+      e(
+        "div",
+        {
+          className: "ana-body",
+          style: { textAlign: "center", fontSize: 11.5, color: C.inkSoft, padding: "2px 0 0" },
+        },
+        B > 1.02 ? `${B.toFixed(1).replace(".", ",")}\xD7 \xB7 mit einem Finger verschieben` : "Zwei Finger, Doppeltippen oder + zum Zoomen \xB7 Organ antippen",
+      ),
     ),
-    React.createElement(
-      "g",
-      { stroke: "#B8917B", strokeWidth: 1.05, fill: "none" },
-      React.createElement("ellipse", { cx: 111, cy: 56, rx: 4.2, ry: 2.7, fill: "#FFFFFF" }),
-      React.createElement("ellipse", { cx: 129, cy: 56, rx: 4.2, ry: 2.7, fill: "#FFFFFF" }),
-      React.createElement("circle", { cx: 111, cy: 56, r: 1.4, fill: "#445061", stroke: "none" }),
-      React.createElement("circle", { cx: 129, cy: 56, r: 1.4, fill: "#445061", stroke: "none" }),
-      React.createElement("path", { d: "M 120,58 L 120,63 L 123,64" }),
-      React.createElement("path", { d: "M 114,67 C 117,69 123,69 126,67" }),
-    ),
-    React.createElement(
-      "g",
-      { opacity: 0.7 },
-      React.createElement("path", { d: "M 116,72 L 124,72 L 124,84 L 116,84 Z", fill: "#E8D2C2", stroke: "#C9A98C", strokeWidth: 0.85 }),
-      React.createElement("path", { d: "M 113,70 C 109,76 106,81 104,85", fill: "none", stroke: "#C98C80", strokeWidth: 2.4 }),
-      React.createElement("path", { d: "M 127,70 C 131,76 134,81 136,85", fill: "none", stroke: "#C98C80", strokeWidth: 2.4 }),
-    ),
-    React.createElement(
-      "g",
-      null,
-      React.createElement("path", {
-        d: "M 94,94 C 103,89 113,89 118,92",
-        fill: "none",
-        stroke: "#D6C29B",
-        strokeWidth: 3.2,
-        strokeLinecap: "round",
-      }),
-      React.createElement("path", {
-        d: "M 146,94 C 137,89 127,89 122,92",
-        fill: "none",
-        stroke: "#D6C29B",
-        strokeWidth: 3.2,
-        strokeLinecap: "round",
-      }),
-      React.createElement("path", {
-        d: "M 106,100 C 93,107 86,124 86,144 C 86,155 90,162 98,162 C 106,158 110,143 110,126 C 110,112 109,103 106,100 Z",
-        fill: "#DAC5CE",
-        stroke: "#B598A6",
-        strokeWidth: 1,
-      }),
-      React.createElement("path", {
-        d: "M 134,100 C 147,107 154,124 154,144 C 154,155 150,162 142,162 C 134,158 130,143 130,126 C 130,112 131,103 134,100 Z",
-        fill: "#DAC5CE",
-        stroke: "#B598A6",
-        strokeWidth: 1,
-      }),
-      React.createElement("path", { d: "M 89,122 C 96,126 104,128 109,128", fill: "none", stroke: "#B598A6", strokeWidth: 0.9 }),
-      React.createElement("path", { d: "M 151,122 C 144,126 136,128 131,128", fill: "none", stroke: "#B598A6", strokeWidth: 0.9 }),
-      React.createElement("path", { d: "M 151,140 C 145,142 137,143 132,143", fill: "none", stroke: "#B598A6", strokeWidth: 0.9 }),
-      React.createElement("path", { d: "M 120,86 L 120,108", stroke: "#CBB6A4", strokeWidth: 4, strokeLinecap: "round" }),
-      React.createElement("path", {
-        d: "M 120,108 L 113,117 M 120,108 L 127,117",
-        stroke: "#CBB6A4",
-        strokeWidth: 2.8,
-        strokeLinecap: "round",
-      }),
-      [102, 111, 120, 129, 138, 147].map((l, d) =>
-        React.createElement(
-          "g",
-          { key: d, opacity: 0.58 },
-          React.createElement("path", {
-            d: `M 116,${l} C 105,${l + 2} 94,${l + 6} 87,${l + 13}`,
-            fill: "none",
-            stroke: "#D6C29B",
-            strokeWidth: 2,
-            strokeLinecap: "round",
-          }),
-          React.createElement("path", {
-            d: `M 124,${l} C 135,${l + 2} 146,${l + 6} 153,${l + 13}`,
-            fill: "none",
-            stroke: "#D6C29B",
-            strokeWidth: 2,
-            strokeLinecap: "round",
-          }),
+    I &&
+      e(
+        "div",
+        { className: "ana-pop", style: { marginTop: 8, padding: "12px 12px 8px", borderRadius: 14, background: C.card, border: `1.5px solid ${C.line}`, borderLeft: `5px solid ${I.color}` } },
+        e(
+          "div",
+          { style: { display: "flex", alignItems: "flex-start", gap: 8 } },
+          e(
+            "div",
+            { style: { flex: 1, minWidth: 0 } },
+            e("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink, lineHeight: 1.15 } }, I.de),
+            e("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, fontStyle: "italic" } }, I.la),
+          ),
+          e(
+            "button",
+            { "aria-label": "Schlie\xDFen", onClick: () => i(null), style: { background: "none", border: "none", color: C.inkSoft, fontSize: 20, lineHeight: 1, cursor: "pointer", padding: "0 2px" } },
+            "\xD7",
+          ),
         ),
-      ),
-      React.createElement("path", {
-        d: "M 116,92 L 124,92 L 124,128 L 120,136 L 116,128 Z",
-        fill: "url(#bmBone2)",
-        stroke: "#C8B489",
-        strokeWidth: 0.85,
-      }),
-      React.createElement("path", {
-        d: `M 115,121 C 118,114 128,112 134,118 C 140,125 139,136 133,144 C 130,148 127,150 125,151
-                 C 121,146 117,138 115,131 C 114,127 114,123 115,121 Z`,
-        fill: "#CE5450",
-        stroke: "#A23E3B",
-        strokeWidth: 1.1,
-      }),
-      React.createElement("path", {
-        d: "M 121,117 C 120,110 118,104 116,99",
-        fill: "none",
-        stroke: "#A23E3B",
-        strokeWidth: 2.2,
-        strokeLinecap: "round",
-      }),
-      React.createElement("path", {
-        d: "M 127,114 C 129,107 127,101 122,98",
-        fill: "none",
-        stroke: "#A23E3B",
-        strokeWidth: 2.2,
-        strokeLinecap: "round",
-      }),
-      React.createElement("path", {
-        d: "M 131,119 C 135,113 138,107 140,102",
-        fill: "none",
-        stroke: "#8C9CD8",
-        strokeWidth: 2,
-        strokeLinecap: "round",
-      }),
-      React.createElement("path", { d: "M 119,128 C 124,126 129,129 132,134", fill: "none", stroke: "#A23E3B", strokeWidth: 1 }),
-    ),
-    React.createElement(
-      "g",
-      null,
-      React.createElement("path", { d: "M 84,163 C 97,156 143,156 156,163", fill: "none", stroke: "#C08A7E", strokeWidth: 2.4 }),
-      React.createElement("path", {
-        d: "M 84,165 C 96,159 112,161 120,168 C 118,177 107,182 95,181 C 87,179 82,173 84,165 Z",
-        fill: "#9C6B57",
-        stroke: "#7C5344",
-        strokeWidth: 1,
-      }),
-      React.createElement("path", {
-        d: "M 128,164 C 139,161 147,167 147,176 C 143,182 134,184 128,180 C 125,174 125,168 128,164 Z",
-        fill: "#D69A93",
-        stroke: "#AF7972",
-        strokeWidth: 1,
-      }),
-      React.createElement("ellipse", {
-        cx: 152,
-        cy: 171,
-        rx: 6,
-        ry: 9,
-        transform: "rotate(-18 152 171)",
-        fill: "#A87D96",
-        stroke: "#856178",
-        strokeWidth: 0.9,
-      }),
-      React.createElement("path", {
-        d: "M 94,186 C 90,184 86,189 88,194 C 92,198 97,194 97,190 Z",
-        fill: "#8E6A62",
-        stroke: "#6E5049",
-        strokeWidth: 0.8,
-        opacity: 0.8,
-      }),
-      React.createElement("path", {
-        d: "M 146,186 C 150,184 154,189 152,194 C 148,198 143,194 143,190 Z",
-        fill: "#8E6A62",
-        stroke: "#6E5049",
-        strokeWidth: 0.8,
-        opacity: 0.8,
-      }),
-      React.createElement("path", {
-        d: "M 94,198 C 94,190 96,186 102,186 L 138,186 C 144,186 146,190 146,198 C 146,202 145,204 144,206",
-        fill: "none",
-        stroke: "#D9A97E",
-        strokeWidth: 5.5,
-        strokeLinecap: "round",
-        strokeLinejoin: "round",
-        opacity: 0.9,
-      }),
-      React.createElement(
-        "g",
-        { stroke: "#C99A72", strokeWidth: 3, fill: "none", strokeLinecap: "round" },
-        React.createElement("path", { d: "M 103,192 C 112,189 126,189 133,194" }),
-        React.createElement("path", { d: "M 102,199 C 112,196 128,196 135,201" }),
-      ),
-      React.createElement("path", {
-        d: `M 90,203 C 98,199 110,197 120,197 C 130,197 142,199 150,203
-                 C 148,213 141,221 132,225 L 108,225 C 99,221 92,213 90,203 Z`,
-        fill: "url(#bmBone2)",
-        stroke: "#C8B489",
-        strokeWidth: 1.1,
-      }),
-      React.createElement("ellipse", { cx: 103, cy: 213, rx: 6, ry: 5, fill: "#E9D9B4", stroke: "#C8B489", strokeWidth: 0.85 }),
-      React.createElement("ellipse", { cx: 137, cy: 213, rx: 6, ry: 5, fill: "#E9D9B4", stroke: "#C8B489", strokeWidth: 0.85 }),
-    ),
-    React.createElement(
-      "g",
-      { opacity: 0.4 },
-      [
-        [119, 86, 5.4],
-        [119.5, 93, 5.8],
-        [120, 100, 6.2],
-        [121, 107, 6.6],
-        [121.5, 114, 6.8],
-        [122, 121, 7],
-        [121.5, 128, 7.2],
-        [121, 135, 7.4],
-        [120, 142, 7.6],
-        [119, 149, 8],
-        [118, 156, 8.4],
-        [117.5, 163, 8.8],
-        [118, 170, 9.2],
-        [119, 177, 9.6],
-        [120, 184, 9.8],
-      ].map(([l, d, c], m) =>
-        React.createElement("rect", {
-          key: m,
-          x: l - c / 2,
-          y: d,
-          width: c,
-          height: 5.4,
-          rx: 1.8,
-          fill: "url(#bmBone2)",
-          stroke: "#C8B489",
-          strokeWidth: 0.65,
+        e("div", { className: "ana-body", style: { fontSize: 13.5, color: C.ink, lineHeight: 1.45, margin: "6px 0 8px" } }, I.fact),
+        e(
+          "div",
+          { className: "ana-display", style: { fontSize: 11.5, fontWeight: 700, color: C.inkSoft, letterSpacing: 0.7, padding: "0 0 5px" } },
+          F.length ? `${F.length} ${F.length === 1 ? "LEKTION" : "LEKTIONEN"} DAZU` : "IN DIESER LERNSTUFE KEINE LEKTION DAZU",
+        ),
+        H.map((v) => {
+          const W = io ? io(v.id) : !0,
+            E = s.best[v.id] != null;
+          return e(
+            "button",
+            {
+              key: v.id,
+              onClick: W ? () => lo && lo(v.id) : void 0,
+              className: "ana-body",
+              style: {
+                display: "flex",
+                alignItems: "center",
+                gap: 9,
+                width: "100%",
+                textAlign: "left",
+                padding: "8px 10px",
+                marginBottom: 5,
+                borderRadius: 10,
+                border: `1.5px solid ${E ? v.color : C.line}`,
+                background: W ? C.card : "#F4F6FA",
+                cursor: W ? "pointer" : "default",
+                opacity: W ? 1 : 0.75,
+              },
+            },
+            e(
+              "span",
+              {
+                style: {
+                  width: 22,
+                  height: 22,
+                  flex: "0 0 22px",
+                  borderRadius: 7,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: E ? v.color : "#EDF0F6",
+                },
+              },
+              E
+                ? e(Check, { size: 13, color: "#fff", strokeWidth: 3 })
+                : W
+                  ? e("span", { style: { width: 6, height: 6, borderRadius: 3, background: v.color } })
+                  : e(Lock, { size: 12, color: "#9AA3B2" }),
+            ),
+            e(
+              "span",
+              { style: { flex: 1, minWidth: 0 } },
+              e(
+                "span",
+                { className: "ana-display", style: { display: "block", fontSize: 14, fontWeight: 600, color: W ? C.ink : "#8C97A7", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } },
+                v.title,
+              ),
+              !W && e("span", { style: { fontSize: 11.5, color: "#9AA3B2" } }, "vorherige Lektion der Einheit abschlie\xDFen"),
+            ),
+            W && e("span", { className: "ana-display", style: { fontSize: 16, color: "#B6BECC" } }, "›"),
+          );
         }),
+        F.length > 5 &&
+          e(
+            "button",
+            { onClick: () => d(!l), className: "ana-body", style: { background: "none", border: "none", color: "#1C7ED6", fontSize: 13, fontWeight: 700, cursor: "pointer", padding: "4px 2px" } },
+            l ? "weniger anzeigen" : `alle ${F.length} anzeigen`,
+          ),
+        D && e("div", { className: "ana-body", style: { fontSize: 12, color: C.inkSoft, padding: "4px 2px 2px" } }, "Unten siehst du alle Lektionen der Region „", D, "“."),
       ),
-    ),
-    React.createElement(
-      "g",
-      { opacity: 0.48 },
-      React.createElement("path", { d: "M 77,110 C 69,118 64,132 61,148 L 69,150 C 71,135 74,123 79,114 Z", fill: "url(#bmMus)" }),
-      React.createElement("path", { d: "M 163,110 C 171,118 176,132 179,148 L 171,150 C 169,135 166,123 161,114 Z", fill: "url(#bmMus)" }),
-      React.createElement("path", {
-        d: "M 61,154 C 58,170 56,186 56,200 L 64,201 C 64,186 66,170 69,156 Z",
-        fill: "url(#bmMus)",
-        opacity: 0.7,
-      }),
-      React.createElement("path", {
-        d: "M 179,154 C 182,170 184,186 184,200 L 176,201 C 176,186 174,170 171,156 Z",
-        fill: "url(#bmMus)",
-        opacity: 0.7,
-      }),
-      React.createElement("path", { d: "M 99,214 C 96,236 98,256 101,270 L 112,270 C 112,250 111,232 110,214 Z", fill: "url(#bmMus)" }),
-      React.createElement("path", { d: "M 141,214 C 144,236 142,256 139,270 L 128,270 C 128,250 129,232 130,214 Z", fill: "url(#bmMus)" }),
-      React.createElement("path", {
-        d: "M 101,278 C 102,294 104,310 105,324 L 113,324 C 113,308 113,292 113,278 Z",
-        fill: "url(#bmMus)",
-        opacity: 0.72,
-      }),
-      React.createElement("path", {
-        d: "M 139,278 C 138,294 136,310 135,324 L 127,324 C 127,308 127,292 127,278 Z",
-        fill: "url(#bmMus)",
-        opacity: 0.72,
-      }),
-    ),
-    React.createElement("ellipse", { cx: 102, cy: 120, rx: 52, ry: 78, fill: "url(#bmSheen)", pointerEvents: "none" }),
-    a("neuro", "#F59F00", "M 100,42 C 100,22 140,22 140,42 C 140,48 139,52 138,55 L 102,55 C 101,52 100,48 100,42 Z", "Gehirn & Nerven"),
-    a(
-      "kopf",
-      "#7048E8",
-      "M 102,57 L 138,57 C 136,64 132,69 129,72 C 130,78 131,82 133,85 L 107,85 C 109,82 110,78 111,72 C 108,69 104,64 102,57 Z",
-      "Kopf & Hals",
-    ),
-    a(
-      "thorax",
-      "#C92A2A",
-      "M 110,84 C 98,88 86,95 80,105 C 75,116 74,128 76,140 C 77,148 79,155 81,161 L 159,161 C 161,155 163,148 164,140 C 166,128 165,116 160,105 C 154,95 142,88 130,84 Z",
-      "Thorax",
-    ),
-    a(
-      "abdomen",
-      "#0CA678",
-      "M 81,163 L 159,163 C 157,175 156,186 154,193 C 152,201 148,205 143,208 L 97,208 C 92,205 88,201 86,193 C 84,186 83,175 81,163 Z",
-      "Abdomen & Becken",
-    ),
-    a(
-      "arm",
-      "#E8930C",
-      "M 79,104 C 68,110 62,124 59,141 C 56,158 54,175 53,190 C 52,200 52,208 53,216 C 48,224 47,235 50,243 C 56,249 64,247 67,240 C 68,232 68,223 67,216 C 65,208 65,200 66,192 C 67,176 69,159 72,144 C 74,130 76,116 79,108 Z M 161,104 C 172,110 178,124 181,141 C 184,158 186,175 187,190 C 188,200 188,208 187,216 C 192,224 193,235 190,243 C 184,249 176,247 173,240 C 172,232 172,223 173,216 C 175,208 175,200 174,192 C 173,176 171,159 168,144 C 166,130 164,116 161,108 Z",
-      "Arm & Hand",
-    ),
-    a(
-      "bein",
-      "#3B5BDB",
-      "M 96,208 C 93,232 93,254 95,272 C 97,296 100,322 101,344 C 96,354 100,362 105,362 C 114,362 119,354 117,344 C 117,322 117,296 118,272 C 120,254 120,232 119,208 Z M 144,208 C 147,232 147,254 145,272 C 143,296 140,322 139,344 C 144,354 140,362 135,362 C 126,362 121,354 123,344 C 123,322 123,296 122,272 C 120,254 120,232 121,208 Z",
-      "Bein & Fu\xDF",
-    ),
-    [
-      ["neuro", 212, 28, 141, 34],
-      ["kopf", 212, 66, 134, 70],
-      ["thorax", 216, 120, 162, 126],
-      ["abdomen", 216, 184, 157, 184],
-      ["arm", 20, 196, 55, 200],
-      ["bein", 24, 300, 97, 296],
-    ].map(([l, d, c, m, h]) => n(l, d, c, m, h)),
   );
 }
 const figuresData = () => {
@@ -11160,7 +11483,7 @@ function HomeScreen({
               },
               "REGION W\xC4HLEN",
             ),
-            React.createElement(BodyMap, { progress: s, selected: S, onSelect: B }),
+            React.createElement(BodyMap, { progress: s, selected: S, onSelect: B, onOpenLesson: r, isOpen: g, lessons: VL }),
             React.createElement(
               "div",
               { style: { display: "flex", gap: 6, flexWrap: "wrap", paddingTop: 4 } },
