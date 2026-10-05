@@ -7381,7 +7381,7 @@ function LabelLayer({
     if ((y && !y.has(x) && !S && !B) || (a && !B && !a.others) || (e === "off" && !S && !B)) return null;
     const [A, u, p, f] = b.b;
     let k = Math.max(3.5, (b.f || b.lh || f) * o * 0.86);
-    (S || B) && (k = Math.max(k, i));
+    B ? (k = Math.max(k, i)) : S && (k = Math.min(k * 1.3, k + 4));
     const w = ((B && a.lang ? a.lang : e) === "de" && b.de) || b.la,
       M = B && !a.reveal ? a.text || "?" : (B && a.revealText) || w,
       z = A + p / 2,
@@ -7422,20 +7422,20 @@ function LabelLayer({
       });
     }
     if (S || B) {
-      const H = Math.max(3, k * 0.32),
+      const H = B ? Math.max(3, k * 0.32) : Math.max(1.5, k * 0.25),
         D = String(M).length * k * 0.6 + 2 * H;
       if (
         (Object.assign(F, {
           background: B && a.reveal === "bad" ? C.bad : n,
           color: "#fff",
           borderRadius: Math.max(4, k * 0.35),
-          padding: `${Math.max(1, k * 0.1)}px ${H}px`,
+          padding: B ? `${Math.max(1, k * 0.1)}px ${H}px` : `0 ${H}px`,
           fontWeight: 700,
           zIndex: 3,
           whiteSpace: "nowrap",
           maxWidth: "none",
           width: "auto",
-          boxShadow: "0 2px 8px rgba(20,30,50,0.32)",
+          boxShadow: B ? "0 2px 8px rgba(20,30,50,0.32)" : "0 1px 3px rgba(20,30,50,0.25)",
         }),
         !b.rot)
       ) {
