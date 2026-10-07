@@ -1,9 +1,25 @@
 ANATOMIA — OFFLINE-ANATOMIE-APP
 ================================
-10 Bereiche, 66 Themen, 527 Lektionen, rund 3500 Lernkarten, 122 klinische
+10 Bereiche, 71 Themen, 630 Lektionen, rund 4400 Lernkarten, 122 klinische
 Faelle, 200 beschriftete Abbildungen im Bildatlas, 3 echte CT-/MRT-Serien.
 
-NEU IN DIESER VERSION: EINTEILUNG NACH KOERPERREGIONEN
+NEU IN DIESER VERSION: 900 NEUE STRUKTUREN
+- 103 neue Lektionen mit rund 900 Strukturen, die vorher fehlten, z. B.:
+  alle mimischen Muskeln, Kau-, Gaumen-, Rachen- und Kehlkopfmuskeln,
+  Aeste der A. carotis externa und A. maxillaris, Hirnarterien im Detail,
+  Gesichts- und Halsvenen, alle Trigeminus- und Fazialisaeste, Halsgeflecht
+  und Kopfganglien; Leberbaender, Leberpforte, Lebersegmente, Leberlaeppchen,
+  Gallenwege, Bauchfellraeume, Darm- und Beckenarterien, Pfortaderkreislauf;
+  Herzinneres, Koronaraeste, Lunge, Pleura und Mediastinum; Achsel-, Arm-
+  und Beingefaesse, alle Armnerven-Aeste und Laehmungsbilder, Gelenkbaender.
+- Neue Themen: Arterien, Venen und Nerven von Ruecken & Wirbelsaeule,
+  Nerven des Thorax, Brustdruese.
+- Alle beschrifteten Strukturen auf den 200 Abbildungen werden gelehrt.
+- Wo moeglich zeigt ein 3D-Modell die Struktur farbig (rund 190 der neuen
+  Karten); im Quiz gibt es dafuer die Frage "Welche Struktur ist im
+  3D-Modell markiert?". Nach Textfragen erscheint das 3D-Bild als Loesung.
+
+EINTEILUNG NACH KOERPERREGIONEN
 Die Lektionen sind neu sortiert. Auf dem Startbildschirm stehen jetzt die
 Bereiche untereinander; ein Tipp klappt einen Bereich auf, darin liegen die
 Themen, darin die Lektionen:
@@ -25,8 +41,6 @@ traegt die Atlas-Fassung den Zusatz "(Bildatlas)". Jede Struktur ist weiter
 da, keine ging verloren. Der Lernfortschritt (abgeschlossene Lektionen,
 Wiederholungsplan, Fehlerbuch) wird automatisch uebernommen; nur die Tests
 der alten Einheiten zaehlen nicht fuer die neuen Themen-Tests.
-Noch duenn besetzt: Fuer Ruecken gibt es keine eigenen Arterien, Venen und
-Nerven, fuer den Thorax keine eigenen Nerven-Lektionen.
 
 FRUEHERE NEUERUNGEN
 - Fehlerbuch mit 3D-Koerper: Knochen, Organe, Muskeln und Gefaesse sind zu
@@ -54,7 +68,7 @@ FRUEHERE NEUERUNGEN
   Ebenen & Achsen, Bewegungen, Organsysteme, Koerperhoehlen, Gewebe).
 - Lernstufen oben auf dem Startbildschirm: "Einsteiger" zeigt nur das
   Grundwissen (107 Lektionen), "Fortgeschritten" nur die komplexen
-  Lektionen (420), "Alles" zeigt alles.
+  Lektionen (523), "Alles" zeigt alles.
 - Viele neue Belohnungen: 6 neue Hintergruende (u. a. Koralle), 5 neue
   Lernpfad-Farben, 10 Avatare, 4 Erfolgs-Effekte, Doppel-XP, Joker- und
   Serien-Schutz-Pakete, 6 neue Titel und 21 Erfolge mit Taler-Bonus.
@@ -94,9 +108,9 @@ LERNMODI
   Strukturen, die noch nie dran waren. Vorderseite: Abbildung ohne
   Beschriftung, die gesuchte Stelle mit Fragezeichen. Rueckseite: lateinischer
   und deutscher Name, Funktion und die beschriftete Abbildung.
-  Karten pro Region: Kopf & Hals 874, Gehirn & Rueckenmark 334,
-  Ruecken 149, Thorax 423, Abdomen & Becken 577, Arm & Hand 329,
-  Bein & Fuss 294, Radiologie 78.
+  Karten pro Region: Kopf & Hals 1155, Gehirn & Rueckenmark 425,
+  Ruecken 202, Thorax 526, Abdomen & Becken 765, Arm & Hand 414,
+  Bein & Fuss 381, Radiologie 78.
 - Wiederholen: Spaced Repetition nach Leitner (1, 2, 4, 8, 16, 32 Tage).
 - Fehlerbuch: Alles falsch Beantwortete sammelt sich automatisch.
 - Faelle: 122 klinische Vignetten mit Aufloesung, 12 pro Durchgang.
