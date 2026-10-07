@@ -1,9 +1,29 @@
 ANATOMIA — OFFLINE-ANATOMIE-APP
 ================================
-10 Bereiche, 71 Themen, 630 Lektionen, rund 4400 Lernkarten, 122 klinische
-Faelle, 200 beschriftete Abbildungen im Bildatlas, 3 echte CT-/MRT-Serien.
+9 Bereiche, 67 Themen, 594 Lektionen, rund 4100 Lernkarten, 108 klinische
+Faelle, 195 beschriftete Abbildungen im Bildatlas. Die App ist ganz auf
+Anatomie ausgerichtet.
 
-NEU IN DIESER VERSION: 900 NEUE STRUKTUREN
+NEU IN DIESER VERSION: NUR NOCH ANATOMIE
+- Radiologie und Schnittbilder sind entfernt: der Bereich "Radiologie", die
+  Themen "Gehirn in CT & MRT", "Thorax in Roentgen & CT" und "Bauch & Becken
+  in CT & Sono", der Modus "Schnittbilder" (CT & MRT scrollen), die
+  Bildatlas-Kategorie "Bildgebung & Klinik", die Pruefungs-Fachrichtung
+  "Bildgebung", 14 Faelle zur Bildgebung und der Titel "Radiologe" im Laden.
+- Anatomische Strukturen, die bisher nur in den Radiologie-Lektionen standen,
+  sind jetzt in Anatomie-Lektionen: "Balken, innere Kapsel & Marklager",
+  "Stammganglien im Ueberblick", "Ventrikelabschnitte & Zisternen",
+  "Gelenke der Hand", dazu Augapfel, Warzenfortsatzzellen, Vierhuegelplatte,
+  Hirnschenkelfuss und Milz-Nieren-Nische.
+- Wer den Titel "Radiologe" gekauft hatte, bekommt die 900 Taler zurueck.
+  Der Lernfortschritt bleibt erhalten; Wiederholungskarten und
+  Fehlerbuch-Eintraege der entfernten Lektionen fallen weg.
+- 3D-Quiz: Gefragt wird nur noch, wenn das Modell genau diese Struktur
+  zeigt. Ist nur das ganze Organ oder der ganze Knochen markiert (z. B. bei
+  einem Knochenhoecker), erscheint die Markierung halbtransparent als
+  Lagehinweis und es gibt dazu keine 3D-Frage.
+
+VORIGE VERSION: 900 NEUE STRUKTUREN
 - 103 neue Lektionen mit rund 900 Strukturen, die vorher fehlten, z. B.:
   alle mimischen Muskeln, Kau-, Gaumen-, Rachen- und Kehlkopfmuskeln,
   Aeste der A. carotis externa und A. maxillaris, Hirnarterien im Detail,
@@ -14,8 +34,8 @@ NEU IN DIESER VERSION: 900 NEUE STRUKTUREN
   und Beingefaesse, alle Armnerven-Aeste und Laehmungsbilder, Gelenkbaender.
 - Neue Themen: Arterien, Venen und Nerven von Ruecken & Wirbelsaeule,
   Nerven des Thorax, Brustdruese.
-- Alle beschrifteten Strukturen auf den 200 Abbildungen werden gelehrt.
-- Wo moeglich zeigt ein 3D-Modell die Struktur farbig (rund 190 der neuen
+- Alle beschrifteten Strukturen auf den Abbildungen werden gelehrt.
+- Wo moeglich zeigt ein 3D-Modell die Struktur farbig (rund 200 der neuen
   Karten); im Quiz gibt es dafuer die Frage "Welche Struktur ist im
   3D-Modell markiert?". Nach Textfragen erscheint das 3D-Bild als Loesung.
 
@@ -29,12 +49,10 @@ Themen, darin die Lektionen:
 - Kopf & Hals, Ruecken, Thorax, Abdomen & Becken, Arm & Hand, Bein & Fuss:
   jeweils zuerst Knochen, dann Muskeln, dann Arterien, dann Venen, dann
   Nerven, danach Gelenke & Baender, die Organe der Region (z. B. Auge, Ohr,
-  Herz, Lunge, Magen & Darm, Niere) und am Ende die Bildgebung der Region.
+  Herz, Lunge, Magen & Darm, Niere).
 - Gehirn & Rueckenmark: Grosshirn, Zwischenhirn & Basalganglien, Hirnstamm &
-  Kleinhirn, Hirnhaeute & Liquor, Rueckenmark & Bahnen, Sehbahn, CT & MRT.
+  Kleinhirn, Hirnhaeute & Liquor, Rueckenmark & Bahnen, Sehbahn.
   Die Arterien, Venen (Hirnsinus) und Hirnnerven stehen bei Kopf & Hals.
-- Radiologie: Grundlagen & Technik (Projektionen, Dichtewerte, MRT-Sequenzen,
-  Kontrastmittel, Sonografie, Angiografie, Frakturen, Strahlenschutz).
 Gemischte Bildtafeln wurden aufgeteilt, z. B. "Herz von aussen" in Herz,
 Arterien und Venen. Steht eine Lektion doppelt im Thema (Schema und Atlas),
 traegt die Atlas-Fassung den Zusatz "(Bildatlas)". Jede Struktur ist weiter
@@ -62,13 +80,13 @@ FRUEHERE NEUERUNGEN
 - Dunkelmodus: Mond-Knopf neben "Anatomia".
 - Updates erscheinen sofort beim naechsten Oeffnen mit Internet.
 - 381 neue Bildatlas-Lektionen in 22 Einheiten: Jede beschriftete Struktur
-  auf jeder der 200 Abbildungen hat jetzt eine eigene Lernkarte mit
+  auf jeder Abbildung hat jetzt eine eigene Lernkarte mit
   Erklaerung, Quizfragen und Karteikarte.
 - Neue Einheit "Grundlagen: Sprache der Anatomie" (Lagebezeichnungen,
   Ebenen & Achsen, Bewegungen, Organsysteme, Koerperhoehlen, Gewebe).
 - Lernstufen oben auf dem Startbildschirm: "Einsteiger" zeigt nur das
   Grundwissen (107 Lektionen), "Fortgeschritten" nur die komplexen
-  Lektionen (523), "Alles" zeigt alles.
+  Lektionen (487), "Alles" zeigt alles.
 - Viele neue Belohnungen: 6 neue Hintergruende (u. a. Koralle), 5 neue
   Lernpfad-Farben, 10 Avatare, 4 Erfolgs-Effekte, Doppel-XP, Joker- und
   Serien-Schutz-Pakete, 6 neue Titel und 21 Erfolge mit Taler-Bonus.
@@ -78,7 +96,7 @@ FRUEHERE NEUERUNGEN
 - Alle Abbildungen sind textfrei: Die englische Originalbeschriftung wurde
   entfernt, die Hinweislinien bleiben stehen. Die Beschriftung legt die App
   selbst darueber, umschaltbar Latein / Deutsch / aus.
-- Bildatlas: 200 Abbildungen in 13 Bereichen, mit Suche nach Strukturen,
+- Bildatlas: 195 Abbildungen in 12 Bereichen, mit Suche nach Strukturen,
   Vollbild mit Zoom und einem Selbsttest pro Abbildung.
 - Quiz und Karteikarten nehmen jetzt die echten Abbildungen: Die gesuchte
   Beschriftung ist durch ein Fragezeichen ersetzt. Bei Abbildungen mit
@@ -86,8 +104,7 @@ FRUEHERE NEUERUNGEN
 - Fuenf neue Einheiten (32 Lektionen): Schaedel, Kiefer & Mund;
   Gehirn: Kerne, Bahnen & Sinus; Organe & Gewebe im Detail;
   Knochen & Gelenke im Detail; Augenmuskeln, Innenohr & Nase.
-- 24 neue klinische Faelle, viele davon mit Bildgebung.
-- Schnittbilder: echte CT- und MRT-Serien wie am Befundplatz.
+- 24 neue klinische Faelle.
 - Schriften sind eingebettet, die App braucht kein Internet mehr dafuer.
 
 BILDER JE LEKTION
@@ -96,9 +113,11 @@ BILDER JE LEKTION
    zoomen, Doppeltippen vergroessert). "Ganzes Bild" zeigt bei Teilbildern
    die komplette Abbildung.
 2. 3D echt: Modelle mit einzeln benannten Knochen, Muskeln und Organen;
-   die gefragte Struktur leuchtet auf, Ziehen dreht das Modell (50 Lektionen).
+   die gefragte Struktur leuchtet auf, Ziehen dreht das Modell (rund 100
+   Lektionen). Halbtransparent markiert heisst: Die Struktur ist Teil des
+   markierten Knochens oder Organs.
 3. Schema: eigene Zeichnung mit farbiger Markierung.
-Lektionen zu Fachbegriffen (Radiologie) zeigen Textkarten.
+Lektionen ohne passendes Bild zeigen Textkarten.
 
 LERNMODI
 - Lektion: Karten durchblaettern, dann Quiz mit mehreren Fragearten —
@@ -108,25 +127,15 @@ LERNMODI
   Strukturen, die noch nie dran waren. Vorderseite: Abbildung ohne
   Beschriftung, die gesuchte Stelle mit Fragezeichen. Rueckseite: lateinischer
   und deutscher Name, Funktion und die beschriftete Abbildung.
-  Karten pro Region: Kopf & Hals 1155, Gehirn & Rueckenmark 425,
-  Ruecken 202, Thorax 526, Abdomen & Becken 765, Arm & Hand 414,
-  Bein & Fuss 381, Radiologie 78.
+  Karten pro Region: Kopf & Hals 1157, Gehirn & Rueckenmark 330,
+  Ruecken 202, Thorax 444, Abdomen & Becken 719, Arm & Hand 414,
+  Bein & Fuss 381.
 - Wiederholen: Spaced Repetition nach Leitner (1, 2, 4, 8, 16, 32 Tage).
 - Fehlerbuch: Alles falsch Beantwortete sammelt sich automatisch.
-- Faelle: 122 klinische Vignetten mit Aufloesung, 12 pro Durchgang.
+- Faelle: 108 klinische Vignetten mit Aufloesung, 12 pro Durchgang.
 - Bildatlas: Abbildung waehlen, Strukturen antippen, Beschriftung auf
   Latein, Deutsch oder ausblenden, Selbsttest mit bis zu 10 Fragen.
   Die Suche auf dem Startbildschirm findet auch Abbildungen.
-- Schnittbilder: CT Thorax & Oberbauch, CT Kopf, MRT Kopf (T1/T2).
-  Mit dem Finger ueber das Bild wischen oder den Regler ziehen, Fenster
-  (Weichteil, Lunge, Knochen) umschalten. Gelbe Striche markieren
-  beschriftete Schichten; von dort geht es direkt zur passenden Lektion.
-- Bildgebung (48 Lektionen): Roentgen-Thorax, Roentgenzeichen, CT Kopf mit
-  Blutungstypen, Schlaganfall-Bildgebung, echte MRT- und CT-Schnitte und
-  akutes Abdomen stehen am Ende ihrer Koerperregion; Hounsfield-Werte und
-  Fenster, MRT-Sequenzen, Kontrastmittelphasen, Projektionen, Sonografie,
-  Frakturen, Angiografie, Strahlenschutz, KM- und MR-Sicherheit im Bereich
-  "Radiologie".
 
 BELOHNUNGEN UND LADEN
 Taler gibt es fuer abgeschlossene Lektionen, fehlerfreie Quizze, bestandene
@@ -142,7 +151,7 @@ Ganz oben die Lernstufe: Einsteiger, Fortgeschritten oder Alles.
 Darunter eine Koerperkarte: Region antippen, darunter erscheinen nur deren
 Themen. Ohne Auswahl stehen die Bereiche untereinander (Grundlagen, Ganzer
 Koerper, Kopf & Hals, Gehirn & Rueckenmark, Ruecken, Thorax, Abdomen &
-Becken, Arm & Hand, Bein & Fuss, Radiologie); Antippen klappt einen Bereich
+Becken, Arm & Hand, Bein & Fuss); Antippen klappt einen Bereich
 auf. Alle Themen sind von Anfang an frei waehlbar; innerhalb eines Themas
 schaltet sich die naechste Lektion frei, sobald die vorherige mit dem Quiz
 abgeschlossen ist. Am Ende jedes Themas steht ein Themen-Test (12 Fragen).
@@ -169,8 +178,8 @@ WEG B — GITHUB PAGES
 AUF IPHONE ODER IPAD INSTALLIEREN
 1. Adresse in SAFARI oeffnen.
 2. Teilen-Symbol -> "Zum Home-Bildschirm".
-3. Beim ersten Start einige Minuten im WLAN geoeffnet lassen (rund 50 MB
-   Bilder, Schichtserien und 3D-Modelle wandern in den Offline-Speicher).
+3. Beim ersten Start einige Minuten im WLAN geoeffnet lassen (rund 55 MB
+   Bilder und 3D-Modelle wandern in den Offline-Speicher).
 4. Danach laeuft alles im Flugmodus.
 Bei einem Update die App einmal im WLAN oeffnen und neu starten.
 
@@ -185,9 +194,6 @@ Abbildungen: OpenStax College, "Anatomy & Physiology", CC BY 4.0
 lateinische und deutsche Begriffe ersetzt.
 3D-Modelle: BodyParts3D (CC BY-SA 2.1 JP) und Z-Anatomy (CC BY-SA),
 aufbereitet ueber das Projekt BodyExplorer.
-MRT-Schnitte der Lektionen: MNI152-Standardgehirn (Montreal Neurological
-Institute / FSL).
-CT- und MRT-Serien im Schnittbild-Viewer: NiiVue-Demodatensaetze (BSD-Lizenz).
 Schriften: Fredoka und Atkinson Hyperlegible (SIL Open Font License, siehe
 OFL-Fredoka.txt und OFL-Atkinson.txt).
-Schemazeichnungen und gezeichnete CT-Ebenen sind eigene Darstellungen.
+Schemazeichnungen sind eigene Darstellungen.
