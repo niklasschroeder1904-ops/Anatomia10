@@ -1,9 +1,34 @@
 ANATOMIA — OFFLINE-ANATOMIE-APP
 ================================
-53 Einheiten, 521 Lektionen, rund 3500 Lernkarten, 122 klinische Faelle,
-200 beschriftete Abbildungen im Bildatlas, 3 echte CT-/MRT-Serien zum Scrollen.
+10 Bereiche, 66 Themen, 527 Lektionen, rund 3500 Lernkarten, 122 klinische
+Faelle, 200 beschriftete Abbildungen im Bildatlas, 3 echte CT-/MRT-Serien.
 
-NEU IN DIESER VERSION
+NEU IN DIESER VERSION: EINTEILUNG NACH KOERPERREGIONEN
+Die Lektionen sind neu sortiert. Auf dem Startbildschirm stehen jetzt die
+Bereiche untereinander; ein Tipp klappt einen Bereich auf, darin liegen die
+Themen, darin die Lektionen:
+- Grundlagen: Sprache der Anatomie, Organsysteme/Hoehlen/Gewebe, Bau von
+  Knochen & Gelenken, Kreislauf & Gefaesswand, Lymph- & Hormonsystem.
+- Ganzer Koerper: Skelett, Muskeln, Arterien, Venen und Nerven im Ueberblick.
+- Kopf & Hals, Ruecken, Thorax, Abdomen & Becken, Arm & Hand, Bein & Fuss:
+  jeweils zuerst Knochen, dann Muskeln, dann Arterien, dann Venen, dann
+  Nerven, danach Gelenke & Baender, die Organe der Region (z. B. Auge, Ohr,
+  Herz, Lunge, Magen & Darm, Niere) und am Ende die Bildgebung der Region.
+- Gehirn & Rueckenmark: Grosshirn, Zwischenhirn & Basalganglien, Hirnstamm &
+  Kleinhirn, Hirnhaeute & Liquor, Rueckenmark & Bahnen, Sehbahn, CT & MRT.
+  Die Arterien, Venen (Hirnsinus) und Hirnnerven stehen bei Kopf & Hals.
+- Radiologie: Grundlagen & Technik (Projektionen, Dichtewerte, MRT-Sequenzen,
+  Kontrastmittel, Sonografie, Angiografie, Frakturen, Strahlenschutz).
+Gemischte Bildtafeln wurden aufgeteilt, z. B. "Herz von aussen" in Herz,
+Arterien und Venen. Steht eine Lektion doppelt im Thema (Schema und Atlas),
+traegt die Atlas-Fassung den Zusatz "(Bildatlas)". Jede Struktur ist weiter
+da, keine ging verloren. Der Lernfortschritt (abgeschlossene Lektionen,
+Wiederholungsplan, Fehlerbuch) wird automatisch uebernommen; nur die Tests
+der alten Einheiten zaehlen nicht fuer die neuen Themen-Tests.
+Noch duenn besetzt: Fuer Ruecken gibt es keine eigenen Arterien, Venen und
+Nerven, fuer den Thorax keine eigenen Nerven-Lektionen.
+
+FRUEHERE NEUERUNGEN
 - Fehlerbuch mit 3D-Koerper: Knochen, Organe, Muskeln und Gefaesse sind zu
   einem ganzen Menschen zusammengesetzt; falsch beantwortete Strukturen
   leuchten rot (je dunkler, desto oefter falsch), Antippen zeigt den Namen.
@@ -22,7 +47,6 @@ NEU IN DIESER VERSION
   XP der letzten 14 Tage, Wiederholungsstufen, Pruefungsverlauf.
 - Dunkelmodus: Mond-Knopf neben "Anatomia".
 - Updates erscheinen sofort beim naechsten Oeffnen mit Internet.
-
 - 381 neue Bildatlas-Lektionen in 22 Einheiten: Jede beschriftete Struktur
   auf jeder der 200 Abbildungen hat jetzt eine eigene Lernkarte mit
   Erklaerung, Quizfragen und Karteikarte.
@@ -30,15 +54,13 @@ NEU IN DIESER VERSION
   Ebenen & Achsen, Bewegungen, Organsysteme, Koerperhoehlen, Gewebe).
 - Lernstufen oben auf dem Startbildschirm: "Einsteiger" zeigt nur das
   Grundwissen (107 Lektionen), "Fortgeschritten" nur die komplexen
-  Lektionen (414), "Alles" zeigt alles.
+  Lektionen (420), "Alles" zeigt alles.
 - Viele neue Belohnungen: 6 neue Hintergruende (u. a. Koralle), 5 neue
   Lernpfad-Farben, 10 Avatare, 4 Erfolgs-Effekte, Doppel-XP, Joker- und
   Serien-Schutz-Pakete, 6 neue Titel und 21 Erfolge mit Taler-Bonus.
 - Gekaufte Designs lassen sich jederzeit wieder ausschalten ("aus").
 - Behoben: Die Lernpfad-Farbe (z. B. Koralle) wurde nicht angezeigt. Sie
   faerbt jetzt die Wirbelsaeule neben den Lektionen.
-
-FRUEHERE NEUERUNGEN
 - Alle Abbildungen sind textfrei: Die englische Originalbeschriftung wurde
   entfernt, die Hinweislinien bleiben stehen. Die Beschriftung legt die App
   selbst darueber, umschaltbar Latein / Deutsch / aus.
@@ -72,9 +94,9 @@ LERNMODI
   Strukturen, die noch nie dran waren. Vorderseite: Abbildung ohne
   Beschriftung, die gesuchte Stelle mit Fragezeichen. Rueckseite: lateinischer
   und deutscher Name, Funktion und die beschriftete Abbildung.
-  Karten pro Region: Kopf & Hals 198, Gehirn & Nerven 104, Thorax 88,
-  Abdomen & Becken 150, Ruecken 29, Arm & Hand 81, Bein & Fuss 97,
-  Schnittbilder 318.
+  Karten pro Region: Kopf & Hals 874, Gehirn & Rueckenmark 334,
+  Ruecken 149, Thorax 423, Abdomen & Becken 577, Arm & Hand 329,
+  Bein & Fuss 294, Radiologie 78.
 - Wiederholen: Spaced Repetition nach Leitner (1, 2, 4, 8, 16, 32 Tage).
 - Fehlerbuch: Alles falsch Beantwortete sammelt sich automatisch.
 - Faelle: 122 klinische Vignetten mit Aufloesung, 12 pro Durchgang.
@@ -85,16 +107,16 @@ LERNMODI
   Mit dem Finger ueber das Bild wischen oder den Regler ziehen, Fenster
   (Weichteil, Lunge, Knochen) umschalten. Gelbe Striche markieren
   beschriftete Schichten; von dort geht es direkt zur passenden Lektion.
-- Radiologie und Schnittbilder (5 Einheiten, 38 Lektionen): Roentgen-Thorax,
-  Roentgenzeichen, CT Kopf mit Blutungstypen, Hounsfield-Werte und Fenster,
-  MRT-Sequenzen, Kontrastmittelphasen, Projektionen, Sonografie,
-  Schlaganfall-Bildgebung, akutes Abdomen, Zugaenge und Fremdmaterial,
-  Frakturen, Angiografie, Strahlenschutz, KM- und MR-Sicherheit, dazu echte
-  MRT- und CT-Lektionen.
+- Bildgebung (48 Lektionen): Roentgen-Thorax, Roentgenzeichen, CT Kopf mit
+  Blutungstypen, Schlaganfall-Bildgebung, echte MRT- und CT-Schnitte und
+  akutes Abdomen stehen am Ende ihrer Koerperregion; Hounsfield-Werte und
+  Fenster, MRT-Sequenzen, Kontrastmittelphasen, Projektionen, Sonografie,
+  Frakturen, Angiografie, Strahlenschutz, KM- und MR-Sicherheit im Bereich
+  "Radiologie".
 
 BELOHNUNGEN UND LADEN
 Taler gibt es fuer abgeschlossene Lektionen, fehlerfreie Quizze, bestandene
-Einheiten-Tests, gewusste Karteikarten, geloeste Faelle und Selbsttests im
+Themen-Tests, gewusste Karteikarten, geloeste Faelle und Selbsttests im
 Bildatlas. Fuer Erfolge (z. B. 10 Lektionen, 7-Tage-Serie, bestandene Tests)
 gibt es Extra-Taler zum Abholen; ein roter Punkt am Taler-Knopf zeigt sie an.
 Im Laden: Hintergruende, Lernpfad-Farben, Avatare, Erfolgs-Effekte, viertes
@@ -104,10 +126,12 @@ mit "einschalten" / "aus" jederzeit an- und abschalten.
 NAVIGATION
 Ganz oben die Lernstufe: Einsteiger, Fortgeschritten oder Alles.
 Darunter eine Koerperkarte: Region antippen, darunter erscheinen nur deren
-Lektionen. Ohne Auswahl sind die Einheiten nach Region sortiert,
-die Radiologie steht am Ende. Alle Einheiten sind von Anfang an frei waehlbar;
-innerhalb einer Einheit schaltet sich die naechste Lektion frei, sobald die
-vorherige mit dem Quiz abgeschlossen ist.
+Themen. Ohne Auswahl stehen die Bereiche untereinander (Grundlagen, Ganzer
+Koerper, Kopf & Hals, Gehirn & Rueckenmark, Ruecken, Thorax, Abdomen &
+Becken, Arm & Hand, Bein & Fuss, Radiologie); Antippen klappt einen Bereich
+auf. Alle Themen sind von Anfang an frei waehlbar; innerhalb eines Themas
+schaltet sich die naechste Lektion frei, sobald die vorherige mit dem Quiz
+abgeschlossen ist. Am Ende jedes Themas steht ein Themen-Test (12 Fragen).
 
 DATEIEN
 Alle Dateien liegen auf einer Ebene, keine Unterordner, nichts umbenennen.
