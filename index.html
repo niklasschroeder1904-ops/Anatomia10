@@ -7721,7 +7721,7 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
     ReactDOM.createPortal(
     React.createElement(
       "div",
-      { className: "ana-body", style: { position: "fixed", inset: 0, zIndex: 60, background: "#fff", display: "flex", flexDirection: "column", height: "100dvh" } },
+      { className: "ana-body", onClick: (D) => D.stopPropagation(), style: { position: "fixed", inset: 0, zIndex: 60, background: "#fff", display: "flex", flexDirection: "column", height: "100dvh" } },
       React.createElement(
         "div",
         { style: { display: "flex", alignItems: "center", gap: 8, padding: "calc(10px + env(safe-area-inset-top)) 12px 10px", borderBottom: `1px solid ${C.line}`, background: "#fff" } },
@@ -7904,7 +7904,7 @@ function AtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 270 
       React.createElement(
         "button",
         {
-          onClick: () => h(!0),
+          onClick: (D) => (D.stopPropagation(), h(!0)),
           className: "ana-body",
           style: {
             marginLeft: "auto",
@@ -13220,7 +13220,7 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
               z.length > 0 &&
                 React.createElement(
                   "div",
-                  { style: { marginTop: 12 } },
+                  { style: { marginTop: 12 }, onClick: (D) => D.stopPropagation() },
                   React.createElement(AtlasView, { plates: z, lesson: g, itemId: k.id, color: o, height: 230 }),
                 ),
               React.createElement(
