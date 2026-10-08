@@ -8855,15 +8855,30 @@ function siblingItems(s, r) {
     .filter((e) => !o.has(e.la) && e.la !== r.la);
 }
 const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-  MASK_GENERIC = new Set("musculus musculi arteria vena nervus ligamentum glandula corpus processus foramen fossa sinus nucleus tractus plexus truncus ramus ductus interna externa internus externus internum externum major majus minor minus superior inferior anterior posterior medialis mediale lateralis laterale profundus profunda superficialis communis dexter dextra sinister sinistra longus longa brevis magnus magna caput pars lobus ossis cavitas planum axis membrana facies margo musculus".split(" ")),
-  maskNorm = (s) => s.toLowerCase().replace(/c/g, "k").replace(/ae/g, "e").replace(/ph/g, "f").replace(/y/g, "i"),
-  maskFact = (s) => {
+  MASK_GENERIC = new Set("musculus musculi arteria vena nervus ligamentum glandula corpus processus foramen fossa sinus nucleus tractus plexus truncus ramus ductus interna externa internus externus internum externum major majus minor minus superior inferior anterior posterior medialis mediale lateralis laterale profundus profunda superficialis communis dexter dextra sinister sinistra longus longa brevis magnus magna caput pars lobus ossis cavitas planum axis membrana facies margo musculus".split(" ").concat(
+    "rechter rechte rechten rechtes linker linke linken linkes oberer obere oberen oberes unterer untere unteren unteres vorderer vordere vorderen vorderes hinterer hintere hinteren hinteres gro\xDFer gro\xDFe gro\xDFen gro\xDFes kleiner kleine kleinen kleines innerer innere inneren inneres \xE4u\xDFerer \xE4u\xDFere \xE4u\xDFeren \xE4u\xDFeres mittlerer mittlere mittleren mittleres gemeinsame gemeinsamer gemeinsamen tiefer tiefen tiefes langer lange langen langes kurzer kurze kurzen kurzes muskel muskeln arterie arterien venen nerven knochen".split(" "),
+    ),
+  ),
+  // one stem, different spellings: Latin ae/oe, c, ph, y, th and German umlauts are written alike
+  stemNorm = (s) =>
+    s.toLowerCase().replace(/\xE4/g, "ae").replace(/\xF6/g, "oe").replace(/\xFC/g, "ue").replace(/\xDF/g, "ss").replace(/ae|oe/g, "e").replace(/c/g, "k").replace(/ph/g, "f").replace(/y/g, "i").replace(/th/g, "t"),
+  // stems of the specific words of a name (not musculus, major, Muskel, rechter ...)
+  stemsOf = (s) => {
+    const o = ((s || "").replace(/\s*\([^()]*\)/g, "").toLowerCase().match(/[a-z\xE4\xF6\xFC\xDF]+/g) || []).filter((t) => t.length >= 5),
+      e = o.filter((t) => !MASK_GENERIC.has(t));
+    return (e.length ? e : o).map(stemNorm).map((t) => t.slice(0, Math.max(5, t.length - 3)));
+  },
+  // does the text name this term, also in the other language ("Medianebene" names "Planum medianum")?
+  namesTerm = (s, r) => {
+    const o = stemNorm(s || "");
+    return stemsOf(r).some((e) => o.includes(e));
+  },
+  // hide the name in its definition; the German name too, unless it is shown anyway (flashcard)
+  maskFact = (s, d = !0) => {
     let r = s.fact || "";
     for (const o of [s.la, s.de]) !o || o.length < 4 || (r = r.replace(new RegExp(escRe(o), "gi"), "\u2026"));
-    const o = ((s.la || "").toLowerCase().match(/[a-z]+/g) || []).filter((t) => t.length >= 5),
-      e = o.filter((t) => !MASK_GENERIC.has(t)),
-      t = (e.length ? e : o).map((a) => maskNorm(a).slice(0, Math.max(5, a.length - 3)));
-    return t.length ? r.replace(/[A-Za-z\xC0-\xFF]+/g, (a) => (a.length >= 4 && t.some((n) => maskNorm(a).includes(n)) ? "\u2026" : a)) : r;
+    const t = [...stemsOf(s.la), ...(d ? stemsOf(s.de) : [])];
+    return t.length ? r.replace(/[A-Za-z\xC0-\xFF]+/g, (a) => (a.length >= 4 && t.some((n) => stemNorm(a).includes(n)) ? "\u2026" : a)) : r;
   },
   whatQ = (s) => (s.term ? "Welcher Begriff ist gemeint?" : "Welche Struktur ist gemeint?"),
   hasSchema = (s) => !!(s.figure && FIGURES[s.figure]);
@@ -8874,41 +8889,61 @@ const bareLabel = (s) => (s || "").replace(/\s*\([^()]*\)/g, "").trim(),
     const t = (s || "").trim(),
       u = bareLabel(t),
       w = u.split(/[\s/]+/).filter(Boolean);
-    return { sl: u.includes("/"), br: t.includes("("), co: u.includes(","), n: w.length, h: (w[0] || "").toLowerCase(), l: u.length };
+    return { sl: u.includes("/"), br: t.includes("("), co: u.includes(","), un: / (und|et) /.test(u), n: w.length, h: (w[0] || "").toLowerCase(), l: u.length };
   },
+  // German wording among Latin names ("Anatomische Grundstellung", "Kyphose und Lordose")
+  GERMANISH = /[\xE4\xF6\xFC\xDF]|\b(der|die|das|des|dem|den|zum|zur|vom|beim)\b|[a-z](ung|ungen|ische|ischer|isches|ischen|heit|keit|lich|liche|licher|chen|zeichen)\b/i,
   FORM_HEAD = /^(mm?|aa?|vv?|nn?|ligg?|procc?|rr?|gll?|nucl|tr|os|ossa|ductus|sinus|plexus|tractus|fossa|foramen|canalis|articulatio|cartilago|lobus|gyrus|sulcus|nucleus|tunica|pars)\.?$/,
   formDist = (a, b) =>
     (a.sl !== b.sl ? 4.5 : 0) +
     (a.br !== b.br ? 1.6 : 0) +
-    (a.co !== b.co ? 1.6 : 0) +
+    (a.co !== b.co ? 2.2 : 0) +
+    (a.un !== b.un ? 1.6 : 0) +
     (a.h !== b.h && (FORM_HEAD.test(a.h) || FORM_HEAD.test(b.h)) ? 1.2 : 0) +
     Math.min(2, 0.6 * Math.abs(a.n - b.n)) +
     Math.min(1.5, Math.abs(a.l - b.l) / 18);
 function pickD(s, r, o, e = 3, syn = null) {
   const F = formOf(o(r)),
     K = (i) => bareLabel(i).toLowerCase(),
+    // the language must not single an option out: a German-worded one among Latin names ("Anatomische
+    // Grundstellung"), or among German names the one that is just the Latin term ("Thalamus", "Foramen ovale")
+    md = o({ la: "\u0001", de: "\u0002" }),
+    B = (i) => bareLabel(i || "").toLowerCase(),
+    G = (n) => (md === "\u0001" ? GERMANISH.test(B(n.la)) : md === "\u0002" && B(n.de) === B(n.la)),
+    G0 = G(r),
     seen = new Set([K(o(r))]),
     c = [],
     add = (n, p) => {
       const i = o(n);
-      i && !seen.has(K(i)) && (seen.add(K(i)), c.push({ n, d: formDist(F, formOf(i)) + p + Math.random() * 0.9 }));
+      i && !seen.has(K(i)) && (seen.add(K(i)), c.push({ n, d: formDist(F, formOf(i)) + p + (G(n) !== G0 ? 2.5 : 0) + Math.random() * 0.9 }));
     };
   s.forEach((n) => add(n, n.__pen || 0));
-  // a pair answer ("Rotatio interna / externa") or a list ("Pons, Cerebellum") needs look-alike distractors:
-  // join neighbouring terms of the lesson the same way (neighbours are often counterparts: Flexio, Extensio)
-  const J = F.sl ? [/\s\/\s/.test(o(r)) ? " / " : "/", "sl", "/"] : F.co ? [", ", "co", ","] : null;
-  if (J && syn && c.filter((x) => formOf(o(x.n))[J[1]]).length < e) {
-    const it = syn.filter((x) => x.id !== r.id && !/[/,]/.test(x.la || "") && !/[/,]/.test(x.de || ""));
-    // "V. iliaca externa" + "V. iliaca interna" -> "V. iliaca externa / interna", like the answers are written
-    const jn = (a, b) => {
-      const A = a.split(" "),
-        B = b.split(" ");
-      let k = 0;
-      if (J[2] === "/") while (k < A.length - 1 && k < B.length - 1 && A[k] === B[k]) k++;
-      return a + J[0] + B.slice(k).join(" ");
-    };
-    for (let k = 0; k + 1 < it.length; k++)
-      add({ id: "pair-" + it[k].id, la: jn(it[k].la, it[k + 1].la), de: jn(it[k].de, it[k + 1].de), __parts: [it[k], it[k + 1]] }, k % 2 ? 0.9 : 0.3);
+  // a pair answer ("Rotatio interna / externa") or a list ("Pons, Cerebellum", "Kyphose und Lordose") needs
+  // look-alike distractors: join neighbouring terms of the lesson the same way (neighbours are often
+  // counterparts: Flexio, Extensio)
+  const R = bareLabel(o(r)),
+    U = R.includes(" et ") ? " et " : " und ",
+    J = F.sl ? "sl" : F.co ? "co" : F.un ? "un" : null;
+  if (J && syn && c.filter((x) => formOf(o(x.n))[J]).length < e) {
+    const one = (x) => [x.la, x.de].every((y) => { const f = formOf(y); return !f.sl && !f.co && !f.un; }),
+      i0 = syn.filter((x) => x.id !== r.id && one(x)),
+      i1 = i0.filter((x) => G(x) === G0),
+      it = i1.length >= 4 ? i1 : i0,
+      // "V. iliaca externa" + "V. iliaca interna" -> "V. iliaca externa / interna", like the answers are written
+      jn = (p) => {
+        if (!F.sl) return F.un ? p.slice(0, -1).join(", ") + U + p[p.length - 1] : p.join(", ");
+        const A = p[0].split(" "),
+          B = p[1].split(" ");
+        let k = 0;
+        while (k < A.length - 1 && k < B.length - 1 && A[k] === B[k]) k++;
+        return p[0] + (/\s\/\s/.test(R) ? " / " : "/") + B.slice(k).join(" ");
+      };
+    // "Caput, Collum et Corpus tali": lists of three, and shorter ones of two
+    for (const m of F.co && F.un ? [3, 2] : [2])
+      for (let k = 0; k + m <= it.length; k++) {
+        const p = it.slice(k, k + m);
+        add({ id: "pair-" + m + p[0].id, la: jn(p.map((x) => x.la)), de: jn(p.map((x) => x.de)), __parts: p }, k % m ? 0.9 : 0.3);
+      }
   }
   // no term twice among the options ("Area Wernicke" next to "Area 4, Area Wernicke")
   const P = (n) => (n.__parts || [n]).map((x) => K(o(x))),
@@ -8941,7 +8976,9 @@ const optionsOf = (s, r) => {
 function makeQuestion(s, r, o) {
   const e = r.items.filter((i) => i.id !== s.id),
     t = (e.length < 5 || Math.random() < 0.3 ? sample(siblingItems(r, s), 6) : []).map((i) => ({ ...i, __pen: 0.5 })),
-    a = shuffle([...e, ...t]),
+    g = (i) => GERMANISH.test(bareLabel(i.la)),
+    w = g(s) ? siblingItems(r, s).filter(g).map((i) => ({ ...i, __pen: 0.5 })) : [],
+    a = shuffle([...e, ...t, ...w]),
     n = { figure: r.figure, hl: s.hl, explain: `${s.la} \u2014 ${s.de}. ${s.fact}`, item: s, lesson: r };
   if (o === "fig") {
     const i = (marksFor(r.id) || {})[s.id],
@@ -8980,7 +9017,7 @@ function makeQuestion(s, r, o) {
         F3 = formOf(m(s)),
         // a pair or list answer needs a pair or list among the distractors, else another question type is asked
         f3 = (k) => !F3[k] || D3.some((h) => formOf(m(h))[k]);
-      if (D3.length === 3 && f3("sl") && f3("co"))
+      if (D3.length === 3 && f3("sl") && f3("co") && f3("un"))
         return {
           ...n,
           kind: "real3d",
@@ -9006,15 +9043,21 @@ function makeQuestion(s, r, o) {
       options: optionsOf([{ label: l(s), correct: !0 }, ...pickD(a, s, l, 3, r.items).map((d) => ({ label: l(d), correct: !1 }))], !0),
     };
   }
+  // the asked name already contains the answer ("Medianebene" - "Planum medianum"): ask for the definition instead
+  (o === "term-de" || o === "term-la") && s.fact && (namesTerm(s.de, s.la) || namesTerm(s.la, s.de)) && (o = "fact");
   if (o === "fact") {
     const i = Math.random() < 0.4,
-      l = (d) => (i ? d.de : d.la);
+      l = (d) => (i ? d.de : d.la),
+      P = maskFact(s),
+      // no distractor the definition itself names ("Sonderfall der Sagittalebenen" next to Planum sagittale)
+      q = (d) => !namesTerm(P, d.la) && !namesTerm(P, d.de),
+      a2 = a.filter(q);
     return {
       ...n,
-      prompt: maskFact(s),
+      prompt: P,
       sub: i ? `${whatQ(r)} (deutsch)` : whatQ(r),
       showFig: !1,
-      options: optionsOf([{ label: l(s), correct: !0 }, ...pickD(a, s, l, 3, r.items).map((d) => ({ label: l(d), correct: !1 }))], !0),
+      options: optionsOf([{ label: l(s), correct: !0 }, ...pickD(a2.length >= 3 ? a2 : a, s, l, 3, r.items.filter(q)).map((d) => ({ label: l(d), correct: !1 }))], !0),
     };
   }
   return o === "term-de"
@@ -13089,7 +13132,7 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
                 React.createElement(
                   "div",
                   { className: "ana-body", style: { fontSize: 15, color: C.inkSoft, lineHeight: 1.5 } },
-                  maskFact(k),
+                  maskFact(k, !1),
                 ),
               React.createElement(
                 "div",
