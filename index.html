@@ -8867,18 +8867,80 @@ const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
   },
   whatQ = (s) => (s.term ? "Welcher Begriff ist gemeint?" : "Welche Struktur ist gemeint?"),
   hasSchema = (s) => !!(s.figure && FIGURES[s.figure]);
-function pickD(s, r, o, e = 3) {
-  const t = new Set([o(r)]),
-    a = [];
-  for (const n of shuffle(s)) {
-    const i = o(n);
-    if (!(!i || t.has(i)) && (t.add(i), a.push(n), a.length === e)) break;
+// answer options must not give themselves away by their form: pair "A / B", brackets, comma,
+// prefix (M., A., Lig. ...), number of words and length should look alike
+const bareLabel = (s) => (s || "").replace(/\s*\([^()]*\)/g, "").trim(),
+  formOf = (s) => {
+    const t = (s || "").trim(),
+      u = bareLabel(t),
+      w = u.split(/[\s/]+/).filter(Boolean);
+    return { sl: u.includes("/"), br: t.includes("("), co: u.includes(","), n: w.length, h: (w[0] || "").toLowerCase(), l: u.length };
+  },
+  FORM_HEAD = /^(mm?|aa?|vv?|nn?|ligg?|procc?|rr?|gll?|nucl|tr|os|ossa|ductus|sinus|plexus|tractus|fossa|foramen|canalis|articulatio|cartilago|lobus|gyrus|sulcus|nucleus|tunica|pars)\.?$/,
+  formDist = (a, b) =>
+    (a.sl !== b.sl ? 4.5 : 0) +
+    (a.br !== b.br ? 1.6 : 0) +
+    (a.co !== b.co ? 1.6 : 0) +
+    (a.h !== b.h && (FORM_HEAD.test(a.h) || FORM_HEAD.test(b.h)) ? 1.2 : 0) +
+    Math.min(2, 0.6 * Math.abs(a.n - b.n)) +
+    Math.min(1.5, Math.abs(a.l - b.l) / 18);
+function pickD(s, r, o, e = 3, syn = null) {
+  const F = formOf(o(r)),
+    K = (i) => bareLabel(i).toLowerCase(),
+    seen = new Set([K(o(r))]),
+    c = [],
+    add = (n, p) => {
+      const i = o(n);
+      i && !seen.has(K(i)) && (seen.add(K(i)), c.push({ n, d: formDist(F, formOf(i)) + p + Math.random() * 0.9 }));
+    };
+  s.forEach((n) => add(n, n.__pen || 0));
+  // a pair answer ("Rotatio interna / externa") or a list ("Pons, Cerebellum") needs look-alike distractors:
+  // join neighbouring terms of the lesson the same way (neighbours are often counterparts: Flexio, Extensio)
+  const J = F.sl ? [/\s\/\s/.test(o(r)) ? " / " : "/", "sl", "/"] : F.co ? [", ", "co", ","] : null;
+  if (J && syn && c.filter((x) => formOf(o(x.n))[J[1]]).length < e) {
+    const it = syn.filter((x) => x.id !== r.id && !/[/,]/.test(x.la || "") && !/[/,]/.test(x.de || ""));
+    // "V. iliaca externa" + "V. iliaca interna" -> "V. iliaca externa / interna", like the answers are written
+    const jn = (a, b) => {
+      const A = a.split(" "),
+        B = b.split(" ");
+      let k = 0;
+      if (J[2] === "/") while (k < A.length - 1 && k < B.length - 1 && A[k] === B[k]) k++;
+      return a + J[0] + B.slice(k).join(" ");
+    };
+    for (let k = 0; k + 1 < it.length; k++)
+      add({ id: "pair-" + it[k].id, la: jn(it[k].la, it[k + 1].la), de: jn(it[k].de, it[k + 1].de), __parts: [it[k], it[k + 1]] }, k % 2 ? 0.9 : 0.3);
   }
-  return a;
+  // no term twice among the options ("Area Wernicke" next to "Area 4, Area Wernicke")
+  const P = (n) => (n.__parts || [n]).map((x) => K(o(x))),
+    used = new Set(),
+    out = [];
+  c.sort((x, y) => x.d - y.d);
+  for (const x of c) out.length < e && !P(x.n).some((k) => used.has(k)) && (out.push(x.n), P(x.n).forEach((k) => used.add(k)));
+  for (const x of c) out.length < e && !out.includes(x.n) && out.push(x.n);
+  return out;
 }
+// an addition in brackets (eponym, numbers) gives the answer away if only the right option has one,
+// or if only the right option has none: then the brackets are dropped; so is a list in brackets
+// ("Paries thoracis (Rippen, Brustbein, ...)"), which makes an option stand out by its length
+const optionsOf = (s, r) => {
+  const o = s.find((e) => e.correct),
+    w = s.filter((e) => e !== o);
+  if (o && w.length)
+    for (const f of ["label", "sub"]) {
+      const z = (o[f] || "").match(/\s?\/\s?/);
+      z && s.forEach((e) => e !== o && e[f] && (e[f] = e[f].replace(/\s?\/\s?/g, z[0])));
+      const u = s.map((e) => (e[f] || "").replace(/\s*\([^()]*,[^()]*\)/g, "").trim() || e[f]);
+      s.some((e, k) => u[k] !== e[f]) && new Set(u).size === s.length && s.forEach((e, k) => (e[f] = u[k]));
+      const b = (e) => (e[f] || "").includes("("),
+        g = b(o) && !w.some(b) ? [o] : !b(o) && w.every(b) ? w : [],
+        v = s.map((e) => (g.includes(e) ? bareLabel(e[f]) : e[f]));
+      g.length && g.every((e) => bareLabel(e[f]).length > 2) && new Set(v).size === s.length && s.forEach((e, k) => (e[f] = v[k]));
+    }
+  return r ? shuffle(s) : s;
+};
 function makeQuestion(s, r, o) {
   const e = r.items.filter((i) => i.id !== s.id),
-    t = e.length < 5 || Math.random() < 0.3 ? sample(siblingItems(r, s), 3) : [],
+    t = (e.length < 5 || Math.random() < 0.3 ? sample(siblingItems(r, s), 6) : []).map((i) => ({ ...i, __pen: 0.5 })),
     a = shuffle([...e, ...t]),
     n = { figure: r.figure, hl: s.hl, explain: `${s.la} \u2014 ${s.de}. ${s.fact}`, item: s, lesson: r };
   if (o === "fig") {
@@ -8901,7 +8963,7 @@ function makeQuestion(s, r, o) {
         showFig: !1,
         mark: i,
         plates: l,
-        options: shuffle([{ label: m(s), correct: !0 }, ...pickD(a, s, m).map((h) => ({ label: m(h), correct: !1 }))]),
+        options: optionsOf([{ label: m(s), correct: !0 }, ...pickD(a, s, m, 3, r.items).map((h) => ({ label: m(h), correct: !1 }))], !0),
       };
     }
     // only when the highlight shows this structure alone ("~" = location hint, shared mesh = parent structure)
@@ -8914,8 +8976,11 @@ function makeQuestion(s, r, o) {
     if (d3.length >= 3) {
       const c = Math.random() < 0.4,
         m = (h) => (c ? h.de : h.la),
-        D3 = pickD(d3, s, m);
-      if (D3.length === 3)
+        D3 = pickD(d3, s, m),
+        F3 = formOf(m(s)),
+        // a pair or list answer needs a pair or list among the distractors, else another question type is asked
+        f3 = (k) => !F3[k] || D3.some((h) => formOf(m(h))[k]);
+      if (D3.length === 3 && f3("sl") && f3("co"))
         return {
           ...n,
           kind: "real3d",
@@ -8925,7 +8990,7 @@ function makeQuestion(s, r, o) {
           prompt: "Welche Struktur ist im 3D-Modell markiert?",
           sub: c ? "Gesucht ist der deutsche Begriff." : "Modell mit dem Finger drehen.",
           showFig: !1,
-          options: shuffle([{ label: m(s), correct: !0 }, ...D3.map((h) => ({ label: m(h), correct: !1 }))]),
+          options: optionsOf([{ label: m(s), correct: !0 }, ...D3.map((h) => ({ label: m(h), correct: !1 }))], !0),
         };
     }
     r.figure || (o = "term-de");
@@ -8938,7 +9003,7 @@ function makeQuestion(s, r, o) {
       prompt: r.term ? "Was ist markiert?" : "Welche Struktur ist markiert?",
       sub: i ? "Gesucht ist der deutsche Begriff." : void 0,
       showFig: !0,
-      options: shuffle([{ label: l(s), correct: !0 }, ...pickD(a, s, l).map((d) => ({ label: l(d), correct: !1 }))]),
+      options: optionsOf([{ label: l(s), correct: !0 }, ...pickD(a, s, l, 3, r.items).map((d) => ({ label: l(d), correct: !1 }))], !0),
     };
   }
   if (o === "fact") {
@@ -8949,7 +9014,7 @@ function makeQuestion(s, r, o) {
       prompt: maskFact(s),
       sub: i ? `${whatQ(r)} (deutsch)` : whatQ(r),
       showFig: !1,
-      options: shuffle([{ label: l(s), correct: !0 }, ...pickD(a, s, l).map((d) => ({ label: l(d), correct: !1 }))]),
+      options: optionsOf([{ label: l(s), correct: !0 }, ...pickD(a, s, l, 3, r.items).map((d) => ({ label: l(d), correct: !1 }))], !0),
     };
   }
   return o === "term-de"
@@ -8957,13 +9022,13 @@ function makeQuestion(s, r, o) {
         ...n,
         prompt: `Wie lautet der ${r.term || "lateinische Name"} f\xFCr \u201E${s.de}\u201C?`,
         showFig: !1,
-        options: shuffle([{ label: s.la, correct: !0 }, ...pickD(a, s, (i) => i.la).map((i) => ({ label: i.la, correct: !1 }))]),
+        options: optionsOf([{ label: s.la, correct: !0 }, ...pickD(a, s, (i) => i.la, 3, r.items).map((i) => ({ label: i.la, correct: !1 }))], !0),
       }
     : {
         ...n,
         prompt: `Was bedeutet \u201E${s.la}\u201C?`,
         showFig: !1,
-        options: shuffle([{ label: s.de, correct: !0 }, ...pickD(a, s, (i) => i.de).map((i) => ({ label: i.de, correct: !1 }))]),
+        options: optionsOf([{ label: s.de, correct: !0 }, ...pickD(a, s, (i) => i.de, 3, r.items).map((i) => ({ label: i.de, correct: !1 }))], !0),
       };
 }
 const ABBR_FULL = [
@@ -9049,11 +9114,16 @@ function makeIntruder(s) {
       .filter((i) => !r.some((l) => l.includes(i.la) || i.la.includes(l))),
     e = Math.random() < 0.4,
     t = (i) => (e ? i.de : i.la),
-    a = sample(o, 1)[0],
-    n = sample(
-      s.items.filter((i, l, d) => d.findIndex((c) => t(c) === t(i)) === l && (!a || t(i) !== t(a))),
+    n0 = sample(
+      s.items.filter((i, l, d) => d.findIndex((c) => t(c) === t(i)) === l),
       3,
-    );
+    ),
+    a = o
+      .filter((i) => !n0.some((l) => bareLabel(t(l)).toLowerCase() === bareLabel(t(i)).toLowerCase()))
+      .map((i) => ({ i, d: Math.min(...n0.map((l) => formDist(formOf(t(l)), formOf(t(i))))) + Math.random() * 0.9 }))
+      .sort((i, l) => i.d - l.d)
+      .map((i) => i.i)[0],
+    n = n0;
   return {
     prompt: s.term
       ? `Welcher Begriff geh\xF6rt NICHT zu \u201E${s.title}\u201C?`
@@ -9062,7 +9132,7 @@ function makeIntruder(s) {
     figure: s.figure,
     hl: [],
     explain: `${a.la} (${a.de}) geh\xF6rt zur Lektion \u201E${a.from}\u201C.`,
-    options: shuffle([{ label: t(a), correct: !0 }, ...n.map((i) => ({ label: t(i), correct: !1 }))]),
+    options: optionsOf([{ label: t(a), correct: !0 }, ...n.map((i) => ({ label: t(i), correct: !1 }))], !0),
   };
 }
 function buildLessonQuiz(s, r = 8) {
@@ -10915,20 +10985,20 @@ function FigureScreen({ src: s, onExit: r, onQuiz: o, q: e = "" }) {
   );
 }
 function buildFigureQuiz(s, r = 10) {
-  const e = (labelsFor(s) || { labels: [] }).labels.map((n, i) => ({ ...n, i })).filter((n) => n.k === "l" && n.la),
+  const e = (labelsFor(s) || { labels: [] }).labels.map((n, i) => ({ ...n, i, id: "fl" + i })).filter((n) => n.k === "l" && n.la),
     t = [],
     a = new Set();
   for (const n of e) a.has(n.la) || (a.add(n.la), t.push(n));
   return shuffle(t)
     .slice(0, Math.min(r, t.length))
     .map((n) => {
-      const i = shuffle(t.filter((d) => d.la !== n.la)).slice(0, 3),
-        l = (d) => (d || "").replace(/:$/, "");
+      const l = (d) => (d || "").replace(/:$/, ""),
+        i = pickD(shuffle(t.filter((d) => d.la !== n.la)), n, (d) => l(d.la), 3, t);
       return {
         idx: n.i,
         la: l(n.la),
         de: l(n.de),
-        options: shuffle([{ label: l(n.la), sub: l(n.de), correct: !0 }, ...i.map((d) => ({ label: l(d.la), sub: l(d.de), correct: !1 }))]),
+        options: optionsOf([{ label: l(n.la), sub: l(n.de), correct: !0 }, ...i.map((d) => ({ label: l(d.la), sub: l(d.de), correct: !1 }))], !0),
       };
     });
 }
@@ -12701,10 +12771,13 @@ function buildCases(s, r = 10) {
         if (h) {
           const y = shuffle(h.items.map((x) => x.la)),
             b = shuffle(ALL_LESSONS.filter((x) => x.unitId === h.unitId && x.id !== h.id).flatMap((x) => x.items.map((S) => S.la)));
-          n = [...y, ...b];
+          n = [...y.map((x) => [x, 0]), ...b.map((x) => [x, 0.5])]
+            .map(([x, p]) => ({ x, d: formDist(formOf(t), formOf(x)) + p + Math.random() * 0.9 }))
+            .sort((x, z) => x.d - z.d)
+            .map((x) => x.x);
         }
       }
-      const i = (h) => h.toLowerCase().replace(/[^a-zäöüß]/g, ""),
+      const i = (h) => h.toLowerCase().replace(/[^a-zäöüß0-9]/g, ""),
         l = new Set([i(t)]),
         d = [],
         c = ALL_LESSONS.some((h) => h.items.some((y) => i(y.la) === i(t))),
@@ -12720,7 +12793,7 @@ function buildCases(s, r = 10) {
         shuffle(a).forEach((h) => {
           d.length < 3 && !l.has(i(h)) && (l.add(i(h)), d.push(h));
         }),
-        { ...e, options: shuffle([{ label: t, correct: !0 }, ...d.map((h) => ({ label: h }))]) }
+        { ...e, options: optionsOf([{ label: t, correct: !0 }, ...d.map((h) => ({ label: h }))], !0) }
       );
     });
 }
@@ -17246,24 +17319,24 @@ const CASES = [
     text: "Nach Sturz auf den ausgestreckten Arm ist das Handgelenk bajonettartig verformt, die Fraktur steht nach dorsal.",
     question: "Wie hei\xDFt diese Fraktur?",
     options: [
-      { label: "Radiusfraktur loco typico (Colles)", correct: !0 },
+      { label: "Colles-Fraktur", correct: !0 },
       { label: "Smith-Fraktur" },
       { label: "Galeazzi-Fraktur" },
       { label: "Monteggia-Fraktur" },
     ],
-    explain: "Distale Radiusextensionsfraktur \u2014 h\xE4ufigste Fraktur des Erwachsenen.",
+    explain: "Distale Radiusextensionsfraktur (Radiusfraktur loco typico) \u2014 h\xE4ufigste Fraktur des Erwachsenen.",
     ref: { lessonId: "arm-knochen", itemId: "radius" },
   },
   {
     text: "Ein Kleinkind wird am Arm hochgezogen und h\xE4lt den Arm danach schlaff in Pronation.",
     question: "Was ist passiert?",
     options: [
-      { label: "Subluxation des Radiusk\xF6pfchens (Chassaignac)", correct: !0 },
+      { label: "Radiusk\xF6pfchen-Subluxation", correct: !0 },
       { label: "Ellenbogenluxation" },
       { label: "Klavikulafraktur" },
       { label: "Schulterluxation" },
     ],
-    explain: "Das Lig. anulare rutscht \xFCber das Radiusk\xF6pfchen; Reposition durch Supination und Beugung.",
+    explain: "Chassaignac-L\xE4hmung: Das Lig. anulare rutscht \xFCber das Radiusk\xF6pfchen; Reposition durch Supination und Beugung.",
     ref: { lessonId: "arm-knochen", itemId: "radius" },
   },
   {
@@ -17289,12 +17362,12 @@ const CASES = [
     text: "Eine Patientin klagt \xFCber Schmerzen am Daumengrundgelenk beim Greifen; der Finkelstein-Test ist positiv.",
     question: "Welche Sehnenscheide ist entz\xFCndet?",
     options: [
-      { label: "1. Strecksehnenfach (Abductor pollicis longus, Extensor pollicis brevis)", correct: !0 },
+      { label: "Sehnenscheide im 1. Strecksehnenfach", correct: !0 },
       { label: "Beugesehnenscheide des Zeigefingers" },
       { label: "Sehne des Extensor carpi ulnaris" },
       { label: "Sehne des Flexor carpi radialis" },
     ],
-    explain: "Tendovaginitis de Quervain am Processus styloideus radii.",
+    explain: "Tendovaginitis de Quervain der Sehnen von Abductor pollicis longus und Extensor pollicis brevis am Processus styloideus radii.",
     ref: { lessonId: "unterarmmuskeln", itemId: "retin" },
   },
   {
@@ -18013,7 +18086,7 @@ const CASES = [
     text: "Bei einem Koronarangiogramm ist das Gef\xE4\xDF im vorderen Interventrikularsulcus verschlossen.",
     question: "Welches Gef\xE4\xDF ist das?",
     options: [
-      { label: "R. interventricularis anterior (RIVA)", correct: !0 },
+      { label: "R. interventricularis anterior", correct: !0 },
       { label: "R. circumflexus" },
       { label: "A. coronaria dextra" },
       { label: "R. marginalis dexter" },
@@ -18044,12 +18117,12 @@ const CASES = [
     text: "Bei einer Lumbalpunktion wird zwischen den Dornforts\xE4tzen L3 und L4 eingegangen.",
     question: "Warum ist das sicher?",
     options: [
-      { label: "Weil der Conus medullaris bei L1/L2 endet", correct: !0 },
+      { label: "Weil das R\xFCckenmark weiter oben endet", correct: !0 },
       { label: "Weil dort keine Dura liegt" },
       { label: "Weil das R\xFCckenmark dort d\xFCnn ist" },
       { label: "Weil die Cauda equina dort fehlt" },
     ],
-    explain: "Unterhalb des Conus liegen nur noch die ausweichenden Fasern der Cauda equina.",
+    explain: "Der Conus medullaris endet bei L1/L2; darunter liegen nur noch die ausweichenden Fasern der Cauda equina.",
     ref: { lessonId: "rueckenmark", itemId: "conus" },
   },
   {
@@ -18116,12 +18189,12 @@ const CASES = [
     text: "Bei einer Frau mit Unterbauchschmerz und positivem Schwangerschaftstest zeigt der Ultraschall freie Fl\xFCssigkeit hinter dem Uterus.",
     question: "Wie hei\xDFt dieser Raum?",
     options: [
-      { label: "Excavatio rectouterina (Douglas)", correct: !0 },
+      { label: "Excavatio rectouterina", correct: !0 },
       { label: "Excavatio vesicouterina" },
       { label: "Fossa ischioanalis" },
       { label: "Recessus costodiaphragmaticus" },
     ],
-    explain: "Tiefster Bauchfellraum der Frau \u2014 hier sammelt sich Blut zuerst.",
+    explain: "Douglas-Raum: tiefster Bauchfellraum der Frau \u2014 hier sammelt sich Blut zuerst.",
     ref: { lessonId: "uro-frau", itemId: "douglas" },
   },
   {
@@ -18248,7 +18321,7 @@ const CASES = [
     text: "Bei einem S\xE4ugling ist die gro\xDFe Fontanelle eingesunken, die Schleimh\xE4ute sind trocken, er trinkt schlecht.",
     question: "Woran denken Sie zuerst?",
     options: [
-      { label: "Fl\xFCssigkeitsmangel (Exsikkose)", correct: !0 },
+      { label: "Fl\xFCssigkeitsmangel", correct: !0 },
       { label: "Erh\xF6hter Hirndruck" },
       { label: "Vorzeitiger Nahtverschluss" },
       { label: "Normalbefund" },
@@ -18425,12 +18498,12 @@ const CASES = [
     text: "Ein 24-j\xE4hriger Mann hat nachts tief sitzende R\xFCckenschmerzen, die sich durch Bewegung bessern. Das MRT zeigt beidseits ein Knochenmark\xF6dem an den Iliosakralgelenken.",
     question: "Welche Erkrankung liegt nahe?",
     options: [
-      { label: "Axiale Spondyloarthritis (M. Bechterew)", correct: !0 },
+      { label: "Axiale Spondyloarthritis", correct: !0 },
       { label: "Bandscheibenvorfall L5/S1" },
       { label: "Spinalkanalstenose" },
       { label: "Osteoporose" },
     ],
-    explain: "Entz\xFCndlicher R\xFCckenschmerz mit Sakroiliitis; im MRT fr\xFCher sichtbar als im R\xF6ntgen.",
+    explain: "Morbus Bechterew: entz\xFCndlicher R\xFCckenschmerz mit Sakroiliitis; im MRT fr\xFCher sichtbar als im R\xF6ntgen.",
     ref: { lessonId: "becken", itemId: "bk-isg" },
   },
   {
