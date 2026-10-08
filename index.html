@@ -7947,6 +7947,21 @@ function AtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 270 
       "div",
       { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, marginTop: 7, lineHeight: 1.35 } },
       x.cap,
+      A &&
+        React.createElement(
+          React.Fragment,
+          null,
+          " \xB7 ",
+          React.createElement(
+            "button",
+            {
+              onClick: (D) => (D.stopPropagation(), b(!y)),
+              className: "ana-body",
+              style: { padding: 0, border: "none", background: "none", color: e, fontSize: 12.5, fontWeight: 700, cursor: "pointer" },
+            },
+            y ? "Ausschnitt" : "Ganzes Bild",
+          ),
+        ),
       !n &&
         React.createElement("span", { style: { color: "#9AA3B2" } }, " \xB7 Diese Struktur ist auf dieser Abbildung nicht beschriftet."),
     ),
@@ -7955,84 +7970,51 @@ function AtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 270 
       { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" } },
       s.length > 1 &&
         React.createElement(
-          React.Fragment,
-          null,
+          "div",
+          { style: { display: "inline-flex", alignItems: "center", borderRadius: 999, border: `1.5px solid ${C.line}`, background: C.card } },
           React.createElement(
             "button",
             {
-              onClick: () => l((i - 1 + s.length) % s.length),
+              onClick: (D) => (D.stopPropagation(), l((i - 1 + s.length) % s.length)),
               className: "ana-display",
               "aria-label": "Vorige Abbildung",
-              style: {
-                padding: "5px 11px",
-                borderRadius: 999,
-                border: `2px solid ${C.line}`,
-                background: C.card,
-                color: C.inkSoft,
-                fontWeight: 700,
-                cursor: "pointer",
-              },
+              style: { padding: "4px 10px", border: "none", background: "none", color: C.inkSoft, fontSize: 16, fontWeight: 700, cursor: "pointer" },
             },
             "\u2039",
           ),
-          React.createElement("div", { className: "ana-body", style: { fontSize: 12, color: "#9AA3B2" } }, i + 1, "/", s.length),
+          React.createElement("span", { className: "ana-body", style: { fontSize: 12, color: "#9AA3B2" } }, i + 1, "/", s.length),
           React.createElement(
             "button",
             {
-              onClick: () => l((i + 1) % s.length),
+              onClick: (D) => (D.stopPropagation(), l((i + 1) % s.length)),
               className: "ana-display",
               "aria-label": "N\xE4chste Abbildung",
-              style: {
-                padding: "5px 11px",
-                borderRadius: 999,
-                border: `2px solid ${C.line}`,
-                background: C.card,
-                color: C.inkSoft,
-                fontWeight: 700,
-                cursor: "pointer",
-              },
+              style: { padding: "4px 10px", border: "none", background: "none", color: C.inkSoft, fontSize: 16, fontWeight: 700, cursor: "pointer" },
             },
             "\u203A",
           ),
         ),
       React.createElement(ModeSwitch, { mode: d, setMode: c, color: e }),
-      A &&
-        React.createElement(
-          "button",
-          {
-            onClick: () => b(!y),
-            className: "ana-body",
-            style: {
-              padding: "5px 10px",
-              borderRadius: 999,
-              border: `1.5px solid ${C.line}`,
-              background: C.card,
-              color: C.inkSoft,
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-            },
-          },
-          y ? "Ausschnitt" : "Ganzes Bild",
-        ),
       React.createElement(
         "button",
         {
           onClick: (D) => (D.stopPropagation(), h(!0)),
           className: "ana-body",
+          "aria-label": "Abbildung gro\xDF anzeigen",
+          title: "Gro\xDF",
           style: {
             marginLeft: "auto",
-            padding: "5px 10px",
+            padding: "4px 10px",
             borderRadius: 999,
             border: `1.5px solid ${C.line}`,
             background: C.card,
             color: C.inkSoft,
-            fontSize: 12,
+            fontSize: 15,
             fontWeight: 700,
             cursor: "pointer",
           },
         },
-        "\u2922 Gro\xDF",
+        "\u2922",
       ),
     ),
     m &&
@@ -13022,10 +13004,10 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
     H = F && z.length ? "blind" : M.length ? "real" : hasSchema(g) ? "schema" : null;
   return React.createElement(
     "div",
-    { style: { minHeight: "100vh", display: "flex", flexDirection: "column" } },
+    { style: { display: "flex", flexDirection: "column" } },
     React.createElement(
       "div",
-      { style: { display: "flex", alignItems: "center", gap: 10, padding: "16px 0 10px" } },
+      { style: { display: "flex", alignItems: "center", gap: 10, padding: "12px 0 8px" } },
       React.createElement(
         "button",
         { onClick: t, "aria-label": "Zur\xFCck", style: { background: "none", border: "none", cursor: "pointer", padding: 4 } },
@@ -13051,7 +13033,6 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
           borderBottom: `5px solid ${m ? e : C.line}`,
           padding: 14,
           cursor: "pointer",
-          flex: 1,
         },
         className: "ana-pop",
         key: `${k.id}-${m}`,
@@ -13110,18 +13091,19 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
                 React.createElement(
                   "div",
                   { style: { marginTop: 12 }, onClick: (D) => D.stopPropagation() },
-                  React.createElement(AtlasView, { plates: z, lesson: g, itemId: k.id, color: o, height: 230 }),
+                  React.createElement(AtlasView, { plates: z, lesson: g, itemId: k.id, color: o, height: 250 }),
                 ),
-              React.createElement(
-                "div",
-                { className: "ana-body", style: { fontSize: 12.5, color: "#9AA3B2", marginTop: 10 } },
-                "Aus: ",
-                g.title,
-              ),
+              !(r || "").includes(g.title) &&
+                React.createElement(
+                  "div",
+                  { className: "ana-body", style: { fontSize: 12.5, color: "#9AA3B2", marginTop: 10 } },
+                  "Aus: ",
+                  g.title,
+                ),
             )
           : React.createElement(
               "div",
-              { style: { minHeight: 300, display: "flex", flexDirection: "column", justifyContent: "center", padding: "10px 6px" } },
+              { style: { minHeight: 230, display: "flex", flexDirection: "column", justifyContent: "center", padding: "10px 6px" } },
               React.createElement(
                 "div",
                 {
@@ -13153,7 +13135,18 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
     ),
     React.createElement(
       "div",
-      { style: { display: "flex", gap: 10, padding: "14px 0 20px" } },
+      {
+        style: {
+          display: "flex",
+          gap: 10,
+          padding: "12px 0 calc(12px + env(safe-area-inset-bottom))",
+          marginBottom: "calc(-1 * env(safe-area-inset-bottom))",
+          position: "sticky",
+          bottom: 0,
+          zIndex: 5,
+          background: C.paper,
+        },
+      },
       m
         ? React.createElement(
             React.Fragment,
