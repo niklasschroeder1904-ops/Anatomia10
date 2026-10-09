@@ -8878,6 +8878,25 @@ const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
     const o = stemNorm(s || "");
     return stemsOf(r).some((e) => o.includes(e));
   },
+  // the definition already says the German name: the name itself, its word stems, or all parts of a compound
+  // ("weiter vom Rumpf entfernt" -> rumpffern, "Knorpelring" -> Ringknorpel)
+  namesDe = (s, r) => {
+    const o = stemNorm(s || ""),
+      e = bareLabel(r || "").toLowerCase(),
+      t = (n, a) =>
+        n.length
+          ? [...Array(Math.max(0, n.length - 3)).keys()].some((k) => {
+              const i = n.slice(0, k + 4),
+                l = n.slice(k + 4);
+              return (!l.length || l.length >= 4) && o.includes(i) && t(l, a + 1);
+            })
+          : a >= 2;
+    return (
+      (e.length >= 4 && new RegExp(`(^|[^a-z\xE4\xF6\xFC\xDF])${escRe(e)}([^a-z\xE4\xF6\xFC\xDF]|$)`, "i").test(s || "")) ||
+      namesTerm(s, r) ||
+      (e.match(/[a-z\xE4\xF6\xFC\xDF]+/g) || []).filter((n) => n.length >= 8 && !MASK_GENERIC.has(n)).some((n) => t(stemNorm(n), 0))
+    );
+  },
   // hide the name in its definition; the German name too, unless it is shown anyway (flashcard)
   maskFact = (s, d = !0) => {
     let r = s.fact || "";
@@ -8969,6 +8988,15 @@ const optionsOf = (s, r) => {
     for (const f of ["label", "sub"]) {
       const z = (o[f] || "").match(/\s?\/\s?/);
       z && s.forEach((e) => e !== o && e[f] && (e[f] = e[f].replace(/\s?\/\s?/g, z[0])));
+      // a pair of names ("Cranialis / superior") among single names would stand out as wrong: show its first name
+      // (not for word parts like "Innen- / Au\xDFendrehung")
+      if (!z && f === "label") {
+        const y = s.map((e) => {
+          const m = e !== o && (e[f] || "").match(/^([^/]*[^\s/-])\s*\/\s*\S/);
+          return m && m[1].trim().length > 2 ? m[1].trim() : e[f];
+        });
+        y.some((x, k) => x !== s[k][f]) && new Set(y.map((x) => bareLabel(x || "").toLowerCase())).size === s.length && s.forEach((e, k) => (e[f] = y[k]));
+      }
       const u = s.map((e) => (e[f] || "").replace(/\s*\([^()]*,[^()]*\)/g, "").trim() || e[f]);
       s.some((e, k) => u[k] !== e[f]) && new Set(u).size === s.length && s.forEach((e, k) => (e[f] = u[k]));
       const b = (e) => (e[f] || "").includes("("),
@@ -9051,18 +9079,42 @@ function makeQuestion(s, r, o) {
   // the asked name already contains the answer ("Medianebene" - "Planum medianum"): ask for the definition instead
   (o === "term-de" || o === "term-la") && s.fact && (namesTerm(s.de, s.la) || namesTerm(s.la, s.de)) && (o = "fact");
   if (o === "fact") {
-    const i = Math.random() < 0.4,
+    // German answers only when the definition does not already say the German name; otherwise the Latin name is asked
+    // and the definition stays readable
+    const i = !namesDe(s.fact, s.de) && Math.random() < 0.4,
       l = (d) => (i ? d.de : d.la),
-      P = maskFact(s),
-      // no distractor the definition itself names ("Sonderfall der Sagittalebenen" next to Planum sagittale)
-      q = (d) => !namesTerm(P, d.la) && !namesTerm(P, d.de),
-      a2 = a.filter(q);
+      P = maskFact(s, i),
+      // no distractor the definition itself names ("Sonderfall der Sagittalebenen" next to Planum sagittale), unless
+      // nothing else is left; a German name only counts as named when nearly the whole word is there
+      // ("Rumpf" does not name "rumpfnah")
+      W = stemNorm(P),
+      nd = (t) => {
+        const x = (bareLabel(t || "").toLowerCase().match(/[a-z\xE4\xF6\xFC\xDF]+/g) || []).filter((y) => y.length >= 5),
+          z = x.filter((y) => !MASK_GENERIC.has(y));
+        return (z.length ? z : x).some((y) => {
+          const v = stemNorm(y);
+          return W.includes(v.slice(0, Math.max(5, v.length - 2)));
+        });
+      },
+      q = (d) => !namesTerm(P, d.la) && !nd(d.de);
     return {
       ...n,
       prompt: P,
       sub: i ? `${whatQ(r)} (deutsch)` : whatQ(r),
       showFig: !1,
-      options: optionsOf([{ label: l(s), correct: !0 }, ...pickD(a2.length >= 3 ? a2 : a, s, l, 3, r.items.filter(q)).map((d) => ({ label: l(d), correct: !1 }))], !0),
+      options: optionsOf(
+        [
+          { label: l(s), correct: !0 },
+          ...pickD(
+            a.map((d) => (q(d) ? d : { ...d, __pen: (d.__pen || 0) + 10 })),
+            s,
+            l,
+            3,
+            r.items.filter(q),
+          ).map((d) => ({ label: l(d), correct: !1 })),
+        ],
+        !0,
+      ),
     };
   }
   return o === "term-de"
