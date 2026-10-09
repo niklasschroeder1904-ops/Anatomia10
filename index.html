@@ -11188,6 +11188,7 @@ function HomeScreen({
   onMnemo: goMnemo,
   onStats: goStats,
   onDark: tgDark,
+  onSecOpen: setSO,
   onReset: onReset,
 }) {
   const lv = s.level || "alle",
@@ -11199,7 +11200,7 @@ function HomeScreen({
     [h, y] = useState({}),
     [b, x] = useState(""),
     [S, B] = useState(null),
-    [os, so] = useState(null),
+    os = s.secOpen || {},
     A = useRef({}),
     u = REGIONS.find((v) => v.id === S),
     p = S ? VL.filter((v) => regionOf(v) === S) : [],
@@ -11225,12 +11226,9 @@ function HomeScreen({
       break;
     }
   }
-  const secOpen = (v) => (os ? !!os[v] : z ? z.unit.section === v : SECTIONS.length > 0 && SECTIONS[0].id === v),
-    secToggle = (v) =>
-      so((W) => {
-        const E = W || Object.fromEntries(SECTIONS.map((N) => [N.id, secOpen(N.id)]));
-        return { ...E, [v]: !E[v] };
-      });
+  // menu sections start closed; what the learner opens or closes stays that way (saved with the progress)
+  const secOpen = (v) => !!os[v],
+    secToggle = (v) => setSO && setSO({ ...os, [v]: !os[v] });
   const I = b.trim().toLowerCase(),
     F =
       I.length < 2
@@ -15029,6 +15027,12 @@ function AnatomiaApp() {
         const f = { ...p, level: u };
         return (saveProgress(f), f);
       });
+    },
+    setSecOpen = (u) => {
+      r((p) => {
+        const f = { ...p, secOpen: u };
+        return (saveProgress(f), f);
+      });
     };
   const goExam = () => e({ name: "examsetup" }),
     goMnemo = () => e({ name: "mnemo" }),
@@ -15160,6 +15164,7 @@ function AnatomiaApp() {
       onMnemo: goMnemo,
       onStats: goStats,
       onDark: toggleDark,
+      onSecOpen: setSecOpen,
       onReset: () => e({ name: "reset" }),
     });
   else if (o.name === "reset")
