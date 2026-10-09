@@ -9167,21 +9167,47 @@ function makeIntruder(s) {
     options: optionsOf([{ label: t(a), correct: !0 }, ...n.map((i) => ({ label: t(i), correct: !1 }))], !0),
   };
 }
-function buildLessonQuiz(s, r = 8) {
-  const o = ["fig", "fact", "term-de", "fig", "term-la", "fact"],
-    e = shuffle(s.items),
-    t = marksFor(s.id) || {},
-    a = platesFor(s.id),
-    n = [];
-  for (let d = 0; d < r - 1; d++) n.push(makeQuestion(e[d % e.length], s, o[d % o.length]));
-  const i = e[0];
-  i && (s.figure || (t[i.id] && t[i.id].li != null && a.length)) && (n[1] = makeTypeQuestion(i, s, t[i.id], a));
-  const l = e.filter((d) => t[d.id] && !t[d.id].np);
-  if (l.length && a.length) {
-    const d = l[Math.floor(Math.random() * l.length)];
-    n[Math.min(3, n.length - 1)] = makePointQuestion(d, s, t[d.id], a);
+// question order: random, no kind or structure twice in a row
+function mixOrder(s, r) {
+  let o = s,
+    e = 1e9;
+  for (let t = 0; t < 60 && e; t++) {
+    const a = shuffle(s),
+      n = a.reduce((i, l, d) => i + (d && (r(a[d - 1], l) || 0)), 0);
+    n < e && ((o = a), (e = n));
   }
-  return (n.splice(2 + Math.floor(Math.random() * Math.max(1, r - 3)), 0, makeIntruder(s)), n.slice(0, r));
+  return o;
+}
+function buildLessonQuiz(s, r = 8) {
+  const t = marksFor(s.id) || {},
+    a = platesFor(s.id),
+    q3 = realModelFor(s.id),
+    e = shuffle(s.items),
+    can = {
+      fig: (i) => !!((t[i.id] && a.length) || s.figure || (q3 && q3.items && q3.items[i.id])),
+      type: (i) => !!(s.figure || (t[i.id] && t[i.id].li != null && a.length)),
+      point: (i) => !!(t[i.id] && !t[i.id].np && a.length),
+    },
+    // a structure is shown in a picture only once per quiz: the "?" spot and then the same spot to type would give it away
+    vis = (k) => k === "fig" || k === "type" || k === "point",
+    used = new Map(),
+    uses = (i) => used.get(i.id) || [],
+    Q = [],
+    take = (k, i) => (used.set(i.id, [...uses(i), k]), Q.push({ k, i })),
+    pick = (k, i = 0) => {
+      const n = e.filter((l) => (!can[k] || can[k](l)) && !uses(l).includes(k) && !(vis(k) && uses(l).some(vis)) && !(i && uses(l).length));
+      if (!n.length) return !1;
+      const l = Math.min(...n.map((d) => uses(d).length));
+      return (take(k, n.find((d) => uses(d).length === l)), !0);
+    };
+  // kinds with pictures first (they need structures with a mark), each on a structure of its own where possible
+  for (const k of ["type", "point", "fig", "fig"]) e.some(can[k]) && pick(k, 1);
+  for (const k of ["term-de", "term-la", "fact"]) pick(k, 1) || pick(k);
+  for (let k = 0; Q.length < r - 1 && k < 3 * (r - 1); k++) pick(["fact", "term-la", "term-de", "fig"][k % 4]);
+  const n = mixOrder(Q, (i, l) => (i.k === l.k ? 1 : 0) + (i.i.id === l.i.id ? 2 : 0)).map(({ k, i }) =>
+    k === "type" ? makeTypeQuestion(i, s, t[i.id], a) : k === "point" ? makePointQuestion(i, s, t[i.id], a) : makeQuestion(i, s, k),
+  );
+  return (n.splice(1 + Math.floor(Math.random() * n.length), 0, makeIntruder(s)), n.slice(0, r));
 }
 function buildUnitTest(s, r = 12) {
   const o = [],
@@ -14087,15 +14113,20 @@ const TOPICS = [
       const n = a.lesson.id + "/" + a.item.la;
       t.has(n) || (t.add(n), e.push(a));
     }
+    // kinds in the same proportions as before, in random order (typed answer or tap question where the picture allows)
+    const k = mixOrder(
+      e.map((a, i) => ["fig", "fact", "type", "fig", "point", "fact"][i % 6]),
+      (a, i) => (a === i ? 1 : 0),
+    );
     return shuffle(e).map(({ item: a, lesson: n }, i) => {
       const l = (marksFor(n.id) || {})[a.id],
         d = platesFor(n.id),
-        c = i % 6;
-      return c === 2 && l && l.li != null && d.length
+        c = k[i];
+      return c === "type" && l && l.li != null && d.length
         ? makeTypeQuestion(a, n, l, d)
-        : c === 4 && l && !l.np && d.length
+        : c === "point" && l && !l.np && d.length
           ? makePointQuestion(a, n, l, d)
-          : makeQuestion(a, n, ["fig", "fact", "term-de", "fig", "term-la", "fact"][c]);
+          : makeQuestion(a, n, c === "type" ? "term-de" : c === "point" ? "term-la" : c);
     });
   };
 function ChipToggle({ on: s, onClick: r, children: o, color: e = EXAM_COLOR }) {
