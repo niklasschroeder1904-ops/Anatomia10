@@ -13488,6 +13488,170 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) {
       )
     : React.createElement(ConceptLearn, { lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t });
 }
+// zoom for tap questions: two fingers (or + / -) zoom, one finger moves the zoomed picture, a short tap is the answer
+function ZoomPane({ onTap: s, reset: r, tap: f = !0, children: o }) {
+  const [e, t] = useState({ s: 1, x: 0, y: 0 }),
+    a = useRef(null),
+    n = useRef(e),
+    i = useRef(new Map()),
+    l = useRef(null),
+    d = useRef(0);
+  n.current = e;
+  const c = (k, x, y) => {
+      const g = a.current,
+        w = ((k - 1) * (g ? g.clientWidth : 320)) / 2,
+        M = ((k - 1) * (g ? g.clientHeight : 300)) / 2;
+      return { s: k, x: Math.max(-w, Math.min(w, x)), y: Math.max(-M, Math.min(M, y)) };
+    },
+    m = (k) => {
+      const g = a.current.getBoundingClientRect();
+      return { x: k.clientX - g.left - g.width / 2, y: k.clientY - g.top - g.height / 2 };
+    },
+    h = (k, g) => {
+      const w = n.current,
+        M = Math.max(1, Math.min(4, g));
+      t(M === 1 ? { s: 1, x: 0, y: 0 } : c(M, k.x - (M * (k.x - w.x)) / w.s, k.y - (M * (k.y - w.y)) / w.s));
+    },
+    y = (k) => {
+      if (k.pointerType === "mouse" && k.button !== 0) return;
+      try {
+        a.current.setPointerCapture(k.pointerId);
+      } catch {}
+      i.current.set(k.pointerId, m(k));
+      const g = [...i.current.values()];
+      l.current =
+        g.length === 1
+          ? { kind: "pan", p0: g[0], t0: n.current, moved: !1, multi: !1 }
+          : {
+              kind: "pinch",
+              d0: Math.hypot(g[0].x - g[1].x, g[0].y - g[1].y),
+              c0: { x: (g[0].x + g[1].x) / 2, y: (g[0].y + g[1].y) / 2 },
+              t0: n.current,
+              moved: !0,
+              multi: !0,
+            };
+    },
+    b = (k) => {
+      if (!i.current.has(k.pointerId)) return;
+      i.current.set(k.pointerId, m(k));
+      const g = [...i.current.values()],
+        w = l.current;
+      if (!w) return;
+      if (w.kind === "pan" && g.length === 1) {
+        const M = g[0].x - w.p0.x,
+          z = g[0].y - w.p0.y;
+        Math.hypot(M, z) > 8 && (w.moved = !0);
+        w.moved && w.t0.s > 1 && t(c(w.t0.s, w.t0.x + M, w.t0.y + z));
+      } else if (w.kind === "pinch" && g.length > 1) {
+        const M = Math.max(1, Math.min(4, (w.t0.s * Math.hypot(g[0].x - g[1].x, g[0].y - g[1].y)) / Math.max(1, w.d0))),
+          z = (g[0].x + g[1].x) / 2,
+          I = (g[0].y + g[1].y) / 2;
+        t(M === 1 ? { s: 1, x: 0, y: 0 } : c(M, z - (M * (w.c0.x - w.t0.x)) / w.t0.s, I - (M * (w.c0.y - w.t0.y)) / w.t0.s));
+      }
+    },
+    x = (k) => {
+      if (!i.current.has(k.pointerId)) return;
+      i.current.delete(k.pointerId);
+      const g = l.current,
+        w = [...i.current.values()];
+      // a tap answers; after moving or pinching, the click that follows is ignored
+      g && !g.moved && !g.multi && !w.length && k.type === "pointerup"
+        ? ((d.current = Date.now() + 600), s && s(k.clientX, k.clientY, a.current))
+        : g && (d.current = Date.now() + 600);
+      l.current = w.length === 1 ? { kind: "pan", p0: w[0], t0: n.current, moved: !0, multi: !0 } : null;
+    };
+  (useEffect(() => {
+    const k = a.current;
+    if (!k) return;
+    const g = (M) => {
+        M.ctrlKey && (M.preventDefault(), h(m(M), n.current.s * Math.exp(Math.max(-0.25, Math.min(0.25, -M.deltaY * 0.01)))));
+      },
+      w = (M) => M.preventDefault();
+    return (
+      k.addEventListener("wheel", g, { passive: !1 }),
+      k.addEventListener("gesturestart", w),
+      () => {
+        (k.removeEventListener("wheel", g), k.removeEventListener("gesturestart", w));
+      }
+    );
+  }, []),
+    useEffect(() => {
+      t({ s: 1, x: 0, y: 0 });
+    }, [r]));
+  const S = (k, g, w, M) =>
+    React.createElement(
+      "button",
+      {
+        "aria-label": g,
+        disabled: M,
+        onClick: (z) => {
+          (z.stopPropagation(), w());
+        },
+        style: {
+          width: 34,
+          height: 34,
+          flexShrink: 0,
+          borderRadius: 10,
+          border: "1.5px solid #DDE3EE",
+          background: "#fff",
+          color: M ? "#C3CAD5" : "#1E2836",
+          fontSize: 16,
+          fontWeight: 700,
+          cursor: M ? "default" : "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 0,
+        },
+      },
+      k,
+    );
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(
+      "div",
+      {
+        ref: a,
+        onPointerDown: y,
+        onPointerMove: b,
+        onPointerUp: x,
+        onPointerCancel: x,
+        onClick: (k) => {
+          Date.now() > d.current && s && s(k.clientX, k.clientY, a.current);
+        },
+        style: { position: "relative", overflow: "hidden", touchAction: "none", userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" },
+      },
+      React.createElement(
+        "div",
+        {
+          style: {
+            transform: `translate(${e.x}px, ${e.y}px) scale(${e.s})`,
+            transformOrigin: "center center",
+            transition: l.current ? "none" : "transform 0.18s ease-out",
+          },
+        },
+        typeof o == "function" ? o(e.s) : o,
+      ),
+    ),
+    React.createElement(
+      "div",
+      { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 6 } },
+      React.createElement(
+        "div",
+        { className: "ana-body", style: { flex: 1, minWidth: 0, fontSize: 11.5, color: "#8B95A6", lineHeight: 1.35 } },
+        e.s > 1.02
+          ? `${e.s.toFixed(1).replace(".", ",")}\xD7 \xB7 mit einem Finger verschieben`
+          : f
+            ? "Zwei Finger oder + zum Zoomen \xB7 Stelle antippen"
+            : "Zwei Finger oder + zum Zoomen",
+      ),
+      S("−", "Herauszoomen", () => h({ x: 0, y: 0 }, n.current.s / 1.6), e.s <= 1),
+      S("+", "Hineinzoomen", () => h({ x: 0, y: 0 }, n.current.s * 1.6), e.s >= 4),
+      S("⟲", "Ganzes Bild", () => t({ s: 1, x: 0, y: 0 }), e.s <= 1),
+    ),
+  );
+}
 function PointImage({ q: s, color: r, onResult: o, done: e }) {
   const [t, a] = useState(null),
     n = s.plates[Math.min(s.mark.i, s.plates.length - 1)],
@@ -13499,12 +13663,15 @@ function PointImage({ q: s, color: r, onResult: o, done: e }) {
     h = c ? c[3] : 1,
     T = useMemo(() => (d && pointTarget(n.src, s.mark.li)) || { tips: [], areas: [] }, [n.src, s.mark.li]),
     P = T.tips.length ? T.tips : [i],
-    y = (b) => {
-      if (e) return;
-      const x = b.currentTarget.getBoundingClientRect(),
-        S = b.touches ? b.touches[0] : b,
-        B = (S.clientX - x.left) / x.width,
-        A = (S.clientY - x.top) / x.height;
+    y = (b, D, E) => {
+      const N = !e && E && E.querySelector("img");
+      if (!N) return;
+      const x = N.getBoundingClientRect(),
+        B = (b - x.left) / x.width,
+        A = (D - x.top) / x.height,
+        [Z, Y, Q, J] = c || [0, 0, 1, 1];
+      // a tap beside the picture is no answer
+      if (B < Z || B > Z + Q || A < Y || A > Y + J) return;
       a([B, A]);
       const u = x.width / Math.max(1, x.height),
         p = P.some((g) => Math.hypot((B - g[0]) * u, A - g[1]) < 0.085 * h),
@@ -13512,7 +13679,41 @@ function PointImage({ q: s, color: r, onResult: o, done: e }) {
         k = T.areas.some((g) => g.filter((w) => inPoly(w, B, A)).length % 2 === 1);
       o(!!(p || f || k));
     },
-    R =
+    // markers keep their size on screen while the picture is zoomed
+    U = (b, D) =>
+      React.createElement("div", {
+        style: {
+          position: "absolute",
+          left: `${b[0] * 100}%`,
+          top: `${b[1] * 100}%`,
+          width: 16 / D,
+          height: 16 / D,
+          marginLeft: -8 / D,
+          marginTop: -8 / D,
+          borderRadius: "50%",
+          border: `${3 / D}px solid ${C.ink}`,
+          background: "rgba(255,255,255,0.6)",
+          pointerEvents: "none",
+        },
+      }),
+    V = (b, D, E) =>
+      React.createElement("div", {
+        key: E,
+        style: {
+          position: "absolute",
+          left: `${b[0] * 100}%`,
+          top: `${b[1] * 100}%`,
+          width: 30 / D,
+          height: 30 / D,
+          marginLeft: -15 / D,
+          marginTop: -15 / D,
+          border: `${3 / D}px solid ${C.good}`,
+          borderRadius: "50%",
+          boxShadow: `0 0 0 ${3 / D}px rgba(47,168,79,0.25)`,
+          pointerEvents: "none",
+        },
+      }),
+    R = (b) =>
       e &&
       React.createElement(
         React.Fragment,
@@ -13537,103 +13738,44 @@ function PointImage({ q: s, color: r, onResult: o, done: e }) {
               }),
             ),
           ),
-        P.map((g, w) =>
-          React.createElement("div", {
-            key: w,
-            style: {
-              position: "absolute",
-              left: `${g[0] * 100}%`,
-              top: `${g[1] * 100}%`,
-              width: 30,
-              height: 30,
-              marginLeft: -15,
-              marginTop: -15,
-              border: `3px solid ${C.good}`,
-              borderRadius: "50%",
-              boxShadow: "0 0 0 3px rgba(47,168,79,0.25)",
-              pointerEvents: "none",
-            },
-          }),
-        ),
+        P.map((g, w) => V(g, b, w)),
       );
   return React.createElement(
     "div",
     { style: { background: "#fff", borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
-    d
-      ? React.createElement(
-          LabeledImage,
-          {
-            src: n.src,
-            mode: "off",
-            color: e ? C.good : r,
-            maxHeight: 300,
-            crop: c,
-            cursor: e ? "default" : "crosshair",
-            quiz: e ? { idx: s.mark.li, reveal: !0, revealText: s.item && s.item.la } : null,
-            onClick: y,
-          },
-          t &&
-            React.createElement("div", {
-              style: {
-                position: "absolute",
-                left: `${t[0] * 100}%`,
-                top: `${t[1] * 100}%`,
-                width: 16,
-                height: 16,
-                marginLeft: -8,
-                marginTop: -8,
-                borderRadius: "50%",
-                border: `3px solid ${C.ink}`,
-                background: "rgba(255,255,255,0.6)",
-                pointerEvents: "none",
-              },
-            }),
-          R,
-        )
-      : React.createElement(
-          "div",
-          { style: { display: "flex", justifyContent: "center" } },
-          React.createElement(
-            "div",
-            { style: { position: "relative", display: "inline-block", maxWidth: "100%" } },
-            React.createElement("img", {
+    React.createElement(ZoomPane, { onTap: y, reset: e, tap: !e }, (b) =>
+      d
+        ? React.createElement(
+            LabeledImage,
+            {
               src: n.src,
-              alt: "",
-              onClick: y,
-              style: { display: "block", maxWidth: "100%", maxHeight: 300, width: "auto", cursor: e ? "default" : "crosshair" },
-            }),
-            t &&
-              React.createElement("div", {
-                style: {
-                  position: "absolute",
-                  left: `${t[0] * 100}%`,
-                  top: `${t[1] * 100}%`,
-                  width: 16,
-                  height: 16,
-                  marginLeft: -8,
-                  marginTop: -8,
-                  borderRadius: "50%",
-                  border: `3px solid ${C.ink}`,
-                  background: "rgba(255,255,255,0.6)",
-                },
+              mode: "off",
+              color: e ? C.good : r,
+              maxHeight: 300,
+              crop: c,
+              cursor: e ? "default" : "crosshair",
+              quiz: e ? { idx: s.mark.li, reveal: !0, revealText: s.item && s.item.la } : null,
+            },
+            t && U(t, b),
+            R(b),
+          )
+        : React.createElement(
+            "div",
+            { style: { display: "flex", justifyContent: "center" } },
+            React.createElement(
+              "div",
+              { style: { position: "relative", display: "inline-block", maxWidth: "100%", lineHeight: 0 } },
+              React.createElement("img", {
+                src: n.src,
+                alt: "",
+                draggable: !1,
+                style: { display: "block", maxWidth: "100%", maxHeight: 300, width: "auto", cursor: e ? "default" : "crosshair", userSelect: "none" },
               }),
-            e &&
-              React.createElement("div", {
-                style: {
-                  position: "absolute",
-                  left: `${i[0] * 100}%`,
-                  top: `${i[1] * 100}%`,
-                  width: 30,
-                  height: 30,
-                  marginLeft: -15,
-                  marginTop: -15,
-                  border: `3px solid ${C.good}`,
-                  borderRadius: "50%",
-                  boxShadow: "0 0 0 3px rgba(47,168,79,0.25)",
-                },
-              }),
+              t && U(t, b),
+              e && V(i, b, "sol"),
+            ),
           ),
-        ),
+    ),
   );
 }
 function TypeAnswer({ q: s, color: r, onResult: o, done: e, right: t }) {
