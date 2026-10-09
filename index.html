@@ -7525,6 +7525,7 @@ function LabelLayer({
   minActive: i = 12,
   onTap: l,
   view: d = null,
+  zs: Z = 1,
 }) {
   if (!s || !r || !o) return null;
   const [c, m, h] = d || [0, 0, 1, 1],
@@ -7537,7 +7538,7 @@ function LabelLayer({
     if ((y && !y.has(x) && !S && !B) || (a && !B && !a.others) || (e === "off" && !S && !B)) return null;
     const [A, u, p, f] = b.b;
     let k = Math.max(3.5, (b.f || b.lh || f) * o * 0.86);
-    B ? (k = Math.max(k, i)) : S && (k = wr ? Math.min(k * 1.1, k + 2) : Math.min(k * 1.3, k + 4));
+    B ? (k = Math.max(k, i) / Z) : S && (k = wr ? Math.min(k * 1.1, k + 2) : Math.min(k * 1.3, k + 4));
     const w = ((B && a.lang ? a.lang : e) === "de" && b.de) || b.la,
       M = B && !a.reveal ? a.text || "?" : (B && a.revealText) || w,
       z = A + p / 2,
@@ -7633,6 +7634,7 @@ function LabeledImage({
   imgStyle: c,
   crop: m = null,
   cursor: h,
+  zs: zz = 1,
 }) {
   const y = labelsFor(s),
     b = useRef(null),
@@ -7641,7 +7643,7 @@ function LabeledImage({
     B = React.createElement(
       "div",
       { style: { position: "absolute", inset: 0, lineHeight: "normal" } },
-      React.createElement(LabelLayer, { data: y, w: S.w, h: S.h, mode: r, hl: o, quiz: e, color: t, onTap: l, view: x ? m : null }),
+      React.createElement(LabelLayer, { data: y, w: S.w, h: S.h, mode: r, hl: o, quiz: e, color: t, onTap: l, view: x ? m : null, zs: zz }),
       i &&
         React.createElement("div", {
           className: "ana-ping",
@@ -7659,6 +7661,7 @@ function LabeledImage({
             boxShadow: "0 0 0 2px rgba(255,255,255,0.85)",
             pointerEvents: "none",
             zIndex: 2,
+            transform: zz !== 1 ? `scale(${1 / zz})` : void 0,
           },
         }),
       d,
@@ -8041,7 +8044,7 @@ function AtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 270 
       }),
   );
 }
-function QuizPlate({ plate: s, mark: r, color: o, reveal: e = !1, height: t = 260, showDot: a = !0, lang: n, revealText: i }) {
+function QuizPlate({ plate: s, mark: r, color: o, reveal: e = !1, height: t = 260, showDot: a = !0, lang: n, revealText: i, zs: zz = 1 }) {
   const l = labelsFor(s.src);
   return l && r && r.li != null
     ? React.createElement(LabeledImage, {
@@ -8052,6 +8055,7 @@ function QuizPlate({ plate: s, mark: r, color: o, reveal: e = !1, height: t = 26
         quiz: { idx: r.li, reveal: e, lang: n, revealText: i },
         dot: a ? r.a : null,
         crop: focusRect(l, r.li, r.a),
+        zs: zz,
       })
     : React.createElement(BlindImage, { src: s.src, mark: r, color: o, height: t });
 }
@@ -13517,14 +13521,16 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) {
       )
     : React.createElement(ConceptLearn, { lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t });
 }
-// zoom for tap questions: two fingers (or + / -) zoom, one finger moves the zoomed picture, a short tap is the answer
+// zoom for quiz pictures: two fingers (or + / -) zoom, one finger moves the zoomed picture;
+// with onTap a short tap is the answer, without it a double tap zooms
 function ZoomPane({ onTap: s, reset: r, tap: f = !0, children: o }) {
   const [e, t] = useState({ s: 1, x: 0, y: 0 }),
     a = useRef(null),
     n = useRef(e),
     i = useRef(new Map()),
     l = useRef(null),
-    d = useRef(0);
+    d = useRef(0),
+    q = useRef({ t: 0, x: 0, y: 0 });
   n.current = e;
   const c = (k, x, y) => {
       const g = a.current,
@@ -13583,10 +13589,18 @@ function ZoomPane({ onTap: s, reset: r, tap: f = !0, children: o }) {
       i.current.delete(k.pointerId);
       const g = l.current,
         w = [...i.current.values()];
-      // a tap answers; after moving or pinching, the click that follows is ignored
-      g && !g.moved && !g.multi && !w.length && k.type === "pointerup"
-        ? ((d.current = Date.now() + 600), s && s(k.clientX, k.clientY, a.current))
-        : g && (d.current = Date.now() + 600);
+      // a tap answers (or, without answers, a double tap zooms); after moving or pinching, the click that follows is ignored
+      if (g && !g.moved && !g.multi && !w.length && k.type === "pointerup") {
+        d.current = Date.now() + 600;
+        if (s) s(k.clientX, k.clientY, a.current);
+        else {
+          const M = Date.now(),
+            z = m(k);
+          M - q.current.t < 320 && Math.hypot(z.x - q.current.x, z.y - q.current.y) < 30
+            ? ((q.current = { t: 0, x: 0, y: 0 }), h(z, n.current.s > 1.2 ? 1 : 2.5))
+            : (q.current = { t: M, x: z.x, y: z.y });
+        }
+      } else g && (d.current = Date.now() + 600);
       l.current = w.length === 1 ? { kind: "pan", p0: w[0], t0: n.current, moved: !0, multi: !0 } : null;
     };
   (useEffect(() => {
@@ -13671,9 +13685,11 @@ function ZoomPane({ onTap: s, reset: r, tap: f = !0, children: o }) {
         { className: "ana-body", style: { flex: 1, minWidth: 0, fontSize: 11.5, color: "#8B95A6", lineHeight: 1.35 } },
         e.s > 1.02
           ? `${e.s.toFixed(1).replace(".", ",")}\xD7 \xB7 mit einem Finger verschieben`
-          : f
-            ? "Zwei Finger oder + zum Zoomen \xB7 Stelle antippen"
-            : "Zwei Finger oder + zum Zoomen",
+          : !s
+            ? "Zwei Finger, Doppeltippen oder + zum Zoomen"
+            : f
+              ? "Zwei Finger oder + zum Zoomen \xB7 Stelle antippen"
+              : "Zwei Finger oder + zum Zoomen",
       ),
       S("−", "Herauszoomen", () => h({ x: 0, y: 0 }, n.current.s / 1.6), e.s <= 1),
       S("+", "Hineinzoomen", () => h({ x: 0, y: 0 }, n.current.s * 1.6), e.s >= 4),
@@ -13784,6 +13800,7 @@ function PointImage({ q: s, color: r, onResult: o, done: e }) {
               crop: c,
               cursor: e ? "default" : "crosshair",
               quiz: e ? { idx: s.mark.li, reveal: !0, revealText: s.item && s.item.la } : null,
+              zs: b,
             },
             t && U(t, b),
             R(b),
@@ -13968,15 +13985,18 @@ function QuizScreen({
         React.createElement(
           "div",
           { style: { background: "#fff", borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
-          React.createElement(QuizPlate, {
-            plate: M.plates[Math.min(M.mark.i, M.plates.length - 1)],
-            mark: M.mark,
-            color: r.color,
-            reveal: I,
-            height: 270,
-            lang: M.lang,
-            revealText: M.item ? (M.lang === "de" ? M.item.de : M.item.la) : void 0,
-          }),
+          React.createElement(ZoomPane, null, (E) =>
+            React.createElement(QuizPlate, {
+              plate: M.plates[Math.min(M.mark.i, M.plates.length - 1)],
+              mark: M.mark,
+              color: r.color,
+              reveal: I,
+              height: 270,
+              lang: M.lang,
+              revealText: M.item ? (M.lang === "de" ? M.item.de : M.item.la) : void 0,
+              zs: E,
+            }),
+          ),
         ),
       M.kind === "real3d" &&
         React.createElement(
