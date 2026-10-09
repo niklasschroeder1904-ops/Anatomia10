@@ -8859,6 +8859,55 @@ function siblingItems(s, r) {
     .flatMap((e) => e.items)
     .filter((e) => !o.has(e.la) && e.la !== r.la);
 }
+// quiz definitions for structures whose own definition only says what they are named after
+// ("Kanal ... f\xFCr die A. carotis interna"): the same content in words that do not give the Latin name away
+const QUIZ_FACTS = {
+  "Medialis": "N\xE4her an der Mitte des K\xF6rpers. Beispiel: Die Elle liegt auf der Kleinfingerseite, n\xE4her zur K\xF6rpermitte als die Speiche (in anatomischer Grundstellung).",
+  "Textus muscularis": "Gewebe aus Zellen, die sich zusammenziehen k\xF6nnen, in drei Formen: quergestreift und willk\xFCrlich am Skelett, glatt in Organen und Gef\xE4\xDFen, und als eigenes Gewebe des Herzens.",
+  "Canalis vertebralis": "R\xF6hre aus den \xFCbereinanderliegenden Wirbell\xF6chern, in der R\xFCckenmark und Nervenwurzeln gesch\xFCtzt liegen.",
+  "Canalis condylaris": "Durchgang hinter dem Gelenkh\xF6cker des Hinterhauptbeins f\xFCr eine Emissarienvene.",
+  "Canalis caroticus": "Durchgang im Felsenbein f\xFCr die innere Halsschlagader und das sie begleitende sympathische Nervengeflecht.",
+  "Canalis pterygoideus": "Durchgang an der Basis des Fl\xFCgelfortsatzes des Keilbeins f\xFCr den Vidianus-Nerv.",
+  "Fossa digastrica": "Grube innen am Unterkieferrand nahe der Mittellinie; hier setzt der vordere Bauch des zweib\xE4uchigen Muskels an.",
+  "Pars superficialis m. masseteris": "Oberfl\xE4chlicher Teil des gro\xDFen Kaumuskels: vom Jochbogen schr\xE4g nach hinten unten zum Kieferwinkel; leistet den Hauptanteil des Kieferschlusses.",
+  "Tuberositas masseterica": "Raue Knochenstelle au\xDFen am Kieferwinkel, an der der gro\xDFe Kaumuskel ansetzt.",
+  "A. masseterica": "Zieht durch die Incisura mandibulae zum gro\xDFen Kaumuskel.",
+  "Pars cavernosa a. carotidis internae": "Abschnitt der inneren Halsschlagader, der S-f\xF6rmig durch den ven\xF6sen Blutleiter seitlich des T\xFCrkensattels zieht; ein Einriss f\xFChrt zu einer Fistel mit pulsierendem Exophthalmus.",
+  "Pars precommunicalis a. cerebri posterioris (P1)": "Erstes St\xFCck der hinteren Hirnarterie zwischen ihrem Ursprung aus der A. basilaris und der Einm\xFCndung der hinteren Verbindungsarterie.",
+  "Ganglion trigeminale": "Sensibler Nervenknoten in einer Duratasche auf der Felsenbeinspitze; hier teilt sich der f\xFCnfte Hirnnerv in seine drei Haupt\xE4ste.",
+  "Ganglion geniculi": "Sensibler Nervenknoten am \xE4u\xDFeren Knie des Gesichtsnervs im Felsenbein.",
+  "N. stapedius": "Ast des Gesichtsnervs zum kleinsten Muskel des Mittelohrs; sein Ausfall f\xFChrt zu L\xE4rmempfindlichkeit (Hyperakusis).",
+  "Ganglion stellatum": "Verschmelzung aus dem unteren Halsknoten und dem ersten Brustknoten des Grenzstrangs, vor dem Hals der 1. Rippe.",
+  "Ganglion ciliare": "Parasympathischer Nervenknoten in der Augenh\xF6hle; schaltet Fasern des III. Hirnnervs f\xFCr Pupillenverengung und Naheinstellung der Linse um.",
+  "Papilla incisiva": "Schleimhauth\xFCgel am vorderen Gaumen direkt hinter den mittleren Schneidez\xE4hnen.",
+  "Papilla parotidea": "Kleiner Schleimhauth\xFCgel in der Wange gegen\xFCber dem 2. oberen Backenzahn, an dem der Ausf\xFChrungsgang der Ohrspeicheldr\xFCse m\xFCndet.",
+  "Pulvinar thalami": "Gr\xF6\xDFter hinterer Kern im Sehh\xFCgel des Zwischenhirns; beteiligt an der visuellen Aufmerksamkeit.",
+  "N. dorsalis scapulae": "Aus C5; versorgt die Rautenmuskeln und den Schulterblattheber.",
+  "Rr. intercostales anteriores": "\xC4ste der inneren Brustkorbarterie zu den oberen sechs Zwischenrippenr\xE4umen.",
+  "Sinus aortae": "Ausbuchtungen der Hauptschlagader direkt hinter den Taschenklappen; aus zweien davon entspringen die Herzkranzarterien.",
+  "V. intercostalis superior sinistra": "Sammelt das Blut aus dem 2. und 3. linken Zwischenrippenraum und m\xFCndet in die linke Arm-Kopf-Vene.",
+  "Vv. bronchiales": "F\xFChren das Blut aus der Wand der Luftr\xF6hren\xE4ste teils in das Azygos-System, teils in die Lungenvenen.",
+  "Valvula sinus coronarii (Thebesius)": "Kleine Falte an der M\xFCndung des gro\xDFen Sammelgef\xE4\xDFes der Herzvenen in den rechten Vorhof.",
+  "Cuspis anterior valvae mitralis": "Gro\xDFes Segel der linken Vorhof-Kammer-Klappe, das in die Wurzel der Hauptschlagader \xFCbergeht.",
+  "Cuspis septalis valvae tricuspidalis": "An der Kammerscheidewand ansetzendes Segel der rechten Vorhof-Kammer-Klappe.",
+  "Segmenta bronchopulmonalia": "Rechts zehn, links meist neun Lungenabschnitte mit eigenem Luftweg und eigener Arterie; sie lassen sich einzeln operativ entfernen.",
+  "Bronchus intermedius": "Abschnitt des rechten Hauptluftwegs zwischen dem Abgang zum Oberlappen und der Aufteilung zu Mittel- und Unterlappen.",
+  "Quadranten der Mamma": "Einteilung der weiblichen Brust in vier Felder; im oberen \xE4u\xDFeren liegt das meiste Dr\xFCsengewebe, dort entstehen die meisten b\xF6sartigen Tumoren.",
+  "Arcus tendineus m. levatoris ani": "Verdickung der Faszie des inneren H\xFCftlochmuskels, von der ein Teil des Afterhebers entspringt.",
+  "Canalis pudendalis (Alcock)": "Faszientunnel an der Seitenwand der Sitzbein-After-Grube f\xFCr den Schamnerv und die inneren Schamgef\xE4\xDFe.",
+  "Plexus venosus rectalis": "Venengeflecht im Mastdarm, das die obere Mastdarmvene (Pfortadergebiet) mit der mittleren und unteren (Hohlvenengebiet) verbindet.",
+  "Ganglion coeliacum": "Sympathischer Nervenknoten vor der Bauchaorta, in dem die gro\xDFen Eingeweidenerven auf das zweite Neuron umgeschaltet werden.",
+  "Plexus hypogastricus superior": "Nervengeflecht vor dem Promontorium; teilt sich in zwei Nerven zu den Beckenorganen.",
+  "Papilla duodeni minor": "M\xFCndung des Nebengangs der Bauchspeicheldr\xFCse (Santorini) etwas oberhalb der gro\xDFen M\xFCndung im Zw\xF6lffingerdarm.",
+  "Plica spiralis (Heister-Klappe)": "Schraubenf\xF6rmige Schleimhautfalte im Ausf\xFChrungsgang der Gallenblase.",
+  "Zona transitionalis et peripherica prostatae": "Die gutartige Vergr\xF6\xDFerung beginnt im \xDCbergangsbereich, das Karzinom meist im tastbaren Au\xDFenbereich der Vorsteherdr\xFCse.",
+  "N. cutaneus antebrachii lateralis": "Sensibler Endast des Muskel-Haut-Nervs an der Speichenseite des Unterarms.",
+  "R. superficialis n. radialis": "Sensibler Ast f\xFCr den daumenseitigen Handr\xFCcken (Tabati\xE8re, Zwischenraum von Daumen und Zeigefinger).",
+  "Facies articularis fibularis tibiae": "Gelenkfl\xE4che unter dem \xE4u\xDFeren Schienbeinknorren f\xFCr das Wadenbeink\xF6pfchen.",
+  "Apex et Basis patellae": "Oben die breite Kante mit dem Ansatz der Quadrizepssehne, unten der spitze Pol mit dem Ursprung des Kniescheibenbands.",
+  "Hiatus adductorius": "\xD6ffnung im gro\xDFen Anzieher-Muskel, durch die die Oberschenkelgef\xE4\xDFe in die Kniekehle treten.",
+  "Hiatus saphenus": "\xD6ffnung in der Oberschenkelfaszie, durch die die gro\xDFe Rosenvene in die V. femoralis m\xFCndet (Krosse)."
+};
 const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
   MASK_GENERIC = new Set("musculus musculi arteria vena nervus ligamentum glandula corpus processus foramen fossa sinus nucleus tractus plexus truncus ramus ductus interna externa internus externus internum externum major majus minor minus superior inferior anterior posterior medialis mediale lateralis laterale profundus profunda superficialis communis dexter dextra sinister sinistra longus longa brevis magnus magna caput pars lobus ossis cavitas planum axis membrana facies margo musculus".split(" ").concat(
     "rechter rechte rechten rechtes linker linke linken linkes oberer obere oberen oberes unterer untere unteren unteres vorderer vordere vorderen vorderes hinterer hintere hinteren hinteres gro\xDFer gro\xDFe gro\xDFen gro\xDFes kleiner kleine kleinen kleines innerer innere inneren inneres \xE4u\xDFerer \xE4u\xDFere \xE4u\xDFeren \xE4u\xDFeres mittlerer mittlere mittleren mittleres gemeinsame gemeinsamer gemeinsamen tiefer tiefen tiefes langer lange langen langes kurzer kurze kurzen kurzes muskel muskeln arterie arterien venen nerven knochen".split(" "),
@@ -8904,6 +8953,55 @@ const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
     const t = [...stemsOf(s.la), ...(d ? stemsOf(s.de) : [])];
     return t.length ? r.replace(/[A-Za-z\xC0-\xFF]+/g, (a) => (a.length >= 4 && t.some((n) => stemNorm(a).includes(n)) ? "\u2026" : a)) : r;
   },
+  // the definition as a question without blanks ("N\xE4her an der \u2026" is not understood): the parts that name the
+  // answer are left out instead - a leading "Name:" label, brackets, a "z. B." example, a clause or a whole sentence.
+  // d: the German name is asked too; lo: only the full Latin name counts (structures named after what they hold,
+  // "Kanal ... f\xFCr die A. carotis interna"). null when nothing clear is left.
+  quizFact = (s, d, lo) => {
+    const N = [s.la, ...(d ? [s.de] : [])].map((n) => bareLabel(n || "")).filter((n) => n.length >= 3),
+      st = lo ? [] : [...stemsOf(s.la), ...(d ? stemsOf(s.de) : [])],
+      bad = (t) =>
+        N.some((n) => new RegExp(`(^|[^a-z\xE4\xF6\xFC\xDF])${escRe(n)}`, "i").test(t)) ||
+        (t.match(/[A-Za-z\xC0-\xFF]+/g) || []).some((a) => a.length >= 4 && st.some((n) => stemNorm(a).includes(n))),
+      L = [s.la, s.de].map((n) => bareLabel(n || "")).filter(Boolean).map(escRe).join("|");
+    let f = (QUIZ_FACTS[s.la] || s.fact || "").trim();
+    L && (f = f.replace(new RegExp(`^(?:${L})\\s*(?:\\([^()]*\\))?\\s*:\\s*`, "i"), ""));
+    // also a longer label that names it ("Oxyphile Zellen der Nebenschilddr\xFCse: ...")
+    const lb = f.match(/^([^:.;]{2,60}):\s+/);
+    lb && bad(lb[1]) && (f = f.slice(lb[0].length));
+    f = f.replace(/\s*\([^()]*\)/g, (m) => (bad(m) ? "" : m));
+    const S = f
+      .split(/(?<=[.!?])(?<!\b(?:z\. ?B|d\. ?h|u\. ?a|bzw|ca|vgl|usw|evtl|etc|ggf|sog|[A-Za-z\xC0-\xFF]{1,4})\.)\s+(?=[A-Z\xC4\xD6\xDC0-9\xBB\u201E(])/)
+      .map((t) => {
+        const c = t
+          .replace(/[.!?]\s*$/, "")
+          .split(/;\s+/)
+          .map((u) => (bad(u) ? u.replace(/,?\s*(?:z\. ?B\.|zum Beispiel|bspw\.)\s.*$/, "") : u))
+          .filter((u) => u.trim() && !bad(u));
+        return c.length ? c.join("; ") + (/[!?]\s*$/.test(t) ? t.trim().slice(-1) : ".") : "";
+      })
+      .filter(Boolean);
+    let r = S.join(" ").replace(/\s{2,}/g, " ").replace(/\s+([,.;:])/g, "$1").trim();
+    r = r.charAt(0).toUpperCase() + r.slice(1);
+    // too little left, or the rest points back to what was left out ("Hier ...", "Ihre Funktion ...")
+    return r.length >= 15 &&
+      (r.match(/[A-Za-z\xC0-\xFF0-9]+/g) || []).length >= 4 &&
+      !/^(?:Hier|Dort|Daher|Darüber|Darunter|Dabei|Deshalb|Dadurch|Sie|Er|Es|Ihre?|Seine?|Diese[mnrs]?|Aus dem|Aus der|Zusammen)\b/.test(r) &&
+      !bad(r)
+      ? r
+      : null;
+  },
+  // can this structure get a definition question that reads clearly? (else makeQuestion asks another kind)
+  QF_OK = new WeakMap(),
+  hasQuizFact = (s) => {
+    if (!QF_OK.has(s)) {
+      const d = s.fact ? quizFact(s, !0) : null;
+      QF_OK.set(s, !!(s.fact && (quizFact(s, !1) || (d && !namesDe(d, s.de)))));
+    }
+    return QF_OK.get(s);
+  },
+  // German and Latin name alike ("Medianebene" - "Planum medianum"): a name question would give itself away
+  termTwin = (s) => !!s.fact && (namesTerm(s.de, s.la) || namesTerm(s.la, s.de)),
   whatQ = (s) => (s.term ? "Welcher Begriff ist gemeint?" : "Welche Struktur ist gemeint?"),
   hasSchema = (s) => !!(s.figure && FIGURES[s.figure]);
 // answer options must not give themselves away by their form: pair "A / B", brackets, comma,
@@ -9079,11 +9177,21 @@ function makeQuestion(s, r, o) {
   // the asked name already contains the answer ("Medianebene" - "Planum medianum"): ask for the definition instead
   (o === "term-de" || o === "term-la") && s.fact && (namesTerm(s.de, s.la) || namesTerm(s.la, s.de)) && (o = "fact");
   if (o === "fact") {
-    // German answers only when the definition does not already say the German name; otherwise the Latin name is asked
-    // and the definition stays readable
-    const i = !namesDe(s.fact, s.de) && Math.random() < 0.4,
+    // the definition without the parts that name the answer; German answers only when it does not say the German name
+    // either (also not as parts of a compound, "Rumpf ... entfernt" for rumpffern)
+    const PL = quizFact(s, !1),
+      PD0 = quizFact(s, !0),
+      PD = PD0 && !namesDe(PD0, s.de) ? PD0 : null;
+    if (!PL && !PD) {
+      // nothing clear is left of the definition: ask the name, or show the picture when the names are alike
+      const cg = namesTerm(s.de, s.la) || namesTerm(s.la, s.de),
+        pm = (quizMarksFor(r.id) || {})[s.id] && platesFor(r.id).length;
+      if (!cg) return makeQuestion(s, r, Math.random() < 0.5 ? "term-de" : "term-la");
+      if (pm || r.figure) return makeQuestion(s, r, "fig");
+    }
+    const i = !!PD && (!PL || Math.random() < 0.4),
       l = (d) => (i ? d.de : d.la),
-      P = maskFact(s, i),
+      P = (i ? PD : PL) || quizFact(s, !1, !0) || maskFact(s, i),
       // no distractor the definition itself names ("Sonderfall der Sagittalebenen" next to Planum sagittale), unless
       // nothing else is left; a German name only counts as named when nearly the whole word is there
       // ("Rumpf" does not name "rumpfnah")
@@ -9255,6 +9363,11 @@ function buildLessonQuiz(s, r = 8) {
       fig: (i) => !!((t[i.id] && a.length) || s.figure || (q3 && q3.items && q3.items[i.id])),
       type: (i) => !!(s.figure || (t[i.id] && t[i.id].li != null && a.length)),
       point: (i) => !!(t[i.id] && !t[i.id].np && a.length),
+      // definition questions only where the definition reads clearly without the answer; no name question where both
+      // names are alike - otherwise makeQuestion would ask another kind and the structure could come twice in a picture
+      fact: (i) => hasQuizFact(i),
+      "term-de": (i) => !termTwin(i),
+      "term-la": (i) => !termTwin(i),
     },
     // a structure is shown in a picture only once per quiz: the "?" spot and then the same spot to type would give it away
     vis = (k) => k === "fig" || k === "type" || k === "point",
@@ -13247,7 +13360,7 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
                 React.createElement(
                   "div",
                   { className: "ana-body", style: { fontSize: 15, color: C.inkSoft, lineHeight: 1.5 } },
-                  maskFact(k, !1),
+                  quizFact(k, !1) || "",
                 ),
               React.createElement(
                 "div",
