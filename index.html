@@ -10364,7 +10364,7 @@ function BodyArt() {
     s("ellipse", { cx: 104, cy: 120, rx: 9, ry: 30, fill: "#FFFFFF", opacity: 0.07 }),
   );
 }
-function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOpen: io, lessons: ls }) {
+function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOpen: io, lessons: ls, onBadge: ob }) {
   const e = React.createElement,
     [t, a] = useState(BM_FULL),
     [n, i] = useState(null),
@@ -10604,7 +10604,10 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
           { pointerEvents: "none", opacity: B > 1.6 ? 0 : 1 },
           BG.map(([v, W, E, N, Z]) => {
             const T = A[v] || { total: 0, done: 0 },
-              K = r === v;
+              K = r === v,
+              // a tap on the count shows the lessons it counts
+              Q = () => (i(null), d(!1), ob ? ob(v) : o(v)),
+              L = (REGIONS.find((R) => R.id === v) || {}).label || v;
             return e(
               "g",
               { key: v },
@@ -10612,6 +10615,27 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
               e("circle", { cx: N, cy: Z, r: 1.5, fill: K ? "#5B6B80" : "#AEB8C7" }),
               e("rect", { x: W - 18, y: E - 9, width: 36, height: 17, rx: 8.5, fill: K ? "#3A4453" : "#FFFFFF", stroke: K ? "#3A4453" : "#DBE1EA", strokeWidth: 1 }),
               e("text", { x: W, y: E + 3.5, textAnchor: "middle", className: "ana-display", fontSize: "10", fontWeight: "700", fill: K ? "#FFFFFF" : "#3A4453" }, T.done, "/", T.total),
+              B <= 1.6 &&
+                e(
+                  "rect",
+                  {
+                    x: W - 22,
+                    y: E - 14,
+                    width: 44,
+                    height: 28,
+                    fill: "transparent",
+                    pointerEvents: "all",
+                    role: "button",
+                    tabIndex: 0,
+                    "aria-label": `${L}: ${T.done} von ${T.total} Lektionen anzeigen`,
+                    style: { cursor: "pointer", outline: "none" },
+                    onClick: Q,
+                    onKeyDown: (R) => {
+                      (R.key === "Enter" || R.key === " ") && (R.preventDefault(), Q());
+                    },
+                  },
+                  e("title", null, `${L}: Lektionen anzeigen`),
+                ),
             );
           }),
         ),
@@ -10646,7 +10670,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
           className: "ana-body",
           style: { textAlign: "center", fontSize: 11.5, color: C.inkSoft, padding: "2px 0 0" },
         },
-        B > 1.02 ? `${B.toFixed(1).replace(".", ",")}\xD7 \xB7 mit einem Finger verschieben` : "Zwei Finger, Doppeltippen oder + zum Zoomen \xB7 Organ antippen",
+        B > 1.02 ? `${B.toFixed(1).replace(".", ",")}\xD7 \xB7 mit einem Finger verschieben` : "Zwei Finger, Doppeltippen oder + zum Zoomen \xB7 Organ oder Zahl antippen",
       ),
     ),
     I &&
@@ -11202,6 +11226,9 @@ function HomeScreen({
     [S, B] = useState(null),
     os = s.secOpen || {},
     A = useRef({}),
+    [jp, setJp] = useState(0),
+    RH = useRef(null),
+    toList = (v) => (B(v), setJp((W) => W + 1)),
     u = REGIONS.find((v) => v.id === S),
     p = S ? VL.filter((v) => regionOf(v) === S) : [],
     f = S
@@ -11226,6 +11253,10 @@ function HomeScreen({
       break;
     }
   }
+  // a tap on a count of the body map scrolls to the lessons of that region
+  useEffect(() => {
+    jp && RH.current && RH.current.scrollIntoView && RH.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [jp]);
   // menu sections start closed; what the learner opens or closes stays that way (saved with the progress)
   const secOpen = (v) => !!os[v],
     secToggle = (v) => setSO && setSO({ ...os, [v]: !os[v] });
@@ -11644,7 +11675,7 @@ function HomeScreen({
               },
               "REGION W\xC4HLEN",
             ),
-            React.createElement(BodyMap, { progress: s, selected: S, onSelect: B, onOpenLesson: r, isOpen: g, lessons: VL }),
+            React.createElement(BodyMap, { progress: s, selected: S, onSelect: B, onOpenLesson: r, isOpen: g, lessons: VL, onBadge: toList }),
             React.createElement(
               "div",
               { style: { display: "flex", gap: 6, flexWrap: "wrap", paddingTop: 4 } },
@@ -11656,7 +11687,7 @@ function HomeScreen({
                   "button",
                   {
                     key: v.id,
-                    onClick: () => B(N ? null : v.id),
+                    onClick: () => (N ? B(null) : toList(v.id)),
                     className: "ana-body",
                     style: {
                       flex: 1,
@@ -11681,7 +11712,7 @@ function HomeScreen({
           S &&
             React.createElement(
               "div",
-              { style: { display: "flex", alignItems: "center", gap: 10, padding: "0 2px 10px" } },
+              { ref: RH, style: { display: "flex", alignItems: "center", gap: 10, padding: "0 2px 10px", scrollMarginTop: 12 } },
               React.createElement(
                 "div",
                 { className: "ana-display", style: { flex: 1, fontSize: 15.5, fontWeight: 700, color: C.ink } },
