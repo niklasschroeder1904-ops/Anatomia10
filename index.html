@@ -9946,10 +9946,26 @@ function Ring({ value: s, color: r, size: o = 38 }) {
 }
 const BM_FULL = { x: -8, y: 4, w: 256, h: 414 },
   BM_MAXZOOM = 6,
-  // cartoon proportions: the figure is drawn in the old coordinates and every point goes through bmPt -
-  // bigger, rounder head, a little broader body, shorter legs. Hit areas, regions and badges use the same map.
+  // cartoon proportions: the figure is drawn in the old coordinates and every point goes through a map -
+  // bigger, rounder head, slim waist, hips and legs, shorter legs. The arms have their own map: one sideways
+  // scale (so they stay straight) and fuller shoulders, upper arms and forearms. Hit areas, regions and
+  // badges go through the same maps as the drawing.
   BM_GY = [[0, 0], [12, 10], [58, 74], [74, 88], [150, 168], [216, 240], [296, 312], [318, 331], [384, 388], [410, 410], [420, 420]],
-  BM_SX = [[0, 1.34], [44, 1.34], [58, 1.18], [68, 1.12], [420, 1.12]],
+  BM_SX = [[0, 1.34], [44, 1.34], [58, 1.18], [68, 1.08], [96, 1.08], [150, 0.97], [214, 0.99], [240, 0.96], [420, 0.96]],
+  BM_SA = 1.08,
+  // arms widen around a line between their edges: soft bumps for the deltoid, the upper arm and the
+  // forearm on a slightly wider base, narrow at the elbow and the wrist; the hand keeps its size
+  BM_AA = [[0, 83.2], [85, 83.2], [94, 81.6], [104, 78.6], [116, 74.2], [128, 71.2], [144, 68], [160, 65.9], [174, 63.8], [188, 61.2], [202, 58.2], [214, 56.5], [420, 56.5]],
+  bmBump = (y, a, p, b) => (y <= a || y >= b ? 0 : 0.5 - 0.5 * Math.cos(Math.PI * (y < p ? (y - a) / (p - a) : 1 + (y - p) / (b - p)))),
+  bmAG = (y) =>
+    y >= 214 || y <= 79
+      ? 1
+      : 1 +
+        0.04 * Math.min(1, (y - 79) / 8, (214 - y) / 14) +
+        0.32 * bmBump(y, 80, 96, 118) +
+        0.3 * bmBump(y, 104, 128, 156) +
+        0.36 * bmBump(y, 157, 171, 204) -
+        0.16 * bmBump(y, 194, 206, 214),
   bmLerp = (t, y) => {
     let i = 1;
     for (; i < t.length - 1 && y > t[i][0]; i++);
@@ -9958,34 +9974,68 @@ const BM_FULL = { x: -8, y: 4, w: 256, h: 414 },
     return b + ((d - b) * (y - a)) / (c - a);
   },
   bmPt = (x, y) => [+(120 + (x - 120) * bmLerp(BM_SX, y)).toFixed(2), +bmLerp(BM_GY, y).toFixed(2)],
-  // a path with absolute M L C A Z commands, point by point
-  bmW = (d) => {
+  bmPtA = (x, y) => {
+    const a = bmLerp(BM_AA, y),
+      g = bmAG(y),
+      u = x < 120 ? a + (x - a) * g : 240 - a + (x - 240 + a) * g;
+    return [+(120 + (u - 120) * BM_SA).toFixed(2), +bmLerp(BM_GY, y).toFixed(2)];
+  },
+  // a path with absolute M L C A Z commands, point by point; n > 1 splits every curve into n pieces first,
+  // so the bends of the map also show inside long segments
+  bmWarp = (d, pt, sx, n) => {
     const t = d.match(/[MLCAZ]|-?\d*\.?\d+(?:e-?\d+)?/g) || [],
-      o = [];
+      o = [],
+      f = (p) => pt(p[0], p[1]).join(",");
     let c = "",
-      k = 0;
+      k = 0,
+      cp = [0, 0],
+      st = [0, 0];
     while (k < t.length) {
       const x = t[k];
       if (/[MLCAZ]/.test(x)) {
         c = x;
-        o.push(x);
         k++;
+        if (c === "Z") cp = st;
+        if (c !== "C" || n < 2) o.push(x);
         continue;
       }
       if (c === "A") {
         const [rx, ry, rot, la, sw, ex, ey] = t.slice(k, k + 7).map(Number),
-          [nx, ny] = bmPt(ex, ey),
           sy = (bmLerp(BM_GY, ey + 0.5) - bmLerp(BM_GY, ey - 0.5)) || 1;
-        o.push(+(rx * bmLerp(BM_SX, ey)).toFixed(2), +(ry * sy).toFixed(2), rot, la, sw, nx + "," + ny);
+        o.push(+(rx * sx(ey)).toFixed(2), +(ry * sy).toFixed(2), rot, la, sw, f([ex, ey]));
+        cp = [ex, ey];
         k += 7;
+      } else if (c === "C") {
+        const q = t.slice(k, k + 6).map(Number);
+        let P = [cp, [q[0], q[1]], [q[2], q[3]], [q[4], q[5]]];
+        if (n < 2) o.push(f(P[1]), f(P[2]), f(P[3]));
+        else
+          for (let i = n; i > 0; i--) {
+            const r = 1 / i,
+              L = (u, v) => [u[0] + (v[0] - u[0]) * r, u[1] + (v[1] - u[1]) * r],
+              a1 = L(P[0], P[1]),
+              b1 = L(P[1], P[2]),
+              c1 = L(P[2], P[3]),
+              a2 = L(a1, b1),
+              b2 = L(b1, c1),
+              m = L(a2, b2),
+              h = i === 1 ? P : [P[0], a1, a2, m];
+            o.push("C", f(h[1]), f(h[2]), f(h[3]));
+            P = [m, b2, c1, P[3]];
+          }
+        cp = [q[4], q[5]];
+        k += 6;
       } else {
-        const [nx, ny] = bmPt(+x, +t[k + 1]);
-        o.push(nx + "," + ny);
+        cp = [+x, +t[k + 1]];
+        if (c === "M") st = cp;
+        o.push(f(cp));
         k += 2;
       }
     }
     return o.join(" ");
   },
+  bmW = (d) => bmWarp(d, bmPt, (y) => bmLerp(BM_SX, y), 1),
+  bmWA = (d) => bmWarp(d, bmPtA, (y) => bmAG(y) * BM_SA, 4),
   bmMirror = (d) => {
     let n = 0;
     return d.replace(/-?\d+(?:\.\d+)?/g, (m) => (n++ % 2 === 0 ? String(+(240 - +m).toFixed(2)) : m));
@@ -10315,13 +10365,14 @@ const BM_BACK_TORSO =
     ["bein", 22, 286, 92, 284],
   ];
 // all tap areas, regions and badge anchors into the cartoon proportions (the drawing does the same when it renders)
-BM_ORGANS.forEach((o) => (o.hit = o.hit.map(bmW)));
+BM_ORGANS.forEach((o) => (o.hit = o.hit.map(o.region === "arm" ? bmWA : bmW)));
 BM_BACK_EXTRA.forEach((o) => (o.back = o.back.map(bmW)));
-Object.keys(BM_BACK_HITS).forEach((k) => (BM_BACK_HITS[k] = BM_BACK_HITS[k].map(bmW)));
-Object.keys(BM_REGIONS).forEach((k) => (BM_REGIONS[k] = bmW(BM_REGIONS[k])));
+// the back shoulder is the shoulder blade (trunk) plus both deltoid caps (arms)
+Object.keys(BM_BACK_HITS).forEach((k) => (BM_BACK_HITS[k] = BM_BACK_HITS[k].map((d, i) => (k === "schulter" && i > 0 ? bmWA : bmW)(d))));
+Object.keys(BM_REGIONS).forEach((k) => (BM_REGIONS[k] = (k === "arm" ? bmWA : bmW)(BM_REGIONS[k])));
 [BM_BADGES, BM_BADGES_BACK].forEach((L) =>
   L.forEach((b) => {
-    const [x, y] = bmPt(b[3], b[4]);
+    const [x, y] = (b[0] === "arm" ? bmPtA : bmPt)(b[3], b[4]);
     b.splice(2, 3, +bmLerp(BM_GY, b[2]).toFixed(1), x, y);
   }),
 );
@@ -10334,6 +10385,8 @@ function bmBack() {
   const s = React.createElement,
     P = bmP,
     PP = bmPP,
+    PA = bmPA,
+    PPA = bmPPA,
     E = bmE,
     SK = "#9C6B52",
     MO = "#A2433A",
@@ -10346,12 +10399,14 @@ function bmBack() {
     musD = { fill: "url(#bmMuscleD)", stroke: MO, strokeWidth: 0.5, strokeLinejoin: "round" },
     fib = (o) => ({ fill: "none", stroke: "#FFC4B8", strokeWidth: 0.45, strokeLinecap: "round", opacity: o || 0.6 }),
     ten = (w, o) => ({ fill: "none", stroke: TD, strokeWidth: w || 1, strokeLinecap: "round", opacity: o || 1 }),
+    shine = (o) => ({ fill: "#FFFFFF", opacity: o || 0.28 }),
     bone = { fill: "url(#bmBoneG)", stroke: BO, strokeWidth: 0.6, strokeLinejoin: "round" },
     rod = (w) => [
       { fill: "none", stroke: BO, strokeWidth: w + 0.9, strokeLinecap: "round" },
       { fill: "none", stroke: "#FBF1DD", strokeWidth: w, strokeLinecap: "round" },
     ],
     R = (d, w, k) => [P(d, rod(w)[0], k + "o"), P(d, rod(w)[1], k)],
+    RA = (d, w, k) => [PA(d, rod(w)[0], k + "o"), PA(d, rod(w)[1], k)],
     ARM =
       "M 86,79 C 78,78 71,84 70,94 C 68,104 67,114 66,124 C 65,136 62,150 61,160 C 60,170 57,180 55,190 C 53,200 51.5,207 51,214 L 61.2,215.6 C 61,206 64,196 66,188 C 67,178 69,168 70,160 C 71,150 73,138 76,128 C 78,120 80,112 82,106 C 84,98 86,88 86,79 Z",
     HAND =
@@ -10366,7 +10421,7 @@ function bmBack() {
     E(120, 411, 40, 4.6, { fill: "url(#bmShadowG)" }, "shadow"),
     // ---- skin ----
     P(BM_BODY, skin, "body"),
-    PP(ARM, limb),
+    PPA(ARM, limb),
     PP("M 101.8,37.2 C 97.6,36.2 95.4,40.4 95.8,45.2 C 96.2,49.8 98.6,52.6 101.9,51.8", { fill: "#F6CDB1", stroke: SK, strokeWidth: 0.9 }),
     // ---- muscles of the left half ----
     s(
@@ -10386,15 +10441,23 @@ function bmBack() {
       s(
         "g",
         { key: "arm", clipPath: "url(#bmClipArm)" },
-        P(ARM, { fill: "url(#bmMuscleG)" }, "ab"),
-        P("M 72,110 C 68.5,122 66,136 64.5,152 C 66,158 70,159 72,154 C 74,140 77,124 80,112 C 77.5,108 74,107 72,110 Z", musL, "tri"),
-        P("M 74.6,114 C 72.4,126 70.8,138 70,150", fib(0.55), "trif"),
-        P("M 87.4,79 C 78.2,77.4 70,84 69.4,95 C 69.3,102 70.5,107.6 72.6,111.2 C 76.8,107.2 80.2,99.6 82.6,93 C 84.6,88 87,84 87.4,79 Z", mus, "delt"),
-        P("M 77.4,83.4 C 74.6,90.2 73.2,98.2 72.8,106 M 81.6,84.8 C 78.8,90.8 77,96.8 76.2,102.6", fib(), "deltf"),
-        P("M 65.4,148.4 C 65.8,152.4 66.6,155.2 68,156.4 C 69.6,155.4 70.8,152.6 71.6,148.8 C 69.6,150 67.4,150 65.4,148.4 Z", { fill: TD, opacity: 0.5 }, "olec"),
-        P("M 62,163 C 59,175 56.5,187 55,199 C 56,202 58,202.5 59,200 C 61.5,188 64,176 67.5,164 Z", musL, "ext1"),
-        P("M 66,164 C 64.5,176 62.5,188 60.5,200 C 61,203.5 63.5,203.5 64.5,200 C 66,188 68,176 70,164 Z", mus, "ext2"),
-        P("M 55.4,201 C 54.6,205.4 53.8,209.6 53.2,214.6 M 58.4,202 C 57.8,206.4 57.4,210.4 57,215.2 M 61.4,202.4 C 61,206.8 60.8,211 60.6,216", ten(0.7, 0.75), "wrist"),
+        PA(ARM, { fill: "url(#bmMuscleG)" }, "ab"),
+        // triceps: lateral head on the outside, long head inside, tendon plate above the elbow
+        PA("M 69.6,106 C 66.2,118 63.4,132 61.6,150 L 66.6,153 C 67.6,140 69.4,126 72.6,111 Z", musD, "tril"),
+        PA("M 85,99 C 79,102 73.4,111 70.8,122 C 68.8,130.6 68.2,139 68.4,145 C 68.6,150 69.2,154 70,157.6 C 72.6,155.4 75,151.6 76.8,147 C 77.8,144.4 79,140.4 80.4,134 L 90,112 Z", musL, "tri"),
+        PA("M 75,114 C 73,123 72,133 72.2,143", fib(0.55), "trif"),
+        PA("M 66.8,147 C 67,151.6 67.8,155.4 69.2,157.4 C 70.6,155.6 71.4,152 71.8,147.4 C 70.2,148.4 68.4,148.4 66.8,147 Z", { fill: TD, opacity: 0.42 }, "olec"),
+        PA("M 79.2,107.4 C 75.6,111.4 73.2,117.6 72.4,124.6 C 74.4,119 76.6,113.4 79.2,107.4 Z", shine(0.24), "trish"),
+        // round deltoid cap
+        PA("M 87.4,79 C 78.2,77.4 70,84 69.4,95 C 69.3,102 70.5,107.6 72.6,111.2 C 76.8,107.2 80.2,99.6 82.6,93 C 84.6,88 87,84 87.4,79 Z", mus, "delt"),
+        PA("M 77.4,83.4 C 74.6,90.2 73.2,98.2 72.8,106 M 81.6,84.8 C 78.8,90.8 77,96.8 76.2,102.6", fib(), "deltf"),
+        PA("M 81.4,81.6 C 77,83.4 73.6,88 72.8,94 C 75.2,89.4 78,85.4 81.4,81.6 Z", shine(0.24), "deltsh"),
+        // forearm extensors: radial group outside, ulnar group inside
+        PA("M 60,150 C 62.6,156 64.6,163 64.6,171 C 64.4,180 61.4,190 58.4,198 C 57.4,200.6 56.2,202.6 55,204 L 52,200 L 56,160 Z", musL, "ext1"),
+        PA("M 74,156 C 71.6,160 68.6,166 66.4,174 C 64.4,182 62.6,192 61.4,200 C 61,203 61,205 61.4,207 L 66,207 L 74,170 Z", mus, "ext2"),
+        PA("M 60.4,160 C 61.8,168 61.2,180 58.2,191 M 68.6,166 C 66.8,174 65,184 63.6,194", fib(0.5), "extf"),
+        PA("M 60.6,155.6 C 62.4,160.6 62.8,166.6 62,172.6 C 61.4,166.6 60.8,161 60.6,155.6 Z", shine(0.22), "extsh"),
+        PA("M 55.4,201 C 54.6,205.4 53.8,209.6 53.2,214.6 M 58.4,202 C 57.8,206.4 57.4,210.4 57,215.2 M 61.4,202.4 C 61,206.8 60.8,211 60.6,216", ten(0.7, 0.75), "wrist"),
       ),
       s(
         "g",
@@ -10415,10 +10478,10 @@ function bmBack() {
       ),
     ),
     // ---- hands (back of the hand) and heels ----
-    PP(THUMB, limb),
-    PP(HAND, limb),
-    PP("M 52.3,236.6 L 52.2,240 M 55.4,236.8 L 55.4,240.6 M 58.5,236.4 L 58.5,239.6", { fill: "none", stroke: "#C98F72", strokeWidth: 0.5, strokeLinecap: "round" }),
-    PP("M 51.4,225 C 53.4,226.2 56.6,226.2 59.6,225", { fill: "none", stroke: "#D9A386", strokeWidth: 0.5, strokeLinecap: "round", opacity: 0.8 }),
+    PPA(THUMB, limb),
+    PPA(HAND, limb),
+    PPA("M 52.3,236.6 L 52.2,240 M 55.4,236.8 L 55.4,240.6 M 58.5,236.4 L 58.5,239.6", { fill: "none", stroke: "#C98F72", strokeWidth: 0.5, strokeLinecap: "round" }),
+    PPA("M 51.4,225 C 53.4,226.2 56.6,226.2 59.6,225", { fill: "none", stroke: "#D9A386", strokeWidth: 0.5, strokeLinecap: "round", opacity: 0.8 }),
     PP(HEEL, limb),
     PP("M 100.6,401.6 C 102.8,403.6 105.8,403.6 108,401.6", { fill: "none", stroke: "#D9A386", strokeWidth: 0.7, strokeLinecap: "round" }),
     // ---- skeleton of the right half ----
@@ -10428,9 +10491,9 @@ function bmBack() {
     R("M 133,94.5 C 140,92 150,90 158,90", 2, "spina"),
     P("M 154,88 C 158,86 161,88 160.5,92 C 158,95 155,94 153.5,91.5 Z", bone, "acro"),
     R("M 121.6,82 C 132,80.6 144,82 153.4,82.6", 2.6, "clav"),
-    R("M 161.6,93 C 164.6,112 168,132 171.2,151.6", 3.4, "hum"),
-    E(172, 155.4, 3.4, 3, bone, "elb"),
-    R("M 172.4,161 C 175.2,176 178.2,192 181,208 M 176.6,161.4 C 179.6,176.4 182.8,192 185.6,207", 1.9, "fore"),
+    RA("M 161.6,93 C 164.6,112 168,132 171.2,151.6", 3.4, "hum"),
+    bmEA(172, 155.4, 3.4, 3, bone, "elb"),
+    RA("M 172.4,161 C 175.2,176 178.2,192 181,208 M 176.6,161.4 C 179.6,176.4 182.8,192 185.6,207", 1.9, "fore"),
     P(BM_PELVIS_BACK, bone, "pelv"),
     E(141, 211.4, 4.4, 4.4, bone, "fhead"),
     R("M 140.6,214 C 139.4,240 137.6,268 136,293", 4.4, "femur"),
@@ -10483,6 +10546,14 @@ const bmP = (d, t, k) => React.createElement("path", { key: k, d: bmW(d), ...t }
     return React.createElement("ellipse", { key: k, cx: x, cy: y, rx: +(rx * bmLerp(BM_SX, cy)).toFixed(2), ry: +(ry * sy).toFixed(2), ...t });
   },
   bmEE = (cx, cy, rx, ry, t) => [bmE(cx, cy, rx, ry, t, "l"), bmE(240 - cx, cy, rx, ry, t, "r")],
+  // the same for arms and hands, through the arm map
+  bmPA = (d, t, k) => React.createElement("path", { key: k, d: bmWA(d), ...t }),
+  bmPPA = (d, t) => bmPair(d).map((a, n) => bmPA(a, t, "p" + n)),
+  bmEA = (cx, cy, rx, ry, t, k) => {
+    const [x, y] = bmPtA(cx, cy),
+      sy = bmLerp(BM_GY, cy + 0.5) - bmLerp(BM_GY, cy - 0.5);
+    return React.createElement("ellipse", { key: k, cx: x, cy: y, rx: +(rx * bmAG(cy) * BM_SA).toFixed(2), ry: +(ry * sy).toFixed(2), ...t });
+  },
   BM_ART = {};
 function BodyDefs() {
   const s = React.createElement,
@@ -10527,6 +10598,7 @@ function bmFront() {
   const s = React.createElement,
     P = bmP,
     PP = bmPP,
+    PPA = bmPPA,
     E = bmE,
     EE = bmEE,
     SK = "#9C6B52",
@@ -10556,30 +10628,36 @@ function bmFront() {
     E(120, 411, 40, 4.6, { fill: "url(#bmShadowG)" }, "shadow"),
     // ---- skin: body, arms, ears ----
     P(BM_BODY, skin, "body"),
-    PP(ARM, limb),
+    PPA(ARM, limb),
     PP("M 101.8,37.2 C 97.6,36.2 95.4,40.4 95.8,45.2 C 96.2,49.8 98.6,52.6 101.9,51.8", { fill: "#F6CDB1", stroke: SK, strokeWidth: 0.9 }),
     PP("M 99.8,40.2 C 98.4,42.4 98.6,46.6 100.3,48.8", { fill: "none", stroke: "#D49C80", strokeWidth: 0.7, strokeLinecap: "round" }),
     // ---- arm muscles ----
     s(
       "g",
       { key: "arm", clipPath: "url(#bmClipArm)" },
-      PP(ARM, { fill: "url(#bmMuscleG)" }),
-      PP("M 70.4,110 C 67.4,122 65,136 63.4,150 L 66.4,151 C 67.8,137 69.8,123 72.6,112 Z", musD),
-      PP("M 80.4,106.6 C 75.4,110.6 72.2,122.6 71.2,135.6 C 70.6,144.6 71.6,151.8 73.8,155.4 C 76.8,152 78.6,142 79.6,131 C 80.4,122 81.8,113 80.4,106.6 Z", musL),
-      PP("M 76.6,113.6 C 74.6,124.6 73.8,137.6 74.4,149.6", fib(0.55)),
-      PP("M 87.4,79 C 78.2,77.4 70,84 69.4,95 C 69.3,102 70.5,107.6 72.6,111.2 C 76.8,107.2 80.2,99.6 82.6,93 C 84.6,88 87,84 87.4,79 Z", mus),
-      PP("M 77.4,83.4 C 74.6,90.2 73.2,98.2 72.8,106 M 81.6,84.8 C 78.8,90.8 77,96.8 76.2,102.6", fib()),
-      PP("M 61.4,160.6 C 64,159.4 67.6,159.4 70.4,160.8", { fill: "none", stroke: MO, strokeWidth: 0.6, opacity: 0.6, strokeLinecap: "round" }),
-      PP("M 61.2,163 C 58.6,174 56.4,186 54.8,198 C 55.6,201 57.4,201.4 58.4,198.6 C 60,187 62.4,175 65.4,164 Z", musL),
-      PP("M 65.6,164 C 63.6,176 61.4,188 59.6,200 C 60.4,203.4 62.6,203.6 63.4,200.4 C 65.2,189 67.4,177 69.8,165 Z", mus),
-      PP("M 58.2,170 C 57.2,180 56,190 55.2,197 M 66.6,170 C 65.2,180 63.6,190 62.2,199", fib(0.5)),
-      PP("M 55.4,201 C 54.6,205.4 53.8,209.6 53.2,214.6 M 58.4,202 C 57.8,206.4 57.4,210.4 57,215.2 M 61.4,202.4 C 61,206.8 60.8,211 60.6,216", ten(0.7, 0.75)),
+      PPA(ARM, { fill: "url(#bmMuscleG)" }),
+      // triceps along the outer edge, a full biceps in front
+      PPA("M 69.6,106 C 66.2,118 63.6,132 61.8,150 L 66.2,152 C 67.4,138 69.4,124 72.4,110 Z", musD),
+      PPA("M 85,99 C 79,102 73.4,111 70.8,122 C 68.8,130.6 68,139 68,145 C 68,150 67.6,153.6 67.8,156.6 C 70.4,154.4 73,151 75,146.6 C 76.6,143 78.4,138 80.4,132 L 90,112 Z", musL),
+      PPA("M 74.8,114 C 72.8,123 71.8,133 72,143", fib(0.55)),
+      PPA("M 79.2,107.4 C 75.6,111.4 73.2,117.6 72.4,124.6 C 74.4,119 76.6,113.4 79.2,107.4 Z", shine(0.26)),
+      // round deltoid cap
+      PPA("M 87.4,79 C 78.2,77.4 70,84 69.4,95 C 69.3,102 70.5,107.6 72.6,111.2 C 76.8,107.2 80.2,99.6 82.6,93 C 84.6,88 87,84 87.4,79 Z", mus),
+      PPA("M 77.4,83.4 C 74.6,90.2 73.2,98.2 72.8,106 M 81.6,84.8 C 78.8,90.8 77,96.8 76.2,102.6", fib()),
+      PPA("M 81.4,81.6 C 77,83.4 73.6,88 72.8,94 C 75.2,89.4 78,85.4 81.4,81.6 Z", shine(0.26)),
+      // elbow crease; brachioradialis on the outside and the flexors on the inside of the forearm
+      PPA("M 61.4,160.6 C 64,159.4 67.6,159.4 70.4,160.8", { fill: "none", stroke: MO, strokeWidth: 0.6, opacity: 0.6, strokeLinecap: "round" }),
+      PPA("M 60,150 C 62.6,156 64.6,163 64.6,171 C 64.4,180 61.4,190 58.4,198 C 57.4,200.6 56.2,202.6 55,204 L 52,200 L 56,160 Z", musL),
+      PPA("M 74,156 C 71.6,160 68.6,166 66.4,174 C 64.4,182 62.6,192 61.4,200 C 61,203 61,205 61.4,207 L 66,207 L 74,170 Z", mus),
+      PPA("M 60.4,160 C 61.8,168 61.2,180 58.2,191 M 68.6,166 C 66.8,174 65,184 63.6,194", fib(0.5)),
+      PPA("M 60.6,155.6 C 62.4,160.6 62.8,166.6 62,172.6 C 61.4,166.6 60.8,161 60.6,155.6 Z", shine(0.24)),
+      PPA("M 55.4,201 C 54.6,205.4 53.8,209.6 53.2,214.6 M 58.4,202 C 57.8,206.4 57.4,210.4 57,215.2 M 61.4,202.4 C 61,206.8 60.8,211 60.6,216", ten(0.7, 0.75)),
     ),
     // ---- hands ----
-    PP(THUMB, limb),
-    PP(HAND, limb),
-    PP("M 50.4,229.4 C 53.2,230.8 57.4,230.8 61.2,229.2", { fill: "none", stroke: "#D9A386", strokeWidth: 0.55, strokeLinecap: "round" }),
-    PP("M 52.3,236.6 L 52.2,240 M 55.4,236.8 L 55.4,240.6 M 58.5,236.4 L 58.5,239.6", { fill: "none", stroke: "#C98F72", strokeWidth: 0.5, strokeLinecap: "round" }),
+    PPA(THUMB, limb),
+    PPA(HAND, limb),
+    PPA("M 50.4,229.4 C 53.2,230.8 57.4,230.8 61.2,229.2", { fill: "none", stroke: "#D9A386", strokeWidth: 0.55, strokeLinecap: "round" }),
+    PPA("M 52.3,236.6 L 52.2,240 M 55.4,236.8 L 55.4,240.6 M 58.5,236.4 L 58.5,239.6", { fill: "none", stroke: "#C98F72", strokeWidth: 0.5, strokeLinecap: "round" }),
     // ---- leg muscles ----
     s(
       "g",
