@@ -9946,6 +9946,46 @@ function Ring({ value: s, color: r, size: o = 38 }) {
 }
 const BM_FULL = { x: -8, y: 4, w: 256, h: 414 },
   BM_MAXZOOM = 6,
+  // cartoon proportions: the figure is drawn in the old coordinates and every point goes through bmPt -
+  // bigger, rounder head, a little broader body, shorter legs. Hit areas, regions and badges use the same map.
+  BM_GY = [[0, 0], [12, 10], [58, 74], [74, 88], [150, 168], [216, 240], [296, 312], [318, 331], [384, 388], [410, 410], [420, 420]],
+  BM_SX = [[0, 1.34], [44, 1.34], [58, 1.18], [68, 1.12], [420, 1.12]],
+  bmLerp = (t, y) => {
+    let i = 1;
+    for (; i < t.length - 1 && y > t[i][0]; i++);
+    const [a, b] = t[i - 1],
+      [c, d] = t[i];
+    return b + ((d - b) * (y - a)) / (c - a);
+  },
+  bmPt = (x, y) => [+(120 + (x - 120) * bmLerp(BM_SX, y)).toFixed(2), +bmLerp(BM_GY, y).toFixed(2)],
+  // a path with absolute M L C A Z commands, point by point
+  bmW = (d) => {
+    const t = d.match(/[MLCAZ]|-?\d*\.?\d+(?:e-?\d+)?/g) || [],
+      o = [];
+    let c = "",
+      k = 0;
+    while (k < t.length) {
+      const x = t[k];
+      if (/[MLCAZ]/.test(x)) {
+        c = x;
+        o.push(x);
+        k++;
+        continue;
+      }
+      if (c === "A") {
+        const [rx, ry, rot, la, sw, ex, ey] = t.slice(k, k + 7).map(Number),
+          [nx, ny] = bmPt(ex, ey),
+          sy = (bmLerp(BM_GY, ey + 0.5) - bmLerp(BM_GY, ey - 0.5)) || 1;
+        o.push(+(rx * bmLerp(BM_SX, ey)).toFixed(2), +(ry * sy).toFixed(2), rot, la, sw, nx + "," + ny);
+        k += 7;
+      } else {
+        const [nx, ny] = bmPt(+x, +t[k + 1]);
+        o.push(nx + "," + ny);
+        k += 2;
+      }
+    }
+    return o.join(" ");
+  },
   bmMirror = (d) => {
     let n = 0;
     return d.replace(/-?\d+(?:\.\d+)?/g, (m) => (n++ % 2 === 0 ? String(+(240 - +m).toFixed(2)) : m));
@@ -10247,7 +10287,7 @@ const BM_BACK_TORSO =
       kw: /r\xFCckenmusk|r\xFCcken- und|nacken- und r\xFCcken|r\xFCckenmuskulatur/i,
       it: /trapez|latissim|rhomboid|erector|longissim|iliocostal|spinalis|multifid|splenius|semispinal|levator scapulae|serratus posterior|quadratus lumborum|rotator(es)? (brevis|longus)/i,
       back: [
-        "M 120,48 C 114,52 110.5,60 109,69 C 101,75 93,77.5 86.5,80 C 92,86 99,92 104.5,100 C 111,114 116.5,134 120,152 Z",
+        "M 120,54 C 116,54.2 112.2,55.8 109.4,59.2 C 110.2,62 110.5,64.5 110.5,67 C 110.5,70 109,72 106,74 C 100,76 92,77 86.5,80 C 92,86 99,92 104.5,100 C 111,114 116.5,134 120,152 Z",
         "M 120,152 L 120,190 C 110,191 99,192 90,190 C 88.5,177 86.5,160 85.5,141 C 84.5,127 84,115 84,108 C 92,111 99.5,117 105.5,123 C 111.5,133 116,143 120,152 Z",
       ],
     },
@@ -10260,7 +10300,7 @@ const BM_BACK_TORSO =
     },
   ],
   BM_BACK_HITS = {
-    gehirn: ["M 120,15.5 C 130.5,15 138,22 138,30.5 C 138,34.5 137,37 135.5,38.5 C 131,45.5 109,45.5 104.5,38.5 C 103,37 102,34.5 102,30.5 C 102,22 109.5,15 120,15.5 Z"],
+    gehirn: ["M 120,15.5 C 130.5,15 138,22 138,30.5 C 138,34.5 137,37 135.5,38.5 C 131,48.2 109,48.2 104.5,38.5 C 103,37 102,34.5 102,30.5 C 102,22 109.5,15 120,15.5 Z"],
     brustkorb: ["M 124.5,90 C 136,89 150,92 157,100 C 157,118 155,136 152.5,152 C 143,156 132,156 124.5,154 Z"],
     schulter: [BM_SCAPULA, "M 86,79 C 78,78 71,84 70,94 C 69.5,101 70.5,106 72,110 C 75,106 78,99 81,93 C 83,88 86,84 86,79 Z", bmMirror("M 86,79 C 78,78 71,84 70,94 C 69.5,101 70.5,106 72,110 C 75,106 78,99 81,93 C 83,88 86,84 86,79 Z")],
     niere: [BM_KIDNEY_BACK],
@@ -10274,263 +10314,384 @@ const BM_BACK_TORSO =
     ["arm", 18, 168, 60, 168],
     ["bein", 22, 286, 92, 284],
   ];
+// all tap areas, regions and badge anchors into the cartoon proportions (the drawing does the same when it renders)
+BM_ORGANS.forEach((o) => (o.hit = o.hit.map(bmW)));
+BM_BACK_EXTRA.forEach((o) => (o.back = o.back.map(bmW)));
+Object.keys(BM_BACK_HITS).forEach((k) => (BM_BACK_HITS[k] = BM_BACK_HITS[k].map(bmW)));
+Object.keys(BM_REGIONS).forEach((k) => (BM_REGIONS[k] = bmW(BM_REGIONS[k])));
+[BM_BADGES, BM_BADGES_BACK].forEach((L) =>
+  L.forEach((b) => {
+    const [x, y] = bmPt(b[3], b[4]);
+    b.splice(2, 3, +bmLerp(BM_GY, b[2]).toFixed(1), x, y);
+  }),
+);
+const BM_BACK_TORSO_W = bmW(BM_BACK_TORSO);
 function BodyArtBack() {
+  return BM_ART.back || (BM_ART.back = bmBack());
+}
+// back view: muscles on the viewer's left half, skeleton under the skin on the right half
+function bmBack() {
   const s = React.createElement,
-    r = (e, t) => s("path", { d: e, ...t }),
-    o = (e, t) => bmPair(e).map((a, n) => s("path", { key: n, d: a, ...t })),
-    M = { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.55 },
-    F = (e) => ({ stroke: "#F2B3A8", strokeWidth: 0.45, fill: "none", opacity: e || 0.65 }),
-    B = { fill: "url(#bmBoneG)", stroke: "#B8A274", strokeWidth: 0.6 };
+    P = bmP,
+    PP = bmPP,
+    E = bmE,
+    SK = "#9C6B52",
+    MO = "#A2433A",
+    TD = "#F7E8D6",
+    BO = "#B59D6C",
+    skin = { fill: "url(#bmSkinG)", stroke: SK, strokeWidth: 1, strokeLinejoin: "round" },
+    limb = { fill: "url(#bmLimbG)", stroke: SK, strokeWidth: 1, strokeLinejoin: "round" },
+    mus = { fill: "url(#bmMuscleG)", stroke: MO, strokeWidth: 0.5, strokeLinejoin: "round" },
+    musL = { fill: "url(#bmMuscleL)", stroke: MO, strokeWidth: 0.5, strokeLinejoin: "round" },
+    musD = { fill: "url(#bmMuscleD)", stroke: MO, strokeWidth: 0.5, strokeLinejoin: "round" },
+    fib = (o) => ({ fill: "none", stroke: "#FFC4B8", strokeWidth: 0.45, strokeLinecap: "round", opacity: o || 0.6 }),
+    ten = (w, o) => ({ fill: "none", stroke: TD, strokeWidth: w || 1, strokeLinecap: "round", opacity: o || 1 }),
+    bone = { fill: "url(#bmBoneG)", stroke: BO, strokeWidth: 0.6, strokeLinejoin: "round" },
+    rod = (w) => [
+      { fill: "none", stroke: BO, strokeWidth: w + 0.9, strokeLinecap: "round" },
+      { fill: "none", stroke: "#FBF1DD", strokeWidth: w, strokeLinecap: "round" },
+    ],
+    R = (d, w, k) => [P(d, rod(w)[0], k + "o"), P(d, rod(w)[1], k)],
+    ARM =
+      "M 86,79 C 78,78 71,84 70,94 C 68,104 67,114 66,124 C 65,136 62,150 61,160 C 60,170 57,180 55,190 C 53,200 51.5,207 51,214 L 61.2,215.6 C 61,206 64,196 66,188 C 67,178 69,168 70,160 C 71,150 73,138 76,128 C 78,120 80,112 82,106 C 84,98 86,88 86,79 Z",
+    HAND =
+      "M 51.2,213.6 C 50.2,219 49.4,225 49.2,231 C 49.1,236 49.2,241 49.6,244.6 C 49.9,246.2 51.7,246.3 52,244.7 L 52.3,236.6 C 52.5,240.4 52.5,244.6 52.7,247.4 C 53,249.1 54.8,249.2 55.1,247.5 L 55.4,236.8 C 55.7,240.6 55.8,244.4 56,246.8 C 56.3,248.4 58,248.4 58.3,246.7 L 58.5,236.4 C 58.8,239.6 59,241.8 59.2,243.5 C 59.6,245 61.2,244.7 61.3,243.1 C 61.6,237.6 61.8,231.6 61.6,226 C 61.5,222 61.3,218.6 61,215.6 Z",
+    THUMB = "M 51.2,220.4 C 47.6,221.8 44.2,226.4 43,231.8 C 42.4,234.8 43,237.4 44.8,237.6 C 46.4,237.8 47.4,236 48,233.8 C 48.8,230.4 50.4,227.8 52.6,226.2 Z",
+    HEEL = "M 97.5,384 C 98,390 95,394 94,399 C 92.5,404 95,409.5 100,410 C 105,410.5 111,410.5 113,408 C 115,402 113,396 112,390 L 112,384 Z",
+    LEFT = "M -20,0 L 120,0 L 120,430 L -20,430 Z",
+    ribs = [92, 99, 106, 113, 120, 127, 134, 141, 148];
   return s(
     "g",
     { pointerEvents: "none" },
-    s("ellipse", { cx: 120, cy: 411, rx: 34, ry: 4.5, fill: "url(#bmShadowG)" }),
-    s("path", { d: BM_BODY, fill: "url(#bmSkinG)", stroke: "#B9876C", strokeWidth: 0.9, strokeLinejoin: "round" }),
-    o(BM_ARM, { fill: "url(#bmLimbG)", stroke: "#B9876C", strokeWidth: 0.9, strokeLinejoin: "round" }),
-    o(BM_THUMB, { fill: "url(#bmLimbG)", stroke: "#B9876C", strokeWidth: 0.8 }),
-    o("M 52,242 L 52.5,250 M 55,243 L 55.5,251 M 58,242 L 58.5,248.5", { stroke: "#C99A80", strokeWidth: 0.55, fill: "none" }),
-    o("M 100.5,37 C 96.5,36.5 95.2,42 96,46.5 C 96.8,50.5 99,52 101.5,51", { fill: "#EFC7AE", stroke: "#B9876C", strokeWidth: 0.8 }),
-    // ---- brain from behind: occipital lobes and cerebellum ----
-    r("M 120,15.5 C 130.5,15 138,22 138,30.5 C 138,34 136.5,36.5 134,37.5 L 106,37.5 C 103.5,36.5 102,34 102,30.5 C 102,22 109.5,15 120,15.5 Z", { fill: "url(#bmBrainG)", stroke: "#A65A71", strokeWidth: 0.7 }),
-    r("M 120,16 L 120,37.5", { stroke: "#A65A71", strokeWidth: 0.7 }),
-    s("g", { stroke: "#B76A80", strokeWidth: 0.5, fill: "none", opacity: 0.85 },
-      [21, 26, 31].map((e, t) => s("g", { key: t },
-        r(`M ${105 + t},${e} C 108,${e - 2.5} 112,${e + 2} 115,${e - 1} C 116.5,${e - 2.5} 118,${e} 119,${e - 1}`),
-        r(`M ${135 - t},${e} C 132,${e - 2.5} 128,${e + 2} 125,${e - 1} C 123.5,${e - 2.5} 122,${e} 121,${e - 1}`)))),
-    r("M 105.5,38 C 109,44.5 131,44.5 134.5,38 C 130,36.6 110,36.6 105.5,38 Z", { fill: "#D98BA0", stroke: "#A65A71", strokeWidth: 0.6 }),
-    s("g", { stroke: "#A65A71", strokeWidth: 0.35, fill: "none", opacity: 0.8 },
-      [39.2, 40.6, 42].map((e) => r(`M ${108 + (e - 39) * 1.6},${e} C 113,${e + 0.8} 127,${e + 0.8} ${132 - (e - 39) * 1.6},${e}`, { key: e }))),
-    r("M 120,38 L 120,43.8", { stroke: "#A65A71", strokeWidth: 0.6 }),
-    // ---- skeleton on the right half (viewer's right) ----
-    s("g", { opacity: 0.9 },
-      [92, 99, 106, 113, 120, 127, 134, 141, 148].map((e, t) => r(`M 123,${e} C 133,${e - 3} 147,${e - 1} 154,${e + 8 + t * 0.4}`, { key: t, stroke: "url(#bmBoneG)", strokeWidth: 2.4, fill: "none", strokeLinecap: "round" })),
-      [92, 99, 106, 113, 120, 127, 134, 141, 148].map((e, t) => r(`M 123,${e} C 133,${e - 3} 147,${e - 1} 154,${e + 8 + t * 0.4}`, { key: "o" + t, stroke: "#B8A274", strokeWidth: 0.4, fill: "none", opacity: 0.7 }))),
-    r(BM_KIDNEY_BACK, { fill: "url(#bmKidneyG)", stroke: "#5E2224", strokeWidth: 0.6 }),
-    r(BM_SCAPULA, B),
-    r("M 133,94.5 C 140,92 150,90 158,90", { stroke: "#E9DDC0", strokeWidth: 2.4, fill: "none", strokeLinecap: "round" }),
-    r("M 133,94.5 C 140,92 150,90 158,90", { stroke: "#B8A274", strokeWidth: 0.4, fill: "none" }),
-    r("M 154,88 C 158,86 161,88 160.5,92 C 158,95 155,94 153.5,91.5 Z", B),
-    r("M 121,82 C 132,80.5 144,82 153.5,82.5", { stroke: "url(#bmBoneG)", strokeWidth: 3.2, fill: "none", strokeLinecap: "round" }),
-    r(BM_PELVIS_BACK, B),
-    r("M 140,212 C 139,240 137,270 135.5,296", { stroke: "url(#bmBoneG)", strokeWidth: 5.5, fill: "none", strokeLinecap: "round" }),
-    r("M 140,212 C 139,240 137,270 135.5,296", { stroke: "#B8A274", strokeWidth: 0.4, fill: "none" }),
-    s("circle", { cx: 141, cy: 211, r: 4.2, ...B }),
-    r("M 129.5,296 C 133,293 139.5,293 142,297 C 141,301 131,301 129.5,296 Z", B),
-    r("M 134.5,301 C 134,326 134,356 135,386", { stroke: "url(#bmBoneG)", strokeWidth: 4, fill: "none", strokeLinecap: "round" }),
-    r("M 142,303 C 143,330 143,360 142.5,388", { stroke: "url(#bmBoneG)", strokeWidth: 2.2, fill: "none", strokeLinecap: "round" }),
-    r("M 160,94 C 162,112 164,130 166,152", { stroke: "url(#bmBoneG)", strokeWidth: 4, fill: "none", strokeLinecap: "round" }),
-    r("M 168,164 C 172,180 176,196 180,212 M 172,162 C 176,178 181,194 185,210", { stroke: "url(#bmBoneG)", strokeWidth: 2.2, fill: "none", strokeLinecap: "round" }),
-    // ---- spine (both halves) ----
-    BM_SPINE_Y.map((e, t) => {
-      const a = 2.2 + t * 0.12;
-      return s("g", { key: "v" + t },
-        r(`M ${120 - a * 2.6},${e + 1.2} L ${120 + a * 2.6},${e + 1.2}`, { stroke: "#E2D4B4", strokeWidth: 1.6, strokeLinecap: "round" }),
-        s("rect", { x: 120 - a, y: e - 1.6, width: a * 2, height: 4.6, rx: 1.4, ...B }));
-    }),
-    r(BM_SACRUM, B),
-    r("M 116,196 L 117,196 M 123,196 L 124,196 M 116.5,202 L 117.5,202 M 122.5,202 L 123.5,202", { stroke: "#B8A274", strokeWidth: 1.2, strokeLinecap: "round" }),
-    // ---- muscles on the left half (viewer's left) ----
-    r("M 120,48 C 114,52 110.5,60 109,69 C 101,75 93,77.5 86.5,80 C 92,86 99,92 104.5,100 C 111,114 116.5,134 120,152 L 120,48 Z", { ...M, opacity: 0.9 }),
-    r("M 117,60 C 112,72 104,80 94,82 M 118,80 C 112,88 106,94 100,96 M 119,104 C 116,110 112,112 108,110 M 119.5,128 C 118,120 114,112 110,108", F()),
-    r("M 120,152 L 120,190 C 110,191 99,192 90,190 C 88.5,177 86.5,160 85.5,141 C 84.5,127 84,115 84,108 C 92,111 99.5,117 105.5,123 C 111.5,133 116,143 120,152 Z", { ...M, opacity: 0.86 }),
-    r("M 119.5,160 C 108,152 96,138 88,118 M 119.5,174 C 106,166 94,150 87,132 M 115,189 C 102,180 92,164 87,146", F(0.55)),
-    r("M 120,156 L 120,190 C 116,190 113,189 111,188 C 111,178 112,166 114,156 Z", { fill: "#E9D8C8", opacity: 0.75 }),
-    r("M 86,79 C 78,78 71,84 70,94 C 69.5,101 70.5,106 72,110 C 75,106 78,99 81,93 C 83,88 86,84 86,79 Z", { ...M, opacity: 0.88 }),
-    r("M 72,110 C 68.5,122 66,136 64.5,152 C 66,158 70,159 72,154 C 74,140 77,124 80,112 C 77.5,108 74,107 72,110 Z", { ...M, opacity: 0.86 }),
-    r("M 67,150 C 66.5,154 66,157 65.5,160 M 71.5,150 C 70.5,154 70,157 69.5,161", { stroke: "#F1E3CF", strokeWidth: 1.6, fill: "none", opacity: 0.9 }),
-    r("M 62,163 C 59,175 56.5,187 55,199 C 56,202 58,202.5 59,200 C 61.5,188 64,176 67.5,164 Z", { ...M, opacity: 0.82 }),
-    r("M 66,164 C 64.5,176 62.5,188 60.5,200 C 61,203.5 63.5,203.5 64.5,200 C 66,188 68,176 70,164 Z", { ...M, opacity: 0.76 }),
-    r("M 88,192 C 94,186 104,185.5 111,191.5 C 105,197 97,200.5 90.5,203.5 Z", { ...M, opacity: 0.75 }),
-    r(BM_GLUTE, { ...M, opacity: 0.92 }),
-    r("M 118,201 C 108,204 98,212 92,224 M 118.5,212 C 109,214 100,220 94,230 M 119,222 C 112,224 105,228 100,233", F()),
-    r("M 88.5,236 C 88,256 91.5,278 96.5,296 L 104,296 C 104,276 103,256 102,236 C 97,234 92,234 88.5,236 Z", { ...M, opacity: 0.88 }),
-    r("M 103,236 C 104,256 105,276 105,296 L 114.5,296 C 116,276 117,256 117.5,238 C 112,234 107,234 103,236 Z", { ...M, opacity: 0.84 }),
-    r("M 95,240 C 96,258 98,276 100,292 M 110,240 C 110,258 110,276 110,292", F(0.5)),
-    r("M 94.5,296 C 96,304 98,310 99,316 M 114,296 C 112.5,304 111.5,310 111,316", { stroke: "#F1E3CF", strokeWidth: 1.4, fill: "none", opacity: 0.9 }),
-    r("M 95,318 C 91,330 91.5,346 96,356 C 99.5,360 104,359 104.5,351 L 104.5,318 C 101,315.5 97.5,315.5 95,318 Z", { ...M, opacity: 0.9 }),
-    r("M 105.5,318 L 105.5,351 C 106,359 110.5,360.5 112.5,355 C 115.5,346 115,330 113,318 C 110.5,315.5 107.5,315.5 105.5,318 Z", { ...M, opacity: 0.86 }),
-    r("M 100,322 C 99,334 99,344 100,352 M 109.5,322 C 110,334 110,344 109.5,352", F(0.55)),
-    r("M 102,357 C 103.5,368 104.5,380 105,392", { stroke: "#F1E3CF", strokeWidth: 2.6, fill: "none", strokeLinecap: "round", opacity: 0.95 }),
-    r("M 101,394 C 103,397 107,397 109,394", { stroke: "#E9C8B4", strokeWidth: 3, fill: "none", strokeLinecap: "round", opacity: 0.8 }),
-    s("ellipse", { cx: 104, cy: 120, rx: 9, ry: 30, fill: "#FFFFFF", opacity: 0.06 }),
+    E(120, 411, 40, 4.6, { fill: "url(#bmShadowG)" }, "shadow"),
+    // ---- skin ----
+    P(BM_BODY, skin, "body"),
+    PP(ARM, limb),
+    PP("M 101.8,37.2 C 97.6,36.2 95.4,40.4 95.8,45.2 C 96.2,49.8 98.6,52.6 101.9,51.8", { fill: "#F6CDB1", stroke: SK, strokeWidth: 0.9 }),
+    // ---- muscles of the left half ----
+    s(
+      "g",
+      { key: "mL", clipPath: "url(#bmClipLeftHalf)" },
+      s(
+        "g",
+        { key: "trunk", clipPath: "url(#bmClipBody)" },
+        P("M 80,61 L 120,61 L 120,200 L 80,200 Z", { fill: "url(#bmMuscleG)" }, "tb"),
+        P("M 120,54 C 116,54.2 112.2,55.8 109.4,59.2 L 103,60.6 L 103,72.4 L 85.4,77.2 L 86.6,80.4 C 92,86 99,92 104.5,100 C 111,114 116.5,134 120,152 Z", musL, "trap"),
+        P("M 118.6,57.6 C 117,63.6 114,69.4 108.6,74 M 117,62 C 112,72 104,80 94,82 M 118,80 C 112,88 106,94 100,96 M 119,104 C 116,110 112,112 108,110 M 119.5,128 C 118,120 114,112 110,108", fib(), "trapf"),
+        P("M 120,152 L 120,190 C 110,191 99,192 90,190 C 88.5,177 86.5,160 85.5,141 C 84.5,127 84,115 84,108 C 92,111 99.5,117 105.5,123 C 111.5,133 116,143 120,152 Z", mus, "lat"),
+        P("M 119.5,160 C 108,152 96,138 88,118 M 119.5,174 C 106,166 94,150 87,132 M 115,189 C 102,180 92,164 87,146", fib(0.5), "latf"),
+        P("M 120,150 C 117.6,160 114,172 110.6,187.6 C 113.6,189.4 117,190 120,190 Z", { fill: TD, opacity: 0.55 }, "fascia"),
+        P("M 88,192 C 94,186 104,185.5 111,191.5 C 105,197 97,200.5 90.5,203.5 Z", musD, "gmed"),
+      ),
+      s(
+        "g",
+        { key: "arm", clipPath: "url(#bmClipArm)" },
+        P(ARM, { fill: "url(#bmMuscleG)" }, "ab"),
+        P("M 72,110 C 68.5,122 66,136 64.5,152 C 66,158 70,159 72,154 C 74,140 77,124 80,112 C 77.5,108 74,107 72,110 Z", musL, "tri"),
+        P("M 74.6,114 C 72.4,126 70.8,138 70,150", fib(0.55), "trif"),
+        P("M 87.4,79 C 78.2,77.4 70,84 69.4,95 C 69.3,102 70.5,107.6 72.6,111.2 C 76.8,107.2 80.2,99.6 82.6,93 C 84.6,88 87,84 87.4,79 Z", mus, "delt"),
+        P("M 77.4,83.4 C 74.6,90.2 73.2,98.2 72.8,106 M 81.6,84.8 C 78.8,90.8 77,96.8 76.2,102.6", fib(), "deltf"),
+        P("M 65.4,148.4 C 65.8,152.4 66.6,155.2 68,156.4 C 69.6,155.4 70.8,152.6 71.6,148.8 C 69.6,150 67.4,150 65.4,148.4 Z", { fill: TD, opacity: 0.5 }, "olec"),
+        P("M 62,163 C 59,175 56.5,187 55,199 C 56,202 58,202.5 59,200 C 61.5,188 64,176 67.5,164 Z", musL, "ext1"),
+        P("M 66,164 C 64.5,176 62.5,188 60.5,200 C 61,203.5 63.5,203.5 64.5,200 C 66,188 68,176 70,164 Z", mus, "ext2"),
+        P("M 55.4,201 C 54.6,205.4 53.8,209.6 53.2,214.6 M 58.4,202 C 57.8,206.4 57.4,210.4 57,215.2 M 61.4,202.4 C 61,206.8 60.8,211 60.6,216", ten(0.7, 0.75), "wrist"),
+      ),
+      s(
+        "g",
+        { key: "leg", clipPath: "url(#bmClipBody)" },
+        P("M 84,198 C 96,200 108,203 120,206 L 120,386 L 78,386 Z", { fill: "url(#bmMuscleG)" }, "lb"),
+        P("M 116.2,258 C 117,274 116.4,292 113.4,308 C 112.6,298 112.8,284 113.8,270 C 114.4,264 115.2,260 116.2,258 Z", musD, "sm"),
+        P("M 97,226 C 93,234 91,248 91.2,262 C 91.4,276 93.6,290 96.4,301 C 97.2,304.6 98,307.6 98.8,310.4 C 99.8,306 100.8,300.6 101.8,295 C 104,280 105.2,262 105,246 C 104.8,236 102,229 97,226 Z", mus, "bf"),
+        P("M 106.2,229 C 105.8,246 106.4,264 108,282 C 108.8,292 110,301 111.4,309 C 113.2,300.6 114.4,291 115.2,280 C 116.2,264 117.2,248 117.6,233 C 114,229.4 109.6,228.4 106.2,229 Z", musL, "st"),
+        P("M 96.4,238 C 95.8,258 96.8,278 99,295 M 111.6,238 C 111.4,258 112,276 112.6,294", fib(0.5), "hamf"),
+        P("M 98.4,306 C 97.8,310.6 97,314.6 96.4,318.6 M 111.4,305 C 111.8,309.6 112.4,314 112.8,318.6", ten(1.3, 0.85), "popl"),
+        P(BM_GLUTE, musL, "gmax"),
+        P("M 118,201 C 108,204 98,212 92,224 M 118.5,212 C 109,214 100,220 94,230 M 119,222 C 112,224 105,228 100,233", fib(), "gmaxf"),
+        P("M 93.4,336 C 93.6,350 96.4,362 101.6,372 C 102.6,374 103.4,376 104.8,378 C 106.2,376 107,374 108.2,372 C 112.6,362 114,350 114,336 Z", musD, "sol"),
+        P("M 101,362 C 102.6,368 103,376 102.8,386 L 106.8,386 C 106.6,376 107.2,368 109,362 C 106.4,363.4 103.6,363.4 101,362 Z", { fill: TD, opacity: 0.92 }, "achil"),
+        P("M 100.6,312.4 C 95.6,317 92.4,328 92.6,342 C 92.8,352 96,360 100.6,362.6 C 103,363.6 104.6,361.6 104.8,357.4 L 104.8,321 C 104.6,316 103.2,313 100.6,312.4 Z", musL, "gl"),
+        P("M 109.2,312.4 C 113.4,316.6 114.6,328 114.2,342 C 113.8,354 111.4,364 107.6,366.4 C 105.6,367.2 105,365 105,361 L 105,321 C 105.2,316 106.6,313 109.2,312.4 Z", mus, "gm"),
+        P("M 98.6,322 C 97.2,334 97.4,346 99.6,356 M 110.4,322 C 111.4,334 111.2,348 109.4,358", fib(0.5), "gf"),
+      ),
+    ),
+    // ---- hands (back of the hand) and heels ----
+    PP(THUMB, limb),
+    PP(HAND, limb),
+    PP("M 52.3,236.6 L 52.2,240 M 55.4,236.8 L 55.4,240.6 M 58.5,236.4 L 58.5,239.6", { fill: "none", stroke: "#C98F72", strokeWidth: 0.5, strokeLinecap: "round" }),
+    PP("M 51.4,225 C 53.4,226.2 56.6,226.2 59.6,225", { fill: "none", stroke: "#D9A386", strokeWidth: 0.5, strokeLinecap: "round", opacity: 0.8 }),
+    PP(HEEL, limb),
+    PP("M 100.6,401.6 C 102.8,403.6 105.8,403.6 108,401.6", { fill: "none", stroke: "#D9A386", strokeWidth: 0.7, strokeLinecap: "round" }),
+    // ---- skeleton of the right half ----
+    s("g", { key: "ribs" }, ribs.map((y, t) => R(`M 123,${y} C 133,${y - 3} 147,${y - 1} 154,${y + 8 + t * 0.4}`, 1.9, "r" + t))),
+    P("M 141,166 C 146.5,165.5 149.5,171 149,178 C 148.5,184.5 145,188.5 141,188 C 137.5,187.5 136.5,184 138,180 C 139,177 138,173.5 137,171.5 C 136.5,168 138,166 141,166 Z", { fill: "url(#bmKidneyG)", stroke: "#6E2320", strokeWidth: 0.6 }, "kid"),
+    P(BM_SCAPULA, bone, "scap"),
+    R("M 133,94.5 C 140,92 150,90 158,90", 2, "spina"),
+    P("M 154,88 C 158,86 161,88 160.5,92 C 158,95 155,94 153.5,91.5 Z", bone, "acro"),
+    R("M 121.6,82 C 132,80.6 144,82 153.4,82.6", 2.6, "clav"),
+    R("M 161.6,93 C 164.6,112 168,132 171.2,151.6", 3.4, "hum"),
+    E(172, 155.4, 3.4, 3, bone, "elb"),
+    R("M 172.4,161 C 175.2,176 178.2,192 181,208 M 176.6,161.4 C 179.6,176.4 182.8,192 185.6,207", 1.9, "fore"),
+    P(BM_PELVIS_BACK, bone, "pelv"),
+    E(141, 211.4, 4.4, 4.4, bone, "fhead"),
+    R("M 140.6,214 C 139.4,240 137.6,268 136,293", 4.4, "femur"),
+    P("M 129.5,296 C 133,293 139.5,293 142,297 C 141,301.6 131,301.6 129.5,296 Z", bone, "knee"),
+    R("M 134.6,302 C 134.2,326 134.2,354 135,380.6", 3.4, "tibia"),
+    R("M 142,303.6 C 142.8,330 142.8,358 142.4,381.4", 1.7, "fibula"),
+    // ---- spine ----
+    s(
+      "g",
+      { key: "spine" },
+      BM_SPINE_Y.map((y, t) => {
+        const a = 2.2 + t * 0.12;
+        return s(
+          "g",
+          { key: "v" + t },
+          P(`M ${120 - a * 2.6},${y + 1.2} L ${120 + a * 2.6},${y + 1.2}`, { stroke: BO, strokeWidth: 2.3, strokeLinecap: "round" }, "to"),
+          P(`M ${120 - a * 2.6},${y + 1.2} L ${120 + a * 2.6},${y + 1.2}`, { stroke: "#FBF1DD", strokeWidth: 1.5, strokeLinecap: "round" }, "t"),
+          P(`M ${120 - a + 1.2},${y - 1.6} L ${120 + a - 1.2},${y - 1.6} C ${120 + a},${y - 1.6} ${120 + a},${y - 1.6} ${120 + a},${y} L ${120 + a},${y + 1.6} C ${120 + a},${y + 3} ${120 + a},${y + 3} ${120 + a - 1.2},${y + 3} L ${120 - a + 1.2},${y + 3} C ${120 - a},${y + 3} ${120 - a},${y + 3} ${120 - a},${y + 1.6} L ${120 - a},${y} C ${120 - a},${y - 1.6} ${120 - a},${y - 1.6} ${120 - a + 1.2},${y - 1.6} Z`, bone, "b"),
+        );
+      }),
+    ),
+    P(BM_SACRUM, bone, "sacrum"),
+    P("M 116,196 L 117,196 M 123,196 L 124,196 M 116.5,202 L 117.5,202 M 122.5,202 L 123.5,202", { stroke: BO, strokeWidth: 1.2, strokeLinecap: "round" }, "foram"),
+    // ---- head from behind: glass skull, cerebrum and cerebellum ----
+    P("M 102.6,30.6 C 102.6,21 110.2,13.4 120,13.4 C 129.8,13.4 137.4,21 137.4,30.6 L 134.8,30.6 C 134.8,22.6 128.4,16.2 120,16.2 C 111.6,16.2 105.2,22.6 105.2,30.6 Z", bone, "skull"),
+    s(
+      "g",
+      { key: "cbl" },
+      PP("M 120.6,36.4 C 116,35.6 110.8,36 108.2,38.2 C 106.8,40.6 108.6,43.6 112,44.2 C 115.2,44.8 118.6,43.8 120.6,42 Z", { fill: "#E89AB0", stroke: "#B5607A", strokeWidth: 0.6, strokeLinejoin: "round" }),
+      PP("M 109.4,40 C 112.2,41.2 115.8,41.4 119,40.6 M 110.4,42.2 C 113,43 116,43 118.8,42.2", { fill: "none", stroke: "#B5607A", strokeWidth: 0.4, opacity: 0.8 }),
+    ),
+    P("M 119.4,16.8 C 112.4,16.4 106.2,20 105,26.6 C 104.2,31.2 105.2,35.4 107.8,37.6 C 111,39.4 116,39.6 119.4,38.8 Z", { fill: "url(#bmBrainG)", stroke: "#B5607A", strokeWidth: 0.7, strokeLinejoin: "round" }, "brL"),
+    P("M 120.6,16.8 C 127.6,16.4 133.8,20 135,26.6 C 135.8,31.2 134.8,35.4 132.2,37.6 C 129,39.4 124,39.6 120.6,38.8 Z", { fill: "url(#bmBrainG)", stroke: "#B5607A", strokeWidth: 0.7, strokeLinejoin: "round" }, "brR"),
+    s(
+      "g",
+      { key: "gyri", fill: "none", stroke: "#C9708A", strokeWidth: 0.55, strokeLinecap: "round" },
+      PP("M 107.4,23.8 C 109.4,21.8 111.8,23.6 113.6,22.2 C 115.2,21 116.8,22.4 118.2,21.6", {}),
+      PP("M 106.4,29 C 108.6,27.2 111,29.4 113.2,27.6 C 115.2,26.2 117,28.4 118.6,27.2", {}),
+      PP("M 107.6,34 C 109.8,32.2 112.2,34.6 114.4,33 C 116.2,31.8 117.4,33.4 118.6,32.8", {}),
+    ),
+    E(112.4, 21.8, 5.6, 3.2, { fill: "url(#bmGlassG)" }, "glass"),
   );
 }
-
+// drawing helpers: shapes are written in the old coordinates and go through the cartoon proportion map
+const bmP = (d, t, k) => React.createElement("path", { key: k, d: bmW(d), ...t }),
+  bmPP = (d, t) => bmPair(d).map((a, n) => bmP(a, t, "p" + n)),
+  bmE = (cx, cy, rx, ry, t, k) => {
+    const [x, y] = bmPt(cx, cy),
+      sy = bmLerp(BM_GY, cy + 0.5) - bmLerp(BM_GY, cy - 0.5);
+    return React.createElement("ellipse", { key: k, cx: x, cy: y, rx: +(rx * bmLerp(BM_SX, cy)).toFixed(2), ry: +(ry * sy).toFixed(2), ...t });
+  },
+  bmEE = (cx, cy, rx, ry, t) => [bmE(cx, cy, rx, ry, t, "l"), bmE(240 - cx, cy, rx, ry, t, "r")],
+  BM_ART = {};
 function BodyDefs() {
-  const s = React.createElement;
-  return (
-    s(
-      "defs",
-      null,
-      s("linearGradient", { id: "bmSkinG", x1: "0", y1: "0", x2: "1", y2: "0" },
-        s("stop", { offset: "0%", stopColor: "#E2B497" }),
-        s("stop", { offset: "22%", stopColor: "#F3D5C0" }),
-        s("stop", { offset: "50%", stopColor: "#F8E2D2" }),
-        s("stop", { offset: "78%", stopColor: "#F3D5C0" }),
-        s("stop", { offset: "100%", stopColor: "#E2B497" })),
-      s("linearGradient", { id: "bmLimbG", x1: "0", y1: "0", x2: "1", y2: "0" },
-        s("stop", { offset: "0%", stopColor: "#E0AF92" }),
-        s("stop", { offset: "45%", stopColor: "#F6DCCA" }),
-        s("stop", { offset: "100%", stopColor: "#E3B79C" })),
-      s("linearGradient", { id: "bmMuscleG", x1: "0", y1: "0", x2: "1", y2: "0" },
-        s("stop", { offset: "0%", stopColor: "#A8433B" }),
-        s("stop", { offset: "45%", stopColor: "#D9786B" }),
-        s("stop", { offset: "100%", stopColor: "#B24C42" })),
-      s("linearGradient", { id: "bmBoneG", x1: "0", y1: "0", x2: "1", y2: "1" },
-        s("stop", { offset: "0%", stopColor: "#FBF5E6" }),
-        s("stop", { offset: "100%", stopColor: "#D8C394" })),
-      s("radialGradient", { id: "bmLungG", cx: "0.45", cy: "0.35", r: "0.75" },
-        s("stop", { offset: "0%", stopColor: "#F6C3C6" }),
-        s("stop", { offset: "100%", stopColor: "#D9868F" })),
-      s("radialGradient", { id: "bmHeartG", cx: "0.35", cy: "0.3", r: "0.8" },
-        s("stop", { offset: "0%", stopColor: "#E8595A" }),
-        s("stop", { offset: "100%", stopColor: "#9E1F25" })),
-      s("radialGradient", { id: "bmLiverG", cx: "0.4", cy: "0.3", r: "0.85" },
-        s("stop", { offset: "0%", stopColor: "#B8634F" }),
-        s("stop", { offset: "100%", stopColor: "#6E3226" })),
-      s("radialGradient", { id: "bmStomachG", cx: "0.4", cy: "0.35", r: "0.8" },
-        s("stop", { offset: "0%", stopColor: "#F0B2A6" }),
-        s("stop", { offset: "100%", stopColor: "#C4675E" })),
-      s("radialGradient", { id: "bmBrainG", cx: "0.4", cy: "0.3", r: "0.85" },
-        s("stop", { offset: "0%", stopColor: "#FAD3DC" }),
-        s("stop", { offset: "100%", stopColor: "#D98BA0" })),
-      s("radialGradient", { id: "bmGutG", cx: "0.5", cy: "0.4", r: "0.8" },
-        s("stop", { offset: "0%", stopColor: "#F7CDB9" }),
-        s("stop", { offset: "100%", stopColor: "#D99A80" })),
-      s("radialGradient", { id: "bmKidneyG", cx: "0.35", cy: "0.35", r: "0.8" },
-        s("stop", { offset: "0%", stopColor: "#C86B66" }),
-        s("stop", { offset: "100%", stopColor: "#7D2F31" })),
-      s("radialGradient", { id: "bmShadowG", cx: "0.5", cy: "0.5", r: "0.5" },
-        s("stop", { offset: "0%", stopColor: "#1E2836", stopOpacity: "0.22" }),
-        s("stop", { offset: "100%", stopColor: "#1E2836", stopOpacity: "0" })),
-    ));
+  const s = React.createElement,
+    st = (a) => a.map(([o, c, op], i) => s("stop", { key: i, offset: o, stopColor: c, stopOpacity: op == null ? 1 : op })),
+    L = (id, a, x2 = "1", y2 = "0") => s("linearGradient", { id, x1: "0", y1: "0", x2, y2 }, st(a)),
+    R = (id, a, cx = "0.36", cy = "0.3", r = "0.8") => s("radialGradient", { id, cx, cy, r }, st(a));
+  return s(
+    "defs",
+    null,
+    // light comes from the upper left
+    L("bmSkinG", [["0%", "#FCE4D3"], ["55%", "#F7D0B6"], ["100%", "#EAB596"]]),
+    L("bmLimbG", [["0%", "#FCE4D3"], ["55%", "#F6CCB1"], ["100%", "#E8B091"]]),
+    L("bmMuscleG", [["0%", "#EE8576"], ["55%", "#DC6658"], ["100%", "#BF473D"]]),
+    L("bmMuscleL", [["0%", "#F8AC9F"], ["100%", "#E67B6C"]]),
+    L("bmMuscleD", [["0%", "#D35B4F"], ["100%", "#A93A32"]]),
+    L("bmBoneG", [["0%", "#FFFAF0"], ["100%", "#EAD8B2"]], "1", "1"),
+    R("bmBrainG", [["0%", "#FFE6EC"], ["60%", "#F7B6C6"], ["100%", "#E591A8"]]),
+    R("bmLungG", [["0%", "#FFE0E3"], ["65%", "#F7B3BB"], ["100%", "#E4909B"]]),
+    R("bmHeartG", [["0%", "#FF8F82"], ["55%", "#E8483F"], ["100%", "#B02829"]]),
+    R("bmLiverG", [["0%", "#D47A61"], ["60%", "#AC503C"], ["100%", "#83382A"]]),
+    R("bmStomachG", [["0%", "#FFD6CA"], ["60%", "#F5A594"], ["100%", "#DE7D69"]]),
+    R("bmGutG", [["0%", "#FFE9DA"], ["100%", "#F5C1A4"]]),
+    R("bmKidneyG", [["0%", "#E27E73"], ["60%", "#C04C43"], ["100%", "#902F29"]]),
+    R("bmSpleenG", [["0%", "#C982AE"], ["100%", "#804170"]]),
+    R("bmPancG", [["0%", "#FFEBB8"], ["100%", "#E8B85A"]]),
+    R("bmBladderG", [["0%", "#FFF3B8"], ["100%", "#EDC74B"]]),
+    R("bmThyroidG", [["0%", "#F8B6C6"], ["100%", "#D2738B"]]),
+    R("bmIrisG", [["0%", "#8CBDF0"], ["100%", "#3A6DB3"]], "0.42", "0.36", "0.7"),
+    R("bmGlassG", [["0%", "#FFFFFF", 0.7], ["60%", "#FFFFFF", 0.15], ["100%", "#FFFFFF", 0]], "0.5", "0.5", "0.5"),
+    R("bmShadowG", [["0%", "#1E2836", 0.24], ["100%", "#1E2836", 0]], "0.5", "0.5", "0.5"),
+    // muscles never spill over the outline of arms and legs
+    s("clipPath", { id: "bmClipArm" }, s("path", { d: BM_REGIONS.arm })),
+    s("clipPath", { id: "bmClipLeg" }, s("path", { d: BM_REGIONS.bein })),
+    s("clipPath", { id: "bmClipBody" }, s("path", { d: bmW(BM_BODY) })),
+    s("clipPath", { id: "bmClipLeftHalf" }, s("rect", { x: -20, y: 0, width: 140, height: 430 })),
+  );
 }
 function BodyArt() {
+  return BM_ART.front || (BM_ART.front = bmFront());
+}
+function bmFront() {
   const s = React.createElement,
-    r = (e, t) => s("path", { d: e, ...t }),
-    o = (e, t) => bmPair(e).map((a, n) => s("path", { key: n, d: a, ...t }));
+    P = bmP,
+    PP = bmPP,
+    E = bmE,
+    EE = bmEE,
+    SK = "#9C6B52",
+    MO = "#A2433A",
+    TD = "#F7E8D6",
+    BO = "#B59D6C",
+    skin = { fill: "url(#bmSkinG)", stroke: SK, strokeWidth: 1, strokeLinejoin: "round" },
+    limb = { fill: "url(#bmLimbG)", stroke: SK, strokeWidth: 1, strokeLinejoin: "round" },
+    mus = { fill: "url(#bmMuscleG)", stroke: MO, strokeWidth: 0.5, strokeLinejoin: "round" },
+    musL = { fill: "url(#bmMuscleL)", stroke: MO, strokeWidth: 0.5, strokeLinejoin: "round" },
+    musD = { fill: "url(#bmMuscleD)", stroke: MO, strokeWidth: 0.5, strokeLinejoin: "round" },
+    fib = (o) => ({ fill: "none", stroke: "#FFC4B8", strokeWidth: 0.45, strokeLinecap: "round", opacity: o || 0.65 }),
+    ten = (w, o) => ({ fill: "none", stroke: TD, strokeWidth: w || 1, strokeLinecap: "round", opacity: o || 1 }),
+    bone = { fill: "url(#bmBoneG)", stroke: BO, strokeWidth: 0.6, strokeLinejoin: "round" },
+    shine = (o) => ({ fill: "#FFFFFF", opacity: o || 0.28 }),
+    org = (f, c, w) => ({ fill: f, stroke: c, strokeWidth: w || 0.7, strokeLinejoin: "round" }),
+    HAND =
+      "M 51.2,213.6 C 50.2,219 49.4,225 49.2,231 C 49.1,236 49.2,241 49.6,244.6 C 49.9,246.2 51.7,246.3 52,244.7 L 52.3,236.6 C 52.5,240.4 52.5,244.6 52.7,247.4 C 53,249.1 54.8,249.2 55.1,247.5 L 55.4,236.8 C 55.7,240.6 55.8,244.4 56,246.8 C 56.3,248.4 58,248.4 58.3,246.7 L 58.5,236.4 C 58.8,239.6 59,241.8 59.2,243.5 C 59.6,245 61.2,244.7 61.3,243.1 C 61.6,237.6 61.8,231.6 61.6,226 C 61.5,222 61.3,218.6 61,215.6 Z",
+    THUMB = "M 51.2,220.4 C 47.6,221.8 44.2,226.4 43,231.8 C 42.4,234.8 43,237.4 44.8,237.6 C 46.4,237.8 47.4,236 48,233.8 C 48.8,230.4 50.4,227.8 52.6,226.2 Z",
+    FOOT = "M 97.5,384 C 98,390 95,394 94,399 C 92.5,404 95,409.5 100,410 C 105,410.5 111,410.5 113,408 C 115,402 113,396 112,390 L 112,384 Z",
+    ribs = [92, 99, 106, 113, 120, 127, 134],
+    ARM =
+      "M 86,79 C 78,78 71,84 70,94 C 68,104 67,114 66,124 C 65,136 62,150 61,160 C 60,170 57,180 55,190 C 53,200 51.5,207 51,214 L 61.2,215.6 C 61,206 64,196 66,188 C 67,178 69,168 70,160 C 71,150 73,138 76,128 C 78,120 80,112 82,106 C 84,98 86,88 86,79 Z";
   return s(
     "g",
     { pointerEvents: "none" },
-    // floor shadow
-    s("ellipse", { cx: 120, cy: 411, rx: 34, ry: 4.5, fill: "url(#bmShadowG)" }),
-    // skin
-    s("path", { d: BM_BODY, fill: "url(#bmSkinG)", stroke: "#B9876C", strokeWidth: 0.9, strokeLinejoin: "round" }),
-    o(BM_ARM, { fill: "url(#bmLimbG)", stroke: "#B9876C", strokeWidth: 0.9, strokeLinejoin: "round" }),
-    o(BM_THUMB, { fill: "url(#bmLimbG)", stroke: "#B9876C", strokeWidth: 0.8 }),
-    // fingers
-    o("M 52,242 L 52.5,250 M 55,243 L 55.5,251 M 58,242 L 58.5,248.5", { stroke: "#C99A80", strokeWidth: 0.55, fill: "none" }),
-    // ears
-    o("M 100.5,37 C 96.5,36.5 95.2,42 96,46.5 C 96.8,50.5 99,52 101.5,51", { fill: "#EFC7AE", stroke: "#B9876C", strokeWidth: 0.8 }),
-    o("M 99.2,40 C 97.8,42 98,46 99.6,48", { fill: "none", stroke: "#C99A80", strokeWidth: 0.6 }),
-    // ---- limb muscles (atlas style) ----
-    o("M 86,80 C 78,79 71,85 70.5,95 C 70.5,102 71.5,107 73,110 C 76,106 79,99 81.5,93 C 83.5,88 86,84 86,80 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.6, opacity: 0.88 }),
-    o("M 78,83 C 75,90 73.5,98 73,106 M 82,84 C 79,90 77,96 76,102", { stroke: "#F2B3A8", strokeWidth: 0.45, fill: "none", opacity: 0.7 }),
-    o("M 74,108 C 70,118 68,132 67,146 C 67,153 69,157 71,155 C 73,145 75,128 78,113 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.6, opacity: 0.85 }),
-    o("M 72,116 C 70,128 69,140 69,150", { stroke: "#F2B3A8", strokeWidth: 0.45, fill: "none", opacity: 0.7 }),
-    o("M 61.5,161 C 58.5,172 56,184 54.5,196 C 55,199.5 57,200 58,197 C 59.5,186 62,174 65,163 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.85 }),
-    o("M 65.5,163 C 63.5,175 61,187 59,199 C 59.5,203 62,203.5 63,200 C 65,188 67,176 69.5,163 C 68,160.5 66.5,160.5 65.5,163 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.8 }),
-    o("M 57,197 C 55.5,203 54.5,208 54,214 M 60,200 C 59,206 58.5,210 58,215 M 62.5,200 C 61.5,206 61,211 60.5,216", { stroke: "#F1E3CF", strokeWidth: 0.7, fill: "none", opacity: 0.9 }),
-    o("M 70,112 C 68,124 66,136 64.5,148 L 66.5,148.5 C 68,136 70,124 72,114 Z", { fill: "#9E3E36", opacity: 0.75 }),
-    o("M 68,150 C 66,155 64.5,158 63.5,161 M 71,152 C 70,156 69.5,159 69.5,162", { stroke: "#F1E3CF", strokeWidth: 0.8, fill: "none", opacity: 0.85 }),
-    o("M 85.5,215 C 86.5,224 88.5,233 90.5,241 L 95,239 C 93.5,230 91.5,221 90,212.5 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.8 }),
-    o("M 88.5,240 C 87.5,258 89,276 93,292 C 96,295.5 99.5,294 99.5,288 C 98.5,270 97.5,253 95.5,239 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.55, opacity: 0.88 }),
-    o("M 101,224 C 97,242 97,266 100.5,288 C 102,292.5 106.5,292.5 108,288 C 110.5,265 110,243 105.5,224 C 104,221.5 102.5,221.5 101,224 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.55, opacity: 0.92 }),
-    o("M 103.3,226 C 102.5,246 102.6,268 104.2,289", { stroke: "#F2B3A8", strokeWidth: 0.6, fill: "none", opacity: 0.75 }),
-    o("M 111,258 C 108.5,270 108.5,282 110.5,292 C 113.5,295 115.5,291 115.5,285 L 116.5,262 C 115,257 112.5,256 111,258 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.55, opacity: 0.88 }),
-    o("M 108,221 C 112,228 115.5,238 117.5,250 L 118.5,234 C 117.5,227 114.5,222 111,219.5 Z", { fill: "#A9483F", stroke: "#8E3A33", strokeWidth: 0.45, opacity: 0.8 }),
-    o("M 88,213 C 96,238 105,266 111.5,297 L 114.5,296 C 109.5,266 100.5,236 91.5,211.5 Z", { fill: "#C9675B", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.95 }),
-    o("M 92,252 C 93,266 95,278 97,288 M 112.5,268 C 112,276 112,284 113,290", { stroke: "#F2B3A8", strokeWidth: 0.45, fill: "none", opacity: 0.6 }),
-    o("M 99,292 C 100,295 102,296 104,296.5 L 108,296.5 C 109,295.5 110,294 110.5,292", { stroke: "#F1E3CF", strokeWidth: 1.6, fill: "none", opacity: 0.9 }),
-    o("M 104,306.5 L 104.5,318", { stroke: "#F1E3CF", strokeWidth: 2.6, fill: "none", strokeLinecap: "round", opacity: 0.95 }),
-    o("M 93.5,325 C 91.5,337 92,350 94.5,362 L 97,361 C 96.5,349 96.5,337 97,325 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.8 }),
-    o("M 98.5,321 C 96.5,336 97,353 100,371 C 101.5,373 103.5,372.5 103.5,370 C 103.5,352 104,336 104.5,321 C 103,318.5 100,318.5 98.5,321 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.9 }),
-    o("M 102,371 C 102.5,378 103.5,384 105,389", { stroke: "#F1E3CF", strokeWidth: 0.9, fill: "none", opacity: 0.9 }),
-    o("M 109,321 C 113,329 114.5,341 113.5,352 C 112.5,358 110,359 109.5,352 C 109.5,342 109,331 108.5,322 Z", { fill: "url(#bmMuscleG)", stroke: "#8E3A33", strokeWidth: 0.5, opacity: 0.82 }),
-    o("M 106.5,318 C 106,340 105,362 104.5,384", { stroke: "#F1E3CF", strokeWidth: 2.2, fill: "none", opacity: 0.85, strokeLinecap: "round" }),
-    [104, 136].map((e) => s("ellipse", { key: "pat" + e, cx: e, cy: 300, rx: 5.5, ry: 6.5, fill: "url(#bmBoneG)", stroke: "#B8A274", strokeWidth: 0.6 })),
-    o("M 99,386 C 100,392 101,398 103,404 M 103.5,386 C 104.5,392 106,398 108,405", { stroke: "#E8D8BF", strokeWidth: 0.8, fill: "none", opacity: 0.9 }),
-    // ---- skeleton of the trunk ----
-    s("g", { opacity: 0.85 },
-      [92, 99, 106, 113, 120, 127, 134].map((e, t) => o(`M 117,${e} C 109,${e - 3} 98,${e - 1} 91.5,${e + 7 + t * 0.6}`, { key: t, stroke: "url(#bmBoneG)", strokeWidth: 2.4, fill: "none", strokeLinecap: "round" })),
-      [92, 99, 106, 113, 120, 127, 134].map((e, t) => o(`M 117,${e} C 109,${e - 3} 98,${e - 1} 91.5,${e + 7 + t * 0.6}`, { key: "o" + t, stroke: "#B8A274", strokeWidth: 0.4, fill: "none", opacity: 0.7 })),
+    E(120, 411, 40, 4.6, { fill: "url(#bmShadowG)" }, "shadow"),
+    // ---- skin: body, arms, ears ----
+    P(BM_BODY, skin, "body"),
+    PP(ARM, limb),
+    PP("M 101.8,37.2 C 97.6,36.2 95.4,40.4 95.8,45.2 C 96.2,49.8 98.6,52.6 101.9,51.8", { fill: "#F6CDB1", stroke: SK, strokeWidth: 0.9 }),
+    PP("M 99.8,40.2 C 98.4,42.4 98.6,46.6 100.3,48.8", { fill: "none", stroke: "#D49C80", strokeWidth: 0.7, strokeLinecap: "round" }),
+    // ---- arm muscles ----
+    s(
+      "g",
+      { key: "arm", clipPath: "url(#bmClipArm)" },
+      PP(ARM, { fill: "url(#bmMuscleG)" }),
+      PP("M 70.4,110 C 67.4,122 65,136 63.4,150 L 66.4,151 C 67.8,137 69.8,123 72.6,112 Z", musD),
+      PP("M 80.4,106.6 C 75.4,110.6 72.2,122.6 71.2,135.6 C 70.6,144.6 71.6,151.8 73.8,155.4 C 76.8,152 78.6,142 79.6,131 C 80.4,122 81.8,113 80.4,106.6 Z", musL),
+      PP("M 76.6,113.6 C 74.6,124.6 73.8,137.6 74.4,149.6", fib(0.55)),
+      PP("M 87.4,79 C 78.2,77.4 70,84 69.4,95 C 69.3,102 70.5,107.6 72.6,111.2 C 76.8,107.2 80.2,99.6 82.6,93 C 84.6,88 87,84 87.4,79 Z", mus),
+      PP("M 77.4,83.4 C 74.6,90.2 73.2,98.2 72.8,106 M 81.6,84.8 C 78.8,90.8 77,96.8 76.2,102.6", fib()),
+      PP("M 61.4,160.6 C 64,159.4 67.6,159.4 70.4,160.8", { fill: "none", stroke: MO, strokeWidth: 0.6, opacity: 0.6, strokeLinecap: "round" }),
+      PP("M 61.2,163 C 58.6,174 56.4,186 54.8,198 C 55.6,201 57.4,201.4 58.4,198.6 C 60,187 62.4,175 65.4,164 Z", musL),
+      PP("M 65.6,164 C 63.6,176 61.4,188 59.6,200 C 60.4,203.4 62.6,203.6 63.4,200.4 C 65.2,189 67.4,177 69.8,165 Z", mus),
+      PP("M 58.2,170 C 57.2,180 56,190 55.2,197 M 66.6,170 C 65.2,180 63.6,190 62.2,199", fib(0.5)),
+      PP("M 55.4,201 C 54.6,205.4 53.8,209.6 53.2,214.6 M 58.4,202 C 57.8,206.4 57.4,210.4 57,215.2 M 61.4,202.4 C 61,206.8 60.8,211 60.6,216", ten(0.7, 0.75)),
     ),
-    o("M 116.5,82 C 108,80.5 97,82 87,82.5", { stroke: "url(#bmBoneG)", strokeWidth: 3.6, fill: "none", strokeLinecap: "round" }),
-    o("M 116.5,82 C 108,80.5 97,82 87,82.5", { stroke: "#B8A274", strokeWidth: 0.5, fill: "none", opacity: 0.6 }),
-    r("M 116.5,84.5 L 123.5,84.5 L 123,101 L 122.5,128 L 120,136 L 117.5,128 L 117,101 Z", { fill: "url(#bmBoneG)", stroke: "#B8A274", strokeWidth: 0.6, opacity: 0.55 }),
-    // pelvis
-    o("M 84,190 C 86,184 92,182 97,185 C 99,191 101,200 106,208 C 104,213 99,214 94,212 C 89,208 85,201 84,195 Z", { fill: "url(#bmBoneG)", stroke: "#B8A274", strokeWidth: 0.6 }),
-    o("M 106,208 C 110,210 114,211 118,212", { stroke: "url(#bmBoneG)", strokeWidth: 3, fill: "none" }),
-    [100, 140].map((e) => s("circle", { key: "fh" + e, cx: e, cy: 212, r: 4, fill: "url(#bmBoneG)", stroke: "#B8A274", strokeWidth: 0.5 })),
+    // ---- hands ----
+    PP(THUMB, limb),
+    PP(HAND, limb),
+    PP("M 50.4,229.4 C 53.2,230.8 57.4,230.8 61.2,229.2", { fill: "none", stroke: "#D9A386", strokeWidth: 0.55, strokeLinecap: "round" }),
+    PP("M 52.3,236.6 L 52.2,240 M 55.4,236.8 L 55.4,240.6 M 58.5,236.4 L 58.5,239.6", { fill: "none", stroke: "#C98F72", strokeWidth: 0.5, strokeLinecap: "round" }),
+    // ---- leg muscles ----
+    s(
+      "g",
+      { key: "leg", clipPath: "url(#bmClipBody)" },
+      P("M 80,204 C 92,208 108,213 120,219.6 C 132,213 148,208 160,204 L 162,386 L 78,386 Z", { fill: "url(#bmMuscleG)" }, "base"),
+      PP("M 84,214 C 86,236 88.6,258 91.4,280 C 92.4,288 94.6,294 97.6,295.6 C 99.2,284 98.6,266 97,250 C 95.4,236 92.6,222 88.4,213 Z", musD),
+      PP("M 107.4,219.6 C 111.6,226.6 115.4,237.6 117.6,250 L 119.2,233.6 C 117.8,226.6 114.6,221.6 111,219 Z", musD),
+      PP("M 101.6,222 C 97.8,240 97.4,264 100.6,288 C 101.8,292.6 106.4,292.6 107.8,288 C 110.6,265 110.2,243 105.8,222 C 104.4,219.6 103,219.6 101.6,222 Z", musL),
+      PP("M 103.8,224 C 102.8,244 102.8,266 104.4,287", fib(0.6)),
+      PP("M 111.2,262 C 108.6,272 108.6,283 110.6,292 C 113.6,295.4 116,291.6 116.2,285 L 116.8,264 C 115.2,258.6 112.6,258 111.2,262 Z", musL),
+      PP("M 87.6,212.6 C 96,236 105,264 111.4,297.4 L 114.8,296.2 C 109.8,266 100.8,236 91.8,211.6 Z", { fill: "#F09A8C", stroke: MO, strokeWidth: 0.5 }),
+      PP("M 92.4,252 C 93.4,266 95.4,278 97.4,288 M 112.6,268 C 112.2,276 112.2,284 113,290", fib(0.5)),
+      PP("M 98.6,291.2 C 99.8,295 102,296.4 104,296.8 L 108,296.8 C 109.2,295.8 110.2,294 110.8,291.2", ten(1.6, 0.85)),
+      PP("M 104.2,306.6 L 104.6,318.6", ten(2.2, 0.85)),
+      PP("M 93.4,325 C 91.4,337 92,350 94.4,362 L 97,361 C 96.4,349 96.4,337 97,325 Z", musD),
+      PP("M 109,321 C 113,329 114.6,341 113.6,352 C 112.6,358 110,359.4 109.6,352.4 C 109.6,342 109.2,331 108.6,322 Z", musD),
+      PP("M 98.6,321 C 96.6,336 97,353 100,371 C 101.4,373.4 103.6,372.8 103.6,370 C 103.6,352 104,336 104.6,321 C 103,318.4 100.2,318.4 98.6,321 Z", musL),
+      PP("M 106.8,320 C 106.4,340 105.8,360 105.4,378", ten(1.4, 0.55)),
+      PP("M 101.8,371 C 102.2,375.4 102.8,379 103.6,382", ten(0.9, 0.7)),
+    ),
+    EE(104, 301.2, 5.6, 6.2, bone),
+    EE(102.4, 299, 2, 2.4, shine(0.5)),
+    // ---- feet ----
+    PP(FOOT, limb),
+    PP("M 99.2,405.4 L 99.4,409.2 M 102.8,405.9 L 102.9,409.6 M 106.4,405.9 L 106.4,409.7 M 109.8,405.4 L 109.6,409.1", { fill: "none", stroke: "#C98F72", strokeWidth: 0.55, strokeLinecap: "round" }),
+    PP("M 98.4,387 C 99.6,386 100.8,386.6 101,388", { fill: "none", stroke: "#D9A386", strokeWidth: 0.6, strokeLinecap: "round" }),
+    // ---- pelvis (behind the gut) ----
+    PP("M 84,190 C 86,184 92,182 97,185 C 99,191 101,200 106,208 C 104,213 99,214 94,212 C 89,208 85,201 84,195 Z", bone),
+    PP("M 106,208 C 110,210 114,211 118,212", { fill: "none", stroke: "url(#bmBoneG)", strokeWidth: 3, strokeLinecap: "round" }),
     // ---- neck ----
-    r("M 117.6,64 L 117.6,96 M 122.4,64 L 122.4,96", { stroke: "#C9B7A2", strokeWidth: 0.7, fill: "none" }),
-    s("path", { d: "M 117.6,66 L 122.4,66 L 122.4,96 L 117.6,96 Z", fill: "#EADCCB", opacity: 0.9 }),
-    [70, 74, 78, 82, 86, 90, 94].map((e) => r(`M 117.6,${e} L 122.4,${e}`, { key: e, stroke: "#C9B7A2", strokeWidth: 0.6 })),
-    r("M 116.5,61 C 116.5,58.5 123.5,58.5 123.5,61 L 123,66.5 C 121,68 119,68 117,66.5 Z", { fill: "#E3C4A6", stroke: "#B8977A", strokeWidth: 0.55 }),
-    r("M 113.5,69 C 115.5,67 118.5,67.5 120,70 C 121.5,67.5 124.5,67 126.5,69 C 128,72.5 126,76 122.5,75.5 L 117.5,75.5 C 114,76 112,72.5 113.5,69 Z", { fill: "#CF7B8E", stroke: "#9E4F62", strokeWidth: 0.6 }),
-    o("M 112,62 C 114,68 116,74 117,80", { stroke: "#C98A80", strokeWidth: 1.4, fill: "none", opacity: 0.55 }),
-    // ---- lungs ----
-    r("M 111,86 C 104,86 96,92 92,102 C 88,114 88,130 90,146 C 96,149 104,149 112,146 C 114,132 115,112 115,96 C 115,90 114,86 111,86 Z", { fill: "url(#bmLungG)", stroke: "#A55962", strokeWidth: 0.7, opacity: 0.94 }),
-    r("M 129,86 C 136,86 144,92 148,102 C 152,114 152,130 150,146 C 144,149 137,149 131,147 C 133,141 135,136 133,129 C 129,125 126,118 126,108 L 125,96 C 125,90 126,86 129,86 Z", { fill: "url(#bmLungG)", stroke: "#A55962", strokeWidth: 0.7, opacity: 0.94 }),
-    r("M 90.5,124 C 98,121 106,118 114,112 M 89.5,136 C 97,134 105,132 113,134 M 150.5,124 C 144,128 138,132 133.5,134", { stroke: "#A55962", strokeWidth: 0.6, fill: "none", opacity: 0.8 }),
-    s("g", { stroke: "#B8696F", strokeWidth: 0.35, fill: "none", opacity: 0.5 },
-      r("M 98,98 C 100,104 101,110 100,118 M 104,96 C 104,104 106,112 106,120 M 96,128 C 99,134 100,140 99,146 M 142,98 C 140,104 139,110 140,118 M 136,96 C 136,104 134,112 134,120 M 144,128 C 141,134 140,140 141,146")),
-    r("M 120,96 C 118,100 116,103 113,106 M 120,96 C 122,100 124,103 127,106", { stroke: "#D9C3AE", strokeWidth: 2.2, fill: "none", strokeLinecap: "round" }),
-    // ---- heart & great vessels ----
-    r("M 121.5,96 C 123,110 126,130 128.5,152", { stroke: "#D9A296", strokeWidth: 2.2, fill: "none", strokeLinecap: "round" }),
-    r("M 116.5,112 L 116,94", { stroke: "#4A67B5", strokeWidth: 3.2, strokeLinecap: "round" }),
-    r("M 121,112 C 120,103 121,97.5 126,97 C 131,96.5 133.5,100.5 133,107 L 132.5,114", { stroke: "#C63B3B", strokeWidth: 3.6, fill: "none", strokeLinecap: "round" }),
-    r("M 123,97.5 L 122,91 M 126.5,97 L 127,90.5 M 130,97.5 L 132,91.5", { stroke: "#C63B3B", strokeWidth: 1.4, strokeLinecap: "round" }),
-    r("M 117,112 C 124,106 134,108 139,116 C 144,124 142,136 136,145 C 133,148 130,148 128,146 C 122,141 115,135 112,128 C 109,121 111,115 117,112 Z", { fill: "url(#bmHeartG)", stroke: "#7A1A1E", strokeWidth: 0.8 }),
-    r("M 127,108.5 C 126,104 128,101 131,100.5", { stroke: "#5B79C9", strokeWidth: 2.6, fill: "none", strokeLinecap: "round" }),
-    r("M 124,110 C 125,118 127,128 131,140 M 117,116 C 121,120 128,121 136,118", { stroke: "#F0C25A", strokeWidth: 0.9, fill: "none", opacity: 0.9 }),
-    s("ellipse", { cx: 125, cy: 120, rx: 6, ry: 4, fill: "#FFFFFF", opacity: 0.16 }),
-    // diaphragm
-    r("M 88.5,149 C 100,143 112,144 120,146.5 C 128,144 140,143 151.5,149", { stroke: "#C2786C", strokeWidth: 1.4, fill: "none", opacity: 0.55 }),
-    // ---- kidneys (behind) ----
-    r("M 95,170 C 90,170 88,176 88.5,182 C 89,188 92,191.5 96,191 C 99,190.5 100,187 98.5,183 C 97.5,180 98.5,177 99.5,175 C 100,172 98,170 95,170 Z", { fill: "url(#bmKidneyG)", stroke: "#5E2224", strokeWidth: 0.6 }),
-    r("M 145,166 C 150,166 152,172 151.5,178 C 151,184 148,187.5 144,187 C 141,186.5 140,183 141.5,179 C 142.5,176 141.5,173 140.5,171 C 140,168 142,166 145,166 Z", { fill: "url(#bmKidneyG)", stroke: "#5E2224", strokeWidth: 0.6 }),
-    r("M 98.5,183 C 103,192 108,202 115,210 M 141.5,179 C 137,190 132,202 125,210", { stroke: "#E9C46A", strokeWidth: 0.9, fill: "none", opacity: 0.85 }),
-    // spleen
-    r("M 147,150 C 152,150 155,156 154.5,163 C 154,169 150.5,172 147.5,170 C 145,166 145,156 147,150 Z", { fill: "#8A5277", stroke: "#5E3350", strokeWidth: 0.6 }),
-    // ---- liver, gallbladder, stomach, pancreas ----
-    r("M 88,150 C 96,146 112,146 128,150 C 133,151 135,154 132,158 C 126,164 116,169 104,172 C 96,173.5 90,168 88,160 Z", { fill: "url(#bmLiverG)", stroke: "#4E1F17", strokeWidth: 0.7 }),
-    r("M 116,149 C 114,156 112,162 110,168", { stroke: "#4E1F17", strokeWidth: 0.6, fill: "none", opacity: 0.6 }),
-    s("ellipse", { cx: 101, cy: 155, rx: 7, ry: 3, fill: "#FFFFFF", opacity: 0.12 }),
-    r("M 107.5,167 C 109.5,165 112,166.5 112,169.5 C 112,172.5 110,175 108,174.5 C 106,173.5 105.8,169 107.5,167 Z", { fill: "#6F9E52", stroke: "#456B31", strokeWidth: 0.55 }),
-    r("M 106,185 C 116,181.5 130,180.5 141,178.5 C 145.5,178 146.5,182 143,183.5 C 133,186.5 120,188.5 110,189 C 104.5,189.5 103.5,186.5 106,185 Z", { fill: "#EDC17F", stroke: "#B48641", strokeWidth: 0.6 }),
-    r("M 128,151 C 138,147 150,153 150,164 C 150,174 142,182 132,182 C 126,182 121,180 120,176 C 124,173.5 132,171.5 136,166 C 138,162 134,158 128,158 Z", { fill: "url(#bmStomachG)", stroke: "#94433C", strokeWidth: 0.7 }),
-    r("M 131,154 C 140,153 146,158 146,165 M 126,178 C 134,178 142,174 145,168", { stroke: "#B9584F", strokeWidth: 0.45, fill: "none", opacity: 0.6 }),
-    // ---- intestines ----
-    r("M 95,213 L 95,193 C 95,190 98,189.5 101,190 C 112,191.5 128,191.5 139,190 C 142,189.5 145,190 145,193 L 145,206 C 145,211 141,213 136,212.5 C 131,212 128,214 125,214.5", { stroke: "#C98266", strokeWidth: 6.4, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" }),
-    r("M 95,213 L 95,193 C 95,190 98,189.5 101,190 C 112,191.5 128,191.5 139,190 C 142,189.5 145,190 145,193 L 145,206 C 145,211 141,213 136,212.5 C 131,212 128,214 125,214.5", { stroke: "#E9B49A", strokeWidth: 4.2, fill: "none", strokeLinecap: "round", strokeLinejoin: "round", strokeDasharray: "3.2 1.1" }),
-    r("M 103,196 C 108,193.5 132,193.5 137,196 C 140,200 140,206 136,209.5 C 130,212 110,212 104,209.5 C 100,206 100,200 103,196 Z", { fill: "url(#bmGutG)", stroke: "#B9775E", strokeWidth: 0.6 }),
-    s("g", { stroke: "#C98266", strokeWidth: 0.7, fill: "none", opacity: 0.85 },
-      r("M 106,199 C 109,196.5 112,201 115,198.5 C 118,196 121,201 124,198.5 C 127,196 130,201 133,198.5"),
-      r("M 105,203.5 C 108,201 111,205.5 114,203 C 117,200.5 120,205.5 123,203 C 126,200.5 129,205.5 132,203 C 134,201.5 136,203 136.5,204"),
-      r("M 107,208 C 110,205.5 113,210 116,207.5 C 119,205 122,210 125,207.5 C 128,205 131,209.5 134,207.5")),
-    r("M 113.5,213 C 113.5,208.5 126.5,208.5 126.5,213 C 126.5,216 124,217.5 120,217.5 C 116,217.5 113.5,216 113.5,213 Z", { fill: "#E7C55E", stroke: "#B08D2C", strokeWidth: 0.6, opacity: 0.95 }),
-    // ---- head details ----
-    r("M 120,15.5 C 130.5,15 138,22 138,30.5 C 138,36 135.5,39.5 131,40.5 L 109,40.5 C 104.5,39.5 102,36 102,30.5 C 102,22 109.5,15 120,15.5 Z", { fill: "url(#bmBrainG)", stroke: "#A65A71", strokeWidth: 0.7 }),
-    r("M 120,16 L 120,40", { stroke: "#A65A71", strokeWidth: 0.7 }),
-    s("g", { stroke: "#B76A80", strokeWidth: 0.5, fill: "none", opacity: 0.85 },
-      [20, 25, 30, 35].map((e, t) => s("g", { key: t },
-        r(`M ${105 + t * 0.5},${e} C 108,${e - 2.5} 112,${e + 2} 115,${e - 1} C 116.5,${e - 2.5} 118,${e} 119,${e - 1}`),
-        r(`M ${135 - t * 0.5},${e} C 132,${e - 2.5} 128,${e + 2} 125,${e - 1} C 123.5,${e - 2.5} 122,${e} 121,${e - 1}`)))),
-    o("M 107,41.5 C 109.5,40 113.5,40 116,41.8", { stroke: "#8A6A55", strokeWidth: 0.9, fill: "none", strokeLinecap: "round" }),
-    s("ellipse", { cx: 112, cy: 46, rx: 3.9, ry: 2.4, fill: "#FFFFFF", stroke: "#9C7A64", strokeWidth: 0.5 }),
-    s("ellipse", { cx: 128, cy: 46, rx: 3.9, ry: 2.4, fill: "#FFFFFF", stroke: "#9C7A64", strokeWidth: 0.5 }),
-    s("circle", { cx: 112, cy: 46, r: 1.75, fill: "#4F86C6" }),
-    s("circle", { cx: 128, cy: 46, r: 1.75, fill: "#4F86C6" }),
-    s("circle", { cx: 112, cy: 46, r: 0.8, fill: "#1E2836" }),
-    s("circle", { cx: 128, cy: 46, r: 0.8, fill: "#1E2836" }),
-    s("circle", { cx: 112.6, cy: 45.4, r: 0.35, fill: "#FFFFFF" }),
-    s("circle", { cx: 128.6, cy: 45.4, r: 0.35, fill: "#FFFFFF" }),
-    r("M 120,44 C 119,47.5 117.6,50.5 117,52.5 C 118,54.3 122,54.3 123,52.5", { stroke: "#B9876C", strokeWidth: 0.75, fill: "none", strokeLinecap: "round" }),
-    r("M 114,57.6 C 117,56.4 123,56.4 126,57.6 C 123.5,60.2 116.5,60.2 114,57.6 Z", { fill: "#C9706A", stroke: "#9E4E49", strokeWidth: 0.45 }),
-    r("M 114,57.6 C 117,58.4 123,58.4 126,57.6", { stroke: "#9E4E49", strokeWidth: 0.45, fill: "none" }),
-    // shine
-    s("ellipse", { cx: 104, cy: 120, rx: 9, ry: 30, fill: "#FFFFFF", opacity: 0.07 }),
+    PP("M 111.6,62 C 113.6,67 116,72.6 117.4,78", { fill: "none", stroke: "#E39C8C", strokeWidth: 1.3, strokeLinecap: "round", opacity: 0.55 }),
+    P("M 117.6,74 L 122.4,74 L 122.4,97 L 117.6,97 Z", { fill: "#EEDFCE", stroke: "#CDB9A2", strokeWidth: 0.5 }, "trachea"),
+    s("g", { key: "rings" }, [78, 81.5, 85, 88.5, 92, 95.5].map((y) => P(`M 117.6,${y} L 122.4,${y}`, { stroke: "#CDB9A2", strokeWidth: 0.6 }, "r" + y))),
+    P("M 116.8,61 L 123.2,61 L 122.6,66.8 C 121.4,68 118.6,68 117.4,66.8 Z", { fill: "#EAD3BD", stroke: "#B9987C", strokeWidth: 0.55 }, "larynx"),
+    P(
+      "M 120,69.8 C 118.6,67.6 115.2,67.4 113.8,69.4 C 112.6,71.6 113,75.2 115.6,76 C 117.4,76.4 119,75.2 120,73.8 C 121,75.2 122.6,76.4 124.4,76 C 127,75.2 127.4,71.6 126.2,69.4 C 124.8,67.4 121.4,67.6 120,69.8 Z",
+      org("url(#bmThyroidG)", "#A65068", 0.6),
+      "thyroid",
+    ),
+    // ---- lungs, airways ----
+    P("M 111,86 C 104,86 96,92 92,102 C 88,114 88,130 90,146 C 96,149 104,149 112,146 C 114,132 115,112 115,96 C 115,90 114,86 111,86 Z", org("url(#bmLungG)", "#B4606B", 0.75), "lungL"),
+    P("M 129,86 C 136,86 144,92 148,102 C 152,114 152,130 150,146 C 144,149 137,149 131,147 C 133,141 135,136 133,129 C 129,125 126,118 126,108 L 125,96 C 125,90 126,86 129,86 Z", org("url(#bmLungG)", "#B4606B", 0.75), "lungR"),
+    P("M 90.6,124 C 98,121 106,118 114,112 M 89.6,136 C 97,134 105,132 113,134 M 150.4,124 C 144,128 138,132 133.6,134", { fill: "none", stroke: "#B4606B", strokeWidth: 0.6, opacity: 0.8 }, "fiss"),
+    EE(99, 102, 4.5, 8, shine(0.3)),
+    P("M 120,96.5 C 118.2,100.2 116,103 113,106 M 120,96.5 C 121.8,100.2 124,103 127,106", { fill: "none", stroke: "#E6D3BF", strokeWidth: 2.4, strokeLinecap: "round" }, "bronchi"),
+    // ---- ribs, clavicles, sternum ----
+    s("g", { key: "ribs", opacity: 0.5 }, ribs.map((y, t) => PP(`M 117,${y} C 109,${y - 3} 98,${y - 1} 91.5,${y + 7 + t * 0.6}`, { fill: "none", stroke: "#FFF6E4", strokeWidth: 2.2, strokeLinecap: "round" }))),
+    s("g", { key: "ribl", opacity: 0.35 }, ribs.map((y, t) => PP(`M 117,${y} C 109,${y - 3} 98,${y - 1} 91.5,${y + 7 + t * 0.6}`, { fill: "none", stroke: BO, strokeWidth: 0.4 }))),
+    P("M 116.4,84.4 L 123.6,84.4 L 123.2,101 L 122.6,126 L 120,134 L 117.4,126 L 116.8,101 Z", { ...bone, opacity: 0.75 }, "sternum"),
+    PP("M 116.6,82 C 108,80.4 97,82 87,82.6", { fill: "none", stroke: BO, strokeWidth: 4.2, strokeLinecap: "round", opacity: 0.55 }),
+    PP("M 116.6,82 C 108,80.4 97,82 87,82.6", { fill: "none", stroke: "#FFF6E4", strokeWidth: 3.2, strokeLinecap: "round" }),
+    // ---- heart and great vessels ----
+    P("M 116.4,112 L 116,93.6", { stroke: "#4A78C8", strokeWidth: 3.4, strokeLinecap: "round" }, "vcs"),
+    P("M 121,112 C 120,103 121,97.5 126,97 C 131,96.5 133.5,100.5 133,107 L 132.5,114", { fill: "none", stroke: "#8C1C20", strokeWidth: 4.4, strokeLinecap: "round" }, "aoO"),
+    P("M 121,112 C 120,103 121,97.5 126,97 C 131,96.5 133.5,100.5 133,107 L 132.5,114", { fill: "none", stroke: "#E8483F", strokeWidth: 3.4, strokeLinecap: "round" }, "ao"),
+    P("M 123,97.6 L 122,91.2 M 126.5,97 L 127,90.6 M 130,97.6 L 132,91.6", { stroke: "#E8483F", strokeWidth: 1.5, strokeLinecap: "round" }, "aob"),
+    P("M 117,112 C 124,106 134,108 139,116 C 144,124 142,136 136,145 C 133,148 130,148 128,146 C 122,141 115,135 112,128 C 109,121 111,115 117,112 Z", org("url(#bmHeartG)", "#7E191D", 0.85), "heart"),
+    P("M 127.4,108.6 C 126.4,104 128.4,101 131.4,100.6", { fill: "none", stroke: "#5B86D6", strokeWidth: 2.8, strokeLinecap: "round" }, "pulm"),
+    P("M 124,110.6 C 125,118 127,128 131,140 M 117,116 C 121,120 128,121 136,118", { fill: "none", stroke: "#F5C55F", strokeWidth: 0.9, opacity: 0.9 }, "cor"),
+    E(122.4, 117.6, 4.6, 3.2, shine(0.3), "hs"),
+    P("M 88.6,149 C 100,143 112,144 120,146.6 C 128,144 140,143 151.4,149", { fill: "none", stroke: "#D27A6D", strokeWidth: 1.4, opacity: 0.55 }, "diaph"),
+    // ---- kidneys, spleen, liver, stomach, pancreas ----
+    P("M 95,170 C 90,170 88,176 88.5,182 C 89,188 92,191.5 96,191 C 99,190.5 100,187 98.5,183 C 97.5,180 98.5,177 99.5,175 C 100,172 98,170 95,170 Z", org("url(#bmKidneyG)", "#6E2320", 0.6), "kidL"),
+    P("M 145,166 C 150,166 152,172 151.5,178 C 151,184 148,187.5 144,187 C 141,186.5 140,183 141.5,179 C 142.5,176 141.5,173 140.5,171 C 140,168 142,166 145,166 Z", org("url(#bmKidneyG)", "#6E2320", 0.6), "kidR"),
+    P("M 98.5,183 C 103,192 108,202 115,210 M 141.5,179 C 137,190 132,202 125,210", { fill: "none", stroke: "#EDC764", strokeWidth: 0.9, opacity: 0.9 }, "ureter"),
+    P("M 147,150 C 152,150 155,156 154.5,163 C 154,169 150.5,172 147.5,170 C 145,166 145,156 147,150 Z", org("url(#bmSpleenG)", "#5E3350", 0.6), "spleen"),
+    P("M 88,150 C 96,146 112,146 128,150 C 133,151 135,154 132,158 C 126,164 116,169 104,172 C 96,173.5 90,168 88,160 Z", org("url(#bmLiverG)", "#5A2219", 0.75), "liver"),
+    P("M 116,149.4 C 114,156 112,162 110,168", { fill: "none", stroke: "#5A2219", strokeWidth: 0.6, opacity: 0.55 }, "livl"),
+    E(100, 154.6, 6.4, 2.6, shine(0.2), "ls"),
+    P("M 107.4,166.8 C 109.6,164.8 112.2,166.4 112.2,169.6 C 112.2,172.6 110,175.2 108,174.6 C 106,173.6 105.6,169 107.4,166.8 Z", org("#86BE5E", "#4E7A33", 0.55), "gall"),
+    P("M 106,185 C 116,181.5 130,180.5 141,178.5 C 145.5,178 146.5,182 143,183.5 C 133,186.5 120,188.5 110,189 C 104.5,189.5 103.5,186.5 106,185 Z", org("url(#bmPancG)", "#B08431", 0.6), "panc"),
+    P("M 128,151 C 138,147 150,153 150,164 C 150,174 142,182 132,182 C 126,182 121,180 120,176 C 124,173.5 132,171.5 136,166 C 138,162 134,158 128,158 Z", org("url(#bmStomachG)", "#A74E43", 0.7), "stomach"),
+    P("M 131.6,154.4 C 140,153.4 146,158 146,165 M 126,178 C 134,178 142,174 145,168", { fill: "none", stroke: "#C2604F", strokeWidth: 0.5, opacity: 0.6 }, "stl"),
+    E(139, 157.6, 4, 2.2, shine(0.3), "ss"),
+    // ---- gut ----
+    P("M 103,196 C 108,193.4 132,193.4 137,196 C 140,200 140,206 136,209.6 C 130,212 110,212 104,209.6 C 100,206 100,200 103,196 Z", org("url(#bmGutG)", "#C48163", 0.6), "small"),
+    s(
+      "g",
+      { key: "loops", fill: "none", stroke: "#D9946F", strokeWidth: 0.8, strokeLinecap: "round", opacity: 0.9 },
+      P("M 106,199.4 C 108.4,196.8 111.4,201.6 114,198.8 C 116.6,196.2 119.6,201.4 122.2,198.6 C 124.8,196 127.8,201.2 130.4,198.6 C 132.4,196.8 134.2,198.4 134.8,199.6", {}, "l1"),
+      P("M 104.8,203.8 C 107.4,201.2 110.4,206 113,203.2 C 115.6,200.6 118.6,205.6 121.2,203 C 123.8,200.4 126.8,205.4 129.4,203 C 131.8,201 134,203 136,204", {}, "l2"),
+      P("M 106.8,208.2 C 109.4,205.6 112.4,210.2 115,207.6 C 117.6,205 120.6,209.8 123.2,207.4 C 125.8,205 128.8,209.6 131.6,207.6", {}, "l3"),
+    ),
+    P("M 95,213 L 95,193 C 95,190 98,189.5 101,190 C 112,191.5 128,191.5 139,190 C 142,189.5 145,190 145,193 L 145,206 C 145,211 141,213 136,212.6 C 131,212.2 128,214 125,214.6", { fill: "none", stroke: "#B76A47", strokeWidth: 7.2, strokeLinecap: "round", strokeLinejoin: "round" }, "colO"),
+    P("M 95,213 L 95,193 C 95,190 98,189.5 101,190 C 112,191.5 128,191.5 139,190 C 142,189.5 145,190 145,193 L 145,206 C 145,211 141,213 136,212.6 C 131,212.2 128,214 125,214.6", { fill: "none", stroke: "#F3AE8A", strokeWidth: 6, strokeLinecap: "round", strokeLinejoin: "round" }, "col"),
+    P("M 95,213 L 95,193 C 95,190 98,189.5 101,190 C 112,191.5 128,191.5 139,190 C 142,189.5 145,190 145,193 L 145,206 C 145,211 141,213 136,212.6 C 131,212.2 128,214 125,214.6", { fill: "none", stroke: "#D98A64", strokeWidth: 6, strokeDasharray: "0.7 3.2", strokeLinejoin: "round", opacity: 0.85 }, "colH"),
+    P("M 113.6,213 C 113.6,208.6 126.4,208.6 126.4,213 C 126.4,216 124,217.6 120,217.6 C 116,217.6 113.6,216 113.6,213 Z", org("url(#bmBladderG)", "#B9952C", 0.6), "bladder"),
+    E(118, 211.4, 2.2, 1.2, shine(0.45), "bs"),
+    // ---- head: glass skull with the brain, face ----
+    P("M 102.6,30.6 C 102.6,21 110.2,13.4 120,13.4 C 129.8,13.4 137.4,21 137.4,30.6 L 134.8,30.6 C 134.8,22.6 128.4,16.2 120,16.2 C 111.6,16.2 105.2,22.6 105.2,30.6 Z", bone, "skull"),
+    P("M 119.4,16.8 C 112.4,16.4 106.2,20 105,26.6 C 104,32.4 105.6,37.4 109.6,39.2 C 112.8,40.4 116.6,40.2 119.4,39 Z", org("url(#bmBrainG)", "#B5607A", 0.7), "brL"),
+    P("M 120.6,16.8 C 127.6,16.4 133.8,20 135,26.6 C 136,32.4 134.4,37.4 130.4,39.2 C 127.2,40.4 123.4,40.2 120.6,39 Z", org("url(#bmBrainG)", "#B5607A", 0.7), "brR"),
+    s(
+      "g",
+      { key: "gyri", fill: "none", stroke: "#C9708A", strokeWidth: 0.55, strokeLinecap: "round" },
+      PP("M 107.4,23.8 C 109.4,21.8 111.8,23.6 113.6,22.2 C 115.2,21 116.8,22.4 118.2,21.6", {}),
+      PP("M 106.4,29 C 108.6,27.2 111,29.4 113.2,27.6 C 115.2,26.2 117,28.4 118.6,27.2", {}),
+      PP("M 106.8,34 C 109,32.2 111.4,34.6 113.6,33 C 115.4,31.8 117,33.6 118.6,32.6", {}),
+      PP("M 109.6,37.8 C 111.6,36.4 113.8,38 115.8,36.8", {}),
+    ),
+    E(112.4, 21.8, 5.6, 3.2, { fill: "url(#bmGlassG)" }, "glass"),
+    PP("M 107.6,42.6 C 109.8,41 113.6,40.8 116.2,42.2", { fill: "none", stroke: "#7A5240", strokeWidth: 1.1, strokeLinecap: "round" }),
+    EE(112, 46.8, 3.7, 3.1, { fill: "#FFFFFF", stroke: "#8A6A55", strokeWidth: 0.5 }),
+    EE(112.2, 47.1, 2.3, 2.4, { fill: "url(#bmIrisG)" }),
+    EE(112.2, 47.2, 1.1, 1.15, { fill: "#1E2836" }),
+    EE(113.1, 46.1, 0.65, 0.65, { fill: "#FFFFFF" }),
+    PP("M 108.3,46.2 C 109.7,43.7 114.3,43.7 115.7,46.2", { fill: "none", stroke: "#6E4C3C", strokeWidth: 0.75, strokeLinecap: "round" }),
+    EE(107.4, 52.4, 3, 1.6, { fill: "#F39A98", opacity: 0.38 }),
+    P("M 120.8,46.8 C 120.6,49.4 119.2,51.6 117.8,52.6 C 118.8,53.8 121.4,53.8 122.4,52.8", { fill: "none", stroke: "#B9806A", strokeWidth: 0.85, strokeLinecap: "round", strokeLinejoin: "round" }, "nose"),
+    P("M 114.6,56.4 C 117,57.4 123,57.4 125.4,56.4 C 124,59.8 116,59.8 114.6,56.4 Z", org("#B9443F", "#8E2F2B", 0.55), "mouth"),
+    P("M 115.8,56.9 C 118,57.6 122,57.6 124.2,56.9 L 123.8,57.9 C 121.6,58.5 118.4,58.5 116.2,57.9 Z", { fill: "#FFFFFF" }, "teeth"),
+    P("M 117.6,59.1 C 119,58.3 121,58.3 122.4,59.1 C 121.2,59.7 118.8,59.7 117.6,59.1 Z", { fill: "#EC7C80" }, "tongue"),
   );
 }
 function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOpen: io, lessons: ls, onBadge: ob }) {
@@ -10556,7 +10717,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
           return { ...E, hit: BM_BACK_HITS[v] || E.hit };
         })
       : BM_ORGANS,
-    RG = BK ? { neuro: BM_REGIONS.neuro, kopf: BM_REGIONS.kopf, ruecken: BM_BACK_TORSO, arm: BM_REGIONS.arm, bein: BM_REGIONS.bein } : BM_REGIONS,
+    RG = BK ? { neuro: BM_REGIONS.neuro, kopf: BM_REGIONS.kopf, ruecken: BM_BACK_TORSO_W, arm: BM_REGIONS.arm, bein: BM_REGIONS.bein } : BM_REGIONS,
     BG = BK ? BM_BADGES_BACK : BM_BADGES,
     B = BM_FULL.w / t.w,
     A = {};
