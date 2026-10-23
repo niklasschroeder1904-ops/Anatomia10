@@ -6534,7 +6534,18 @@ const BASIC_LESSONS = new Set([
     { id: "alle", label: "Alles", icon: "\u{1F4DA}", hint: "Alle Lektionen, Grundwissen und Vertiefung gemischt." },
   ],
   inLevel = (s, r) => !r || r === "alle" || (r === "einsteiger" ? levelOf(s) === 1 : levelOf(s) === 2),
-  levelUnits = (s, r) => s.map((o) => ({ ...o, lessons: o.lessons.filter((e) => inLevel(e, r)) })).filter((o) => o.lessons.length);
+  levelUnits = (s, r) => s.map((o) => ({ ...o, lessons: o.lessons.filter((e) => inLevel(e, r)) })).filter((o) => o.lessons.length),
+  // the lesson after s in menu order for level r: the next one of the topic, else the first of the next topic; null at the end
+  nextLessonAfter = (s, r) => {
+    for (const o of [r, "alle"]) {
+      const e = levelUnits(UNITS, o),
+        t = e.findIndex((n) => n.lessons.some((i) => i.id === s));
+      if (t < 0) continue;
+      const a = e[t].lessons[e[t].lessons.findIndex((n) => n.id === s) + 1] || (e[t + 1] && e[t + 1].lessons[0]);
+      return a ? findLesson(a.id) : null;
+    }
+    return null;
+  };
 const ALL_LESSONS = UNITS.flatMap((s) => s.lessons.map((r) => ({ ...r, unitId: s.id, color: s.color, dark: s.dark }))),
   findItem = (s) => {
     CUR_MOVE[s] && (s = CUR_MOVE[s]);
@@ -14553,7 +14564,7 @@ function FxRain({ kind: s }) {
       )
     : null;
 }
-function ResultScreen({ kind: s, pct: r, xpGain: o, passed: e, color: t, dark: a, onHome: n, onRetry: i, onBack: l, fx: fxKind, boosted: bst }) {
+function ResultScreen({ kind: s, pct: r, xpGain: o, passed: e, color: t, dark: a, onHome: n, onRetry: i, onBack: l, fx: fxKind, boosted: bst, next: nx, onNext: goNext }) {
   const d = starsFor(r),
     c = s !== "test" || e;
   return React.createElement(
@@ -14630,9 +14641,22 @@ function ResultScreen({ kind: s, pct: r, xpGain: o, passed: e, color: t, dark: a
       { style: { width: "100%", maxWidth: 340, display: "flex", flexDirection: "column", gap: 10 } },
       s === "test" && !e && React.createElement(Btn, { color: t, dark: a, onClick: i }, "Nochmal versuchen"),
       l && React.createElement(Btn, { color: t, dark: a, onClick: l }, "Zur\xFCck zur Abbildung"),
+      nx &&
+        goNext &&
+        React.createElement(
+          Btn,
+          { color: C.good, dark: C.goodDark, onClick: goNext },
+          "N\xE4chste Lektion",
+          React.createElement(
+            "div",
+            { className: "ana-body", style: { fontSize: 13.5, fontWeight: 600, letterSpacing: 0, opacity: 0.92, marginTop: 3, lineHeight: 1.3 } },
+            nx.topic ? `Neues Thema: ${nx.topic} \xB7 ` : "",
+            nx.title,
+          ),
+        ),
       React.createElement(
         Btn,
-        { ghost: s === "test" && !e, color: s === "test" && !e ? C.inkSoft : C.good, dark: C.goodDark, onClick: n },
+        { ghost: (s === "test" && !e) || !!(nx && goNext), color: (s === "test" && !e) || (nx && goNext) ? C.inkSoft : C.good, dark: C.goodDark, onClick: n },
         "Zur \xDCbersicht",
       ),
     ),
@@ -15581,7 +15605,7 @@ function AnatomiaApp() {
         w = (p * 10 + (g === 1 ? 20 : 0)) * xm,
         M = n(s);
       (t({ ...s, xp: s.xp + w, ...M, coins: (s.coins || 0) + x("lesson", g), best: { ...s.best, [u]: Math.max(s.best[u] || 0, g) } }),
-        e({ name: "result", kind: "quiz", pct: g, xpGain: w, color: k.color, dark: k.dark }));
+        e({ name: "result", kind: "quiz", lessonId: u, pct: g, xpGain: w, color: k.color, dark: k.dark }));
     },
     B = (u, p, f) => {
       const k = UNITS.find((F) => F.id === u),
@@ -15815,16 +15839,22 @@ function AnatomiaApp() {
   else if (o.name === "fail") {
     const u = findLesson(o.lessonId);
     A = React.createElement(FailScreen, { color: u.color, dark: u.dark, onRetry: () => l(u.id), onHome: () => e({ name: "home" }) });
-  } else
-    o.name === "result" &&
-      (A = React.createElement(ResultScreen, {
-        ...o,
-        fx: s.fx,
-        boosted: xm > 1,
-        onHome: () => e({ name: "home" }),
-        onBack: o.back && o.back.name ? () => e(o.back) : void 0,
-        onRetry: () => b(o.unitId),
-      }));
+  } else if (o.name === "result") {
+    // after a lesson: straight on to the next lesson of the menu
+    const u = o.kind === "quiz" && o.lessonId ? findLesson(o.lessonId) : null,
+      p = u ? nextLessonAfter(u.id, s.level) : null,
+      f = p && p.unitId !== u.unitId ? UNITS.find((k) => k.id === p.unitId) : null;
+    A = React.createElement(ResultScreen, {
+      ...o,
+      fx: s.fx,
+      boosted: xm > 1,
+      onHome: () => e({ name: "home" }),
+      onBack: o.back && o.back.name ? () => e(o.back) : void 0,
+      onRetry: () => b(o.unitId),
+      next: p ? { title: p.title, topic: f ? f.title : null } : null,
+      onNext: p ? () => i(p.id) : void 0,
+    });
+  }
   return React.createElement(
     "div",
     { className: "ana-body", style: { minHeight: "100vh", background: C.paper, color: C.ink } },
