@@ -9122,15 +9122,25 @@ const optionsOf = (s, r) => {
   return r ? shuffle(s) : s;
 };
 // the structure behind an answer option: in the lesson first, else anywhere in the app
-let ITEM_BY_LABEL = null;
+let ITEM_BY_LABEL = null,
+  ITEM_LESSON = null;
 const itemByLabel = (s, r) => {
     const o = s && s.items && s.items.find((e) => e.la === r || e.de === r);
     if (o) return o;
     if (!ITEM_BY_LABEL) {
-      ITEM_BY_LABEL = new Map();
-      ALL_LESSONS.forEach((e) => e.items.forEach((t) => [t.la, t.de].forEach((a) => a && !ITEM_BY_LABEL.has(a) && ITEM_BY_LABEL.set(a, t))));
+      ((ITEM_BY_LABEL = new Map()), (ITEM_LESSON = new Map()));
+      ALL_LESSONS.forEach((e) =>
+        e.items.forEach((t) => (ITEM_LESSON.set(t, e.id), [t.la, t.de].forEach((a) => a && !ITEM_BY_LABEL.has(a) && ITEM_BY_LABEL.set(a, t)))),
+      );
     }
     return ITEM_BY_LABEL.get(r) || null;
+  },
+  // the same as a reference {lessonId, itemId}, for the record of mixed-up pairs
+  itemRefByLabel = (s, r) => {
+    const o = itemByLabel(s, r);
+    if (!o) return null;
+    const e = s && s.items && s.items.includes(o) ? s.id : ITEM_LESSON && ITEM_LESSON.get(o);
+    return e ? { lessonId: e, itemId: o.id } : null;
   },
   // what kind of structure the first word names, for "eine Ebene, keine Achse"
   HEAD_DE = {
@@ -9151,8 +9161,8 @@ const itemByLabel = (s, r) => {
     lig: ["ein Band", "kein Band"],
     ligg: ["Bänder", "keine Bänder"],
     ligamentum: ["ein Band", "kein Band"],
-    os: ["ein Knochen", "kein Knochen"],
-    ossa: ["Knochen", "keine Knochen"],
+    os: ["ein einzelner Knochen", "kein einzelner Knochen"],
+    ossa: ["eine Knochengruppe", "keine Knochengruppe"],
     nucleus: ["ein Kern", "kein Kern"],
     nuclei: ["Kerne", "keine Kerne"],
     tractus: ["eine Bahn", "keine Bahn"],
@@ -9198,8 +9208,40 @@ const itemByLabel = (s, r) => {
         l >= 5 && l > L && ((L = l), (a = n));
       }
     if (!a) return null;
-    const c = (n) => (n.split(/\s+/)[0] || "").replace(/,$/, "");
-    return `Fast: \u201E${a}\u201C stimmt \u2013 gesucht war ${HEAD_DE[e[0]][0]} (${c(s)}), ${HEAD_DE[t[0]][1]} (${c(r)}).`;
+    const c = (n) => (n.split(/\s+/)[0] || "").replace(/,$/, ""),
+      g = HEAD_DE[e[0]][0];
+    return `Fast: \u201E${a}\u201C stimmt \u2013 gesucht ${/^eine?\s/.test(g) ? "war" : "waren"} ${g} (${c(s)}), ${HEAD_DE[t[0]][1]} (${c(r)}).`;
+  },
+  // "Ebene oder Achse?" for a pair of terms of two kinds (in a fixed order, so it does not hint at the answer)
+  contrastSub = (s, r) => {
+    const o = (n) => ((n || "").toLowerCase().split(/\s+/)[0] || "").replace(/[.,;:]/g, ""),
+      e = (n) => n && n[0].replace(/^(ein|eine)\s+/, ""),
+      t = e(HEAD_DE[o(s)]),
+      a = e(HEAD_DE[o(r)]);
+    return t && a && t !== a ? [t, a].sort().join(" oder ") + "?" : "Welcher der beiden Begriffe ist es?";
+  },
+  // a question about one term of a mixed-up pair with only the two terms to choose from; with a picture where the
+  // lesson has one, else the definition
+  contrastQuestion = (s, r, o) => {
+    const e = s.item,
+      t = r.item,
+      a = s.lesson,
+      n = ((quizMarksFor(a.id) || {})[e.id] && platesFor(a.id).length) || (hasSchema(a) && e.hl && e.hl.length),
+      i = makeQuestion(e, a, n && Math.random() < 0.6 ? "fig" : "fact"),
+      l = i.options && i.options.find((c) => c.correct),
+      d = l && l.label === e.de && e.de !== e.la ? "de" : "la",
+      f = e[d] === t[d] ? (d === "la" ? "de" : "la") : d;
+    return e[f] === t[f]
+      ? null
+      : {
+          ...i,
+          pair: o,
+          sub: [contrastSub(e.la, t.la), f === "de" ? "Gesucht ist der deutsche Begriff." : null].filter(Boolean).join(" "),
+          options: shuffle([
+            { label: e[f], correct: !0 },
+            { label: t[f], correct: !1 },
+          ]),
+        };
   },
   // first clause of a definition, as a short reminder of what the chosen term means
   shortFact = (s) => {
@@ -9491,6 +9533,22 @@ function buildLessonQuiz(s, r = 8) {
     k === "type" ? makeTypeQuestion(i, s, t[i.id], a) : k === "point" ? makePointQuestion(i, s, t[i.id], a) : makeQuestion(i, s, k),
   );
   return (n.splice(1 + Math.floor(Math.random() * n.length), 0, makeIntruder(s)), n.slice(0, r));
+}
+// training of mixed-up pairs: the most frequent first, each pair asked both ways, the same pair not twice in a row
+function buildConfusionQuiz(s, r = 10) {
+  const o = Object.entries(s.conf || {})
+      .map(([t, a]) => ({ k: t, ...a }))
+      .sort((t, a) => a.n - t.n || (a.last || 0) - (t.last || 0))
+      .slice(0, Math.ceil(r / 2)),
+    e = [];
+  o.forEach((t) => {
+    const a = findItem(t.a),
+      n = findItem(t.b);
+    a && n && [contrastQuestion(a, n, t.k), contrastQuestion(n, a, t.k)].forEach((i) => i && e.push({ k: t.k, i: i.item, q: i }));
+  });
+  return mixOrder(e, (t, a) => (t.k === a.k ? 2 : 0))
+    .map((t) => t.q)
+    .slice(0, r);
 }
 function buildUnitTest(s, r = 12) {
   const o = [],
@@ -12402,6 +12460,7 @@ function HomeScreen({
   onDark: tgDark,
   onSecOpen: setSO,
   onReset: onReset,
+  onConf: goConf,
 }) {
   const lv = s.level || "alle",
     VU = levelUnits(UNITS, lv),
@@ -12793,6 +12852,26 @@ function HomeScreen({
           React.createElement(
             "div",
             { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, paddingBottom: 16 } },
+            // mixed-up pairs from earlier answers: a full-width tile while there are any
+            (() => {
+              const v = Object.values(s.conf || {}).sort((E, N) => N.n - E.n || (N.last || 0) - (E.last || 0)),
+                W = v[0] && [findItem(v[0].a), findItem(v[0].b)];
+              return (
+                v.length > 0 &&
+                goConf &&
+                React.createElement(
+                  "div",
+                  { style: { gridColumn: "1 / -1" } },
+                  React.createElement(ModeTile, {
+                    color: "#C2255C",
+                    icon: React.createElement("span", { style: { fontSize: 15 } }, "\u{1F500}"),
+                    title: "Verwechslungen \xFCben",
+                    sub: `${v.length} ${v.length === 1 ? "Paar" : "Paare"}${W && W[0] && W[1] ? ` \xB7 z. B. ${W[0].item.la} \u2194 ${W[1].item.la}` : ""}`,
+                    onClick: goConf,
+                  }),
+                )
+              );
+            })(),
             React.createElement(ModeTile, {
               color: C.gold,
               icon: React.createElement(RotateCcw, { size: 16, color: C.gold }),
@@ -15126,6 +15205,8 @@ function QuizScreen({
   maxHearts: l = 3,
   jokers: d = 0,
   onUseJoker: c,
+  onConfuse: oc,
+  onPair: op,
 }) {
   const [m, h] = useState(0),
     [y, b] = useState(l),
@@ -15139,16 +15220,23 @@ function QuizScreen({
     I = z ? f != null : u != null,
     F = z ? f === !0 : u != null && M.options[u].correct,
     // a wrong pick in a normal choice question: which structure it was, and a hint when it was nearly right
-    CL = !z && !M.kind && M.item && u != null && !F ? M.options[u].label : null,
+    CL = !z && M.item && M.options && u != null && !F ? M.options[u].label : null,
     CH = CL ? itemByLabel(M.lesson, CL) : null,
     NM = CL ? nearMissHint(M.options.find((E) => E.correct).label, CL) : null,
     H = (E) => {
       (E ? A((N) => N + 1) : o && b((N) => N - 1),
         i && M.item && M.lesson && i(M.lesson.id, M.item.id, E),
-        i && M.itemRef && i(M.itemRef.lessonId, M.itemRef.itemId, E));
+        i && M.itemRef && i(M.itemRef.lessonId, M.itemRef.itemId, E),
+        op && M.pair && op(M.pair, E));
     },
     D = (E) => {
-      I || (p(E), H(M.options[E].correct));
+      if (I) return;
+      (p(E), H(M.options[E].correct));
+      // a wrong pick: remember the pair of terms for the training of mix-ups (in the training itself onPair counts it)
+      if (!M.options[E].correct && oc && !M.pair && M.item && M.lesson) {
+        const N = itemRefByLabel(M.lesson, M.options[E].label);
+        N && oc({ lessonId: M.lesson.id, itemId: M.item.id }, N);
+      }
     },
     v = (E, N) => {
       I || (k(E), N != null && w(N), H(E));
@@ -15426,6 +15514,8 @@ function ResultScreen({ kind: s, pct: r, xpGain: o, passed: e, color: t, dark: a
           ? "Kartenstapel geschafft!"
           : s === "cases"
             ? "F\xE4lle bearbeitet!"
+            : s === "mix"
+              ? "Verwechslungen ge\xFCbt!"
             : s === "figure"
               ? "Selbsttest geschafft!"
               : "Lektion abgeschlossen!",
@@ -15707,7 +15797,7 @@ function ExamSetupScreen({ progress: s, onExit: r, onStart: o }) {
     React.createElement(Btn, { color: EXAM_COLOR, dark: "#0F4C8A", disabled: !f, onClick: () => f && o(S, B) }, "Pr\xFCfung starten"),
   );
 }
-function ExamScreen({ questions: s, cfg: r, onExit: o, onAnswer: e, onDone: t }) {
+function ExamScreen({ questions: s, cfg: r, onExit: o, onAnswer: e, onDone: t, onConfuse: oc }) {
   const a = useRef([]),
     n = useRef(Date.now()),
     i = useRef(!1),
@@ -15742,6 +15832,7 @@ function ExamScreen({ questions: s, cfg: r, onExit: o, onAnswer: e, onDone: t })
         (a.current.push({ lessonId: h, itemId: y, ok: b, item: x && x.item, lesson: x && x.lesson }), e && e(h, y, b));
       },
       jokers: 0,
+      onConfuse: oc,
       onExit: o,
       onFinish: () => c(!1),
       onFail: () => c(!1),
@@ -16389,6 +16480,40 @@ function AnatomiaApp() {
         return (saveProgress(f), f);
       });
     },
+    // mixed-up pairs: counted on every mix-up, gone after three right answers in a row in the training
+    confuse = (u, p) => {
+      const f = cardKey(u.lessonId, u.itemId),
+        k = cardKey(p.lessonId, p.itemId);
+      f !== k &&
+        r((g) => {
+          const w = [f, k].sort().join("|"),
+            M = { ...(g.conf || {}) },
+            z = M[w] || { a: f, b: k, n: 0, ok: 0 };
+          M[w] = { ...z, n: z.n + 1, ok: 0, last: dayNum() };
+          const I = Object.keys(M);
+          I.length > 60 &&
+            I.sort((F, H) => (M[F].last || 0) - (M[H].last || 0))
+              .slice(0, I.length - 60)
+              .forEach((F) => delete M[F]);
+          const R = { ...g, conf: M };
+          return (saveProgress(R), R);
+        });
+    },
+    pairDone = (u, p) =>
+      r((f) => {
+        const k = { ...(f.conf || {}) },
+          [a, b] = u.split("|"),
+          g = k[u] || { a, b, n: 0, ok: 0 };
+        // a pair already gone this round comes back when the other way round is answered wrong
+        if (!k[u] && p) return f;
+        p ? (g.ok + 1 >= 3 ? delete k[u] : (k[u] = { ...g, ok: g.ok + 1 })) : (k[u] = { ...g, ok: 0, n: g.n + 1, last: dayNum() });
+        const w = { ...f, conf: k };
+        return (saveProgress(w), w);
+      }),
+    goConf = () => {
+      const u = buildConfusionQuiz(s, 10);
+      u.length && e({ name: "mix", questions: u });
+    },
     y = (u, p, f) => {
       if (!u || !p) return;
       const k = cardKey(u, p);
@@ -16451,6 +16576,7 @@ function AnatomiaApp() {
       },
       onCases: () => e({ name: "cases", cases: buildCases(CASES, 12) }),
       onErrors: () => e({ name: "errors" }),
+      onConf: goConf,
       onShop: () => e({ name: "shop" }),
       onAtlas: (u) => e({ name: "figatlas", q: typeof u == "string" ? u : "" }),
       onLevel: setLevel,
@@ -16491,6 +16617,7 @@ function AnatomiaApp() {
       questions: o.questions,
       cfg: o.cfg,
       onAnswer: y,
+      onConfuse: confuse,
       onExit: () => e({ name: "examsetup" }),
       onDone: (u) => examDone(u, o.cfg),
     });
@@ -16572,6 +16699,7 @@ function AnatomiaApp() {
           const k = { ...f, jokers: Math.max(0, (f.jokers || 0) - 1) };
           return (saveProgress(k), k);
         }),
+      onConfuse: confuse,
       onExit: () => e({ name: "learn", lessonId: u.id }),
       onFinish: (f, k) => S(u.id, f, k),
       onFail: () => e({ name: "fail", lessonId: u.id }),
@@ -16590,8 +16718,26 @@ function AnatomiaApp() {
           const f = { ...p, jokers: Math.max(0, (p.jokers || 0) - 1) };
           return (saveProgress(f), f);
         }),
+      onConfuse: confuse,
       onExit: () => e({ name: "home" }),
       onFinish: (p, f) => B(u.id, p, f),
+      onFail: () => e({ name: "home" }),
+    });
+  } else if (o.name === "mix") {
+    // training of mixed-up pairs: two terms per question, no hearts
+    A = React.createElement(QuizScreen, {
+      questions: o.questions,
+      unit: { color: "#C2255C", dark: "#9C1D4A" },
+      heartsEnabled: !1,
+      title: "Verwechslungen \xFCben",
+      onAnswer: y,
+      onPair: pairDone,
+      jokers: 0,
+      onExit: () => e({ name: "home" }),
+      onFinish: (u, p) => {
+        const f = u * 6 * xm;
+        (t({ ...s, xp: s.xp + f, ...n(s) }), e({ name: "result", kind: "mix", pct: u / Math.max(1, p), xpGain: f, color: "#C2255C", dark: "#9C1D4A" }));
+      },
       onFail: () => e({ name: "home" }),
     });
   } else if (o.name === "shop")
