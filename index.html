@@ -9534,17 +9534,22 @@ function buildLessonQuiz(s, r = 8) {
   );
   return (n.splice(1 + Math.floor(Math.random() * n.length), 0, makeIntruder(s)), n.slice(0, r));
 }
-// training of mixed-up pairs: the most frequent first, each pair asked both ways, the same pair not twice in a row
-function buildConfusionQuiz(s, r = 10) {
-  const o = Object.entries(s.conf || {})
-      .map(([t, a]) => ({ k: t, ...a }))
-      .sort((t, a) => a.n - t.n || (a.last || 0) - (t.last || 0))
+// mixed-up pairs that still lead to their cards, the most frequent first
+function confPairs(s) {
+  return Object.entries(s.conf || {})
+    .map(([r, o]) => ({ k: r, ...o, A: findItem(o.a), B: findItem(o.b) }))
+    .filter((r) => r.A && r.B)
+    .sort((r, o) => o.n - r.n || (o.last || 0) - (r.last || 0));
+}
+// training of mixed-up pairs (all, or just pair p): the most frequent first, each pair asked both ways, the same pair
+// not twice in a row
+function buildConfusionQuiz(s, r = 10, p = null) {
+  const o = confPairs(s)
+      .filter((t) => !p || t.k === p)
       .slice(0, Math.ceil(r / 2)),
     e = [];
   o.forEach((t) => {
-    const a = findItem(t.a),
-      n = findItem(t.b);
-    a && n && [contrastQuestion(a, n, t.k), contrastQuestion(n, a, t.k)].forEach((i) => i && e.push({ k: t.k, i: i.item, q: i }));
+    [contrastQuestion(t.A, t.B, t.k), contrastQuestion(t.B, t.A, t.k)].forEach((i) => i && e.push({ k: t.k, i: i.item, q: i }));
   });
   return mixOrder(e, (t, a) => (t.k === a.k ? 2 : 0))
     .map((t) => t.q)
@@ -12460,7 +12465,6 @@ function HomeScreen({
   onDark: tgDark,
   onSecOpen: setSO,
   onReset: onReset,
-  onConf: goConf,
 }) {
   const lv = s.level || "alle",
     VU = levelUnits(UNITS, lv),
@@ -12468,6 +12472,7 @@ function HomeScreen({
     cc = claimableCount(s),
     c = dueCards(s, 999).length,
     m = Object.keys(s.errors || {}).length,
+    cf = confPairs(s).length,
     [h, y] = useState({}),
     [b, x] = useState(""),
     [S, B] = useState(null),
@@ -12852,26 +12857,6 @@ function HomeScreen({
           React.createElement(
             "div",
             { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, paddingBottom: 16 } },
-            // mixed-up pairs from earlier answers: a full-width tile while there are any
-            (() => {
-              const v = Object.values(s.conf || {}).sort((E, N) => N.n - E.n || (N.last || 0) - (E.last || 0)),
-                W = v[0] && [findItem(v[0].a), findItem(v[0].b)];
-              return (
-                v.length > 0 &&
-                goConf &&
-                React.createElement(
-                  "div",
-                  { style: { gridColumn: "1 / -1" } },
-                  React.createElement(ModeTile, {
-                    color: "#C2255C",
-                    icon: React.createElement("span", { style: { fontSize: 15 } }, "\u{1F500}"),
-                    title: "Verwechslungen \xFCben",
-                    sub: `${v.length} ${v.length === 1 ? "Paar" : "Paare"}${W && W[0] && W[1] ? ` \xB7 z. B. ${W[0].item.la} \u2194 ${W[1].item.la}` : ""}`,
-                    onClick: goConf,
-                  }),
-                )
-              );
-            })(),
             React.createElement(ModeTile, {
               color: C.gold,
               icon: React.createElement(RotateCcw, { size: 16, color: C.gold }),
@@ -12897,7 +12882,7 @@ function HomeScreen({
               color: C.bad,
               icon: React.createElement(X, { size: 16, color: C.bad }),
               title: "Fehlerbuch",
-              sub: m === 0 ? "leer" : `${m} Strukturen`,
+              sub: m + cf === 0 ? "leer" : [m && `${m} Strukturen`, cf && `${cf} ${cf === 1 ? "Paar" : "Paare"}`].filter(Boolean).join(" \xB7 "),
               onClick: n,
             }),
             React.createElement(ModeTile, {
@@ -13908,49 +13893,137 @@ function ErrorBody3D({ errors: s, onOpenLesson: r }) {
       ),
   );
 }
-function ErrorBookScreen({ progress: s, onExit: r, onTrain: o, onOpenLesson: e }) {
+function ErrorBookScreen({ progress: s, onExit: r, onTrain: o, onOpenLesson: e, onConf: oc }) {
   const t = errorCards(s, 60),
     a = {};
   t.forEach((i) => {
     const l = UNITS.find((d) => d.id === i.lesson.unitId) || { title: "Sonstige", color: C.inkSoft, id: "x" };
     (a[l.id] = a[l.id] || { unit: l, list: [] }).list.push(i);
   });
-  const n = Object.values(a).sort((i, l) => l.list.length - i.list.length);
+  const n = Object.values(a).sort((i, l) => l.list.length - i.list.length),
+    cv = oc ? confPairs(s) : [],
+    [all, setAll] = useState(!1),
+    CC = "#C2255C",
+    row = {
+      display: "flex",
+      width: "100%",
+      textAlign: "left",
+      alignItems: "center",
+      gap: 10,
+      padding: "10px 12px",
+      marginBottom: 6,
+      background: C.card,
+      border: `1.5px solid ${C.line}`,
+      borderRadius: 12,
+      cursor: "pointer",
+    },
+    de = (i) => i.item.de || i.item.la;
   return React.createElement(
     "div",
-    { style: { minHeight: "100vh" } },
+    { style: { minHeight: "100vh", paddingBottom: 16 } },
     React.createElement(
       TopBar,
       { onBack: r },
       React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, "Fehlerbuch"),
     ),
     React.createElement(ErrorBody3D, { errors: errorCards(s, 400), onOpenLesson: e }),
-    t.length === 0
+    t.length === 0 && cv.length === 0
       ? React.createElement(
           "div",
           { className: "ana-body", style: { color: C.inkSoft, fontSize: 15, padding: "20px 4px", lineHeight: 1.5 } },
-          "Noch keine Fehler gesammelt. Alles, was du im Quiz oder in den Karteikarten falsch hast, landet hier automatisch.",
+          "Noch keine Fehler gesammelt. Alles, was du im Quiz oder in den Karteikarten falsch hast, landet hier automatisch \u2013 auch Begriffe, die du verwechselt hast.",
         )
       : React.createElement(
           React.Fragment,
           null,
-          React.createElement(
-            "div",
-            { className: "ana-body", style: { color: C.inkSoft, fontSize: 14, padding: "0 4px 12px" } },
-            t.length,
-            " Strukturen mit Fehlern \u2014 die h\xE4ufigsten zuerst.",
-          ),
-          React.createElement(
-            "div",
-            { style: { paddingBottom: 14 } },
+          t.length > 0 &&
             React.createElement(
-              Btn,
-              { color: C.bad, dark: C.badDark, onClick: o },
-              "Fehlerstapel \xFCben (",
-              Math.min(t.length, 20),
-              " Karten)",
+              "div",
+              { className: "ana-body", style: { color: C.inkSoft, fontSize: 14, padding: "0 4px 12px" } },
+              t.length,
+              " Strukturen mit Fehlern \u2014 die h\xE4ufigsten zuerst.",
             ),
+          React.createElement(
+            "div",
+            { style: { display: "flex", flexDirection: "column", gap: 8, paddingBottom: 14 } },
+            t.length > 0 &&
+              React.createElement(
+                Btn,
+                { color: C.bad, dark: C.badDark, onClick: o },
+                "Fehlerstapel \xFCben (",
+                Math.min(t.length, 20),
+                " Karten)",
+              ),
+            cv.length > 0 &&
+              React.createElement(
+                Btn,
+                { color: CC, dark: "#9C1D4A", onClick: () => oc() },
+                "Verwechslungen \xFCben (",
+                cv.length,
+                cv.length === 1 ? " Paar)" : " Paare)",
+              ),
           ),
+          // mixed-up pairs: a tap trains just that pair; three dots for the three right answers in a row
+          cv.length > 0 &&
+            React.createElement(
+              "div",
+              { style: { marginBottom: 14 } },
+              React.createElement(
+                "div",
+                { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: CC, letterSpacing: 0.6, padding: "0 2px 4px" } },
+                "\u{1F500} VERWECHSLUNGEN \xB7 ",
+                cv.length,
+              ),
+              React.createElement(
+                "div",
+                { className: "ana-body", style: { fontSize: 13, color: C.inkSoft, lineHeight: 1.4, padding: "0 2px 8px" } },
+                "Tippe ein Paar an, um nur dieses zu \xFCben. Nach 3 richtigen Antworten in Folge ist es erledigt.",
+              ),
+              (all ? cv : cv.slice(0, 5)).map((i) =>
+                React.createElement(
+                  "button",
+                  { key: i.k, onClick: () => oc(i.k), className: "ana-body", style: row },
+                  React.createElement(
+                    "span",
+                    { style: { flex: 1, minWidth: 0 } },
+                    React.createElement("span", { style: { fontWeight: 700, color: C.ink } }, i.A.item.la, " \u2194 ", i.B.item.la),
+                    (de(i.A) !== i.A.item.la || de(i.B) !== i.B.item.la) &&
+                      React.createElement(
+                        "span",
+                        { style: { display: "block", fontSize: 13, color: C.inkSoft, marginTop: 2 } },
+                        de(i.A),
+                        " \u2194 ",
+                        de(i.B),
+                      ),
+                  ),
+                  React.createElement(
+                    "span",
+                    { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 } },
+                    React.createElement("span", { className: "ana-display", style: { fontSize: 12.5, fontWeight: 700, color: CC } }, i.n, "\xD7"),
+                    React.createElement(
+                      "span",
+                      { "aria-label": `${i.ok} von 3 richtig`, style: { display: "flex", gap: 3 } },
+                      [0, 1, 2].map((l) =>
+                        React.createElement("span", { key: l, style: { width: 7, height: 7, borderRadius: 4, background: l < i.ok ? CC : C.line } }),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              !all &&
+                cv.length > 5 &&
+                React.createElement(
+                  "button",
+                  {
+                    onClick: () => setAll(!0),
+                    className: "ana-display",
+                    style: { background: "none", border: "none", color: CC, fontSize: 14, fontWeight: 700, padding: "4px 2px", cursor: "pointer" },
+                  },
+                  "Alle ",
+                  cv.length,
+                  " Paare zeigen",
+                ),
+            ),
           n.map((i) =>
             React.createElement(
               "div",
@@ -13968,24 +14041,7 @@ function ErrorBookScreen({ progress: s, onExit: r, onTrain: o, onOpenLesson: e }
               i.list.map((l) =>
                 React.createElement(
                   "button",
-                  {
-                    key: l.key,
-                    onClick: () => e(l.lesson.id),
-                    className: "ana-body",
-                    style: {
-                      display: "flex",
-                      width: "100%",
-                      textAlign: "left",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "10px 12px",
-                      marginBottom: 6,
-                      background: C.card,
-                      border: `1.5px solid ${C.line}`,
-                      borderRadius: 12,
-                      cursor: "pointer",
-                    },
-                  },
+                  { key: l.key, onClick: () => e(l.lesson.id), className: "ana-body", style: row },
                   React.createElement(
                     "span",
                     { style: { flex: 1 } },
@@ -15462,7 +15518,22 @@ function FxRain({ kind: s }) {
       )
     : null;
 }
-function ResultScreen({ kind: s, pct: r, xpGain: o, passed: e, color: t, dark: a, onHome: n, onRetry: i, onBack: l, fx: fxKind, boosted: bst, next: nx, onNext: goNext }) {
+function ResultScreen({
+  kind: s,
+  pct: r,
+  xpGain: o,
+  passed: e,
+  color: t,
+  dark: a,
+  onHome: n,
+  onRetry: i,
+  onBack: l,
+  backLabel: bl,
+  fx: fxKind,
+  boosted: bst,
+  next: nx,
+  onNext: goNext,
+}) {
   const d = starsFor(r),
     c = s !== "test" || e;
   return React.createElement(
@@ -15540,7 +15611,7 @@ function ResultScreen({ kind: s, pct: r, xpGain: o, passed: e, color: t, dark: a
       "div",
       { style: { width: "100%", maxWidth: 340, display: "flex", flexDirection: "column", gap: 10 } },
       s === "test" && !e && React.createElement(Btn, { color: t, dark: a, onClick: i }, "Nochmal versuchen"),
-      l && React.createElement(Btn, { color: t, dark: a, onClick: l }, "Zur\xFCck zur Abbildung"),
+      l && React.createElement(Btn, { color: t, dark: a, onClick: l }, bl || "Zur\xFCck zur Abbildung"),
       nx &&
         goNext &&
         React.createElement(
@@ -15556,7 +15627,12 @@ function ResultScreen({ kind: s, pct: r, xpGain: o, passed: e, color: t, dark: a
         ),
       React.createElement(
         Btn,
-        { ghost: (s === "test" && !e) || !!(nx && goNext), color: (s === "test" && !e) || (nx && goNext) ? C.inkSoft : C.good, dark: C.goodDark, onClick: n },
+        {
+          ghost: (s === "test" && !e) || !!(nx && goNext) || !!l,
+          color: (s === "test" && !e) || (nx && goNext) || l ? C.inkSoft : C.good,
+          dark: C.goodDark,
+          onClick: n,
+        },
         "Zur \xDCbersicht",
       ),
     ),
@@ -16510,8 +16586,8 @@ function AnatomiaApp() {
         const w = { ...f, conf: k };
         return (saveProgress(w), w);
       }),
-    goConf = () => {
-      const u = buildConfusionQuiz(s, 10);
+    goConf = (k) => {
+      const u = buildConfusionQuiz(s, 10, typeof k == "string" ? k : null);
       u.length && e({ name: "mix", questions: u });
     },
     y = (u, p, f) => {
@@ -16576,7 +16652,6 @@ function AnatomiaApp() {
       },
       onCases: () => e({ name: "cases", cases: buildCases(CASES, 12) }),
       onErrors: () => e({ name: "errors" }),
-      onConf: goConf,
       onShop: () => e({ name: "shop" }),
       onAtlas: (u) => e({ name: "figatlas", q: typeof u == "string" ? u : "" }),
       onLevel: setLevel,
@@ -16733,10 +16808,19 @@ function AnatomiaApp() {
       onAnswer: y,
       onPair: pairDone,
       jokers: 0,
-      onExit: () => e({ name: "home" }),
+      onExit: () => e({ name: "errors" }),
       onFinish: (u, p) => {
         const f = u * 6 * xm;
-        (t({ ...s, xp: s.xp + f, ...n(s) }), e({ name: "result", kind: "mix", pct: u / Math.max(1, p), xpGain: f, color: "#C2255C", dark: "#9C1D4A" }));
+        (t({ ...s, xp: s.xp + f, ...n(s) }), e({
+            name: "result",
+            kind: "mix",
+            pct: u / Math.max(1, p),
+            xpGain: f,
+            color: "#C2255C",
+            dark: "#9C1D4A",
+            back: { name: "errors" },
+            backLabel: "Zur\xFCck zum Fehlerbuch",
+          }));
       },
       onFail: () => e({ name: "home" }),
     });
@@ -16753,6 +16837,7 @@ function AnatomiaApp() {
       progress: s,
       onExit: () => e({ name: "home" }),
       onOpenLesson: i,
+      onConf: goConf,
       onTrain: () => {
         const u = errorCards(s, 20);
         u.length && d({ cards: u, title: "Fehlerstapel", color: C.bad, dark: C.badDark, back: "errors" });
@@ -16789,7 +16874,15 @@ function AnatomiaApp() {
       onFinish: (u) => {
         const p = n(s);
         (t({ ...s, xp: s.xp + u * 5 * xm, coins: (s.coins || 0) + u, ...p }),
-          e({ name: "result", kind: "flash", pct: u / Math.max(1, o.cards.length), xpGain: u * 5 * xm, color: o.color, dark: o.dark }));
+          e({
+            name: "result",
+            kind: "flash",
+            pct: u / Math.max(1, o.cards.length),
+            xpGain: u * 5 * xm,
+            color: o.color,
+            dark: o.dark,
+            ...(o.back === "errors" ? { back: { name: "errors" }, backLabel: "Zur\xFCck zum Fehlerbuch" } : {}),
+          }));
       },
     });
   else if (o.name === "fail") {
