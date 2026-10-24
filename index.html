@@ -9244,8 +9244,18 @@ const itemByLabel = (s, r) => {
         };
   },
   // first clause of a definition, as a short reminder of what the chosen term means
+  // (a full stop after an abbreviation or a number does not end it: "\xC4ste der A. thoracica interna", "2. Rippe")
   shortFact = (s) => {
-    const r = ((s && s.fact) || "").split(/[;.]\s/)[0].replace(/\.$/, "").trim();
+    const o = ((s && s.fact) || "").trim(),
+      e = /[;.](\s|$)/g;
+    let r = o,
+      t;
+    for (; (t = e.exec(o)); )
+      if (o[t.index] === ";" || !/^([A-Za-z\xC4\xD6\xDC\xE4\xF6\xFC]{1,2}|Lig|Ligg|Proc|Procc|Nucl|bzw|ca|vgl|ggf|usw|Abb|Nr|\d+|[CTLS]h?\d+)$/.test(o.slice(0, t.index).split(/[\s(/\u2013-]/).pop())) {
+        r = o.slice(0, t.index);
+        break;
+      }
+    r = r.replace(/\.$/, "").trim();
     return r.length > 90 ? r.slice(0, 88).replace(/\s+\S*$/, "") + " \u2026" : r;
   };
 function makeQuestion(s, r, o) {
@@ -9459,23 +9469,192 @@ function makePointQuestion(s, r, o, e) {
     options: [],
   };
 }
+// the odd one out ("Welche Struktur geh\xF6rt NICHT zu ...?") should take knowledge, not a glance, and must not belong to
+// the lesson after all: never from the lesson's topic (its unit), its picture (the other parts "\xB7 Teil n") or a lesson
+// sharing a structure with it, and no name found in its body region or in several regions ("Capsula articularis").
+// Structures: the same kind from a distant region (a leg muscle among arm muscles); terms: a neighbouring basics
+// lesson or a structure named alike ("Proc. transversus" among the axes)
+const ODD_FAR = {
+    kopf: ["bein"],
+    neuro: ["arm", "bein", "abdomen", "thorax"],
+    thorax: ["bein", "neuro"],
+    abdomen: ["neuro", "arm"],
+    arm: ["neuro", "abdomen", "bein"],
+    bein: ["kopf", "neuro", "thorax", "arm", "ruecken"],
+    ruecken: ["bein"],
+  },
+  ODD_EXTRA = {
+    "gl-ebenen": ["Proc. transversus", "Fascia transversalis"],
+    "gl-hoehlen": ["Cavitas glenoidalis", "Canalis carpi", "Canalis inguinalis", "Canalis mandibulae", "Cavitas dentis"],
+    "gl-bewegung": ["Flexura coli dextra", "Flexura duodenojejunalis"],
+    "gl-gewebe": ["Diaphysis", "Metaphysis", "Linea epiphysialis", "Cavitas medullaris"],
+  },
+  // terms that belong to more than one basics topic
+  ODD_SKIP = { "gl-lage": /Grundstellung/, "gl-bewegung": /Grundstellung/, "gl-gewebe": /Peritoneum/ },
+  // bones and joints, and the parts of the circulation, overlap
+  ODD_REL = { knochen: ["knochen", "gelenke"], gelenke: ["gelenke", "knochen"], "g-kreislauf": ["arterien", "venen", "organ"], "g-lymph": ["organ", "arterien", "venen"] },
+  ODD_STOP = new Set(
+    "lateralis medialis superior inferior anterior posterior major minor longus brevis magnus profundus profunda superficialis dexter dextra dextrum sinister sinistra sinistrum internus interna internum externus externa externum communis proprius propria medius media intermedius ascendens descendens centralis principalis dorsalis ventralis cranialis caudalis proximalis distalis processus partes laterale mediale laterales mediales superius inferius anterius posterius superiores inferiores anteriores posteriores majus minus longum breve profundum superficiale intermedium commune proprium medium collaterale collateralia articularis articulare articulares fibrosa fibrosum fibrosus synovialis oberer obere oberes oberen unterer untere unteres unteren innerer innere inneres inneren \xE4u\xDFerer \xE4u\xDFere \xE4u\xDFeres \xE4u\xDFeren vorderer vordere vorderes vorderen hinterer hintere hinteres hinteren rechter rechte rechtes rechten linker linke linkes linken gro\xDFer gro\xDFe gro\xDFes gro\xDFen kleiner kleine kleines kleinen mittlerer mittlere mittleres mittleren langer lange langes langen kurzer kurze kurzes kurzen tiefer tiefe tiefes tiefen seitlicher seitliche gemeinsame gemeinsamer".split(
+      " ",
+    ),
+  ),
+  oddCat = (s) => {
+    const r = (s.unitId || "").replace(/^[a-z]+-/, "");
+    return /^(knochen|skelett|knochenbau)$/.test(r) ? "knochen" : /^(muskeln|arterien|venen|nerven|gelenke)$/.test(r) ? r : "organ";
+  },
+  // the kind of a structure by its name where it says so (an artery of the kidney is an artery), else by its unit
+  oddKind = (s, r) => {
+    const o = bareLabel(s.la).toLowerCase() + " ";
+    return /^(a|aa|arteria|arteriae)\.?\s/.test(o)
+      ? "arterien"
+      : /^(v|vv|vena|venae)\.?\s/.test(o) || /\bvenos/.test(o)
+        ? "venen"
+        : /^(n|nn|nervus|nervi|plexus|ganglion|ganglia)\.?\s/.test(o)
+          ? "nerven"
+          : /^(m|mm|musculus|musculi)\.?\s/.test(o)
+            ? "muskeln"
+            : /^(os|ossa)\s/.test(o)
+              ? "knochen"
+              : /^(lig|ligg|ligamentum|ligamenta|articulatio|articulationes)\.?\s/.test(o)
+                ? "gelenke"
+                : oddCat(r);
+  },
+  // layers and tissues are found in every organ ("Tunica mucosa", "Fascia")
+  ODD_LAYER = /^(tunica|tela|lamina|stratum|epithel|endothel|mesothel|membrana|textus|substantia|fascia|capsula)\b/i,
+  oddWords = (s) =>
+    (s || "")
+      .toLowerCase()
+      .replace(/\([^)]*\)/g, " ")
+      .split(/[^a-z\xE4\xF6\xFC\xDF]+/)
+      .filter((r) => r.length >= 5 && !ODD_STOP.has(r)),
+  // names alike: a word that starts the same ("Muskelsystem" - "Muskelgewebe", "Ventriculus dexter" - "Ventriculus lateralis")
+  oddLike = (s, r) => s.some((o) => r.some((e) => o.slice(0, 4) === e.slice(0, 4)));
+// per structure, worked out once: its names, its kind, its forms, and whether it may be an odd one out at all
+let ODD = null;
+function oddInit() {
+  if (ODD) return ODD;
+  const K = (r) => bareLabel(r || "").toLowerCase(),
+    add = (r, o, e) => (r.get(o) || r.set(o, new Set()).get(o)).add(e),
+    meta = new Map(),
+    regions = new Map(),
+    unit = new Map(),
+    byName = new Map(),
+    heads = new Set(),
+    regNames = new Map(),
+    regOne = new Map();
+  ALL_LESSONS.forEach((r) => {
+    const o = regionOf(r);
+    r.items.forEach((e) => {
+      const t = K(e.la),
+        a = K(e.de);
+      meta.set(e, { la: t, de: a, kind: oddKind(e, r), fla: formOf(e.la), fde: formOf(e.de), wla: oddWords(e.la), wde: oddWords(e.de) });
+      [t, a].forEach((n) => {
+        if (!n) return;
+        (add(regions, n, o), add(regNames, o, n));
+        const i = n.split(/\s+/);
+        i.length > 1 ? heads.add(i[0]) : n.length >= 5 && !/[/-]/.test(n) && add(regOne, o, n);
+      });
+      (add(unit, r.unitId, t), add(byName, t, r));
+    });
+  });
+  // never the odd one out: a name found in several regions, a kind with a side only ("Lig. collaterale laterale",
+  // "Condylus medialis"), a one-word name that starts other names ("Fornix": there is a "Fornix gastricus" and a
+  // "Fornix pharyngis"), layers and tissues
+  meta.forEach((r) => {
+    const o = r.la.split(/\s+/);
+    r.bad =
+      [r.la, r.de].some((e) => e && (regions.get(e).size > 1 || (!/\s/.test(e) && heads.has(e)))) ||
+      (o.length > 1 && o.slice(1).every((e) => ODD_STOP.has(e))) ||
+      ODD_LAYER.test(r.la);
+  });
+  return (ODD = { meta, unit, byName, regNames, regOne });
+}
 function makeIntruder(s) {
-  const r = s.items.map((i) => i.la),
-    o = ALL_LESSONS.filter((i) => i.id !== s.id && !!i.term == !!s.term)
-      .flatMap((i) => i.items.map((l) => ({ ...l, from: i.title })))
-      .filter((i) => !r.some((l) => l.includes(i.la) || i.la.includes(l))),
+  const { meta, unit, byName, regNames, regOne } = oddInit(),
+    M = (i) => meta.get(i),
+    W = (i, l) => (" " + i + " ").includes(" " + l + " "),
+    base = (i) => i.title.replace(/\s*\xB7\s*Teil\s*\d+\s*$/, "").replace(/\s*\(Bildatlas\)/, ""),
+    own = s.items.map((i) => M(i).la),
+    // the lesson's picture (its other parts) and lessons sharing a structure with it
+    near = new Set([...own.flatMap((i) => [...(byName.get(i) || [])]), ...ALL_LESSONS.filter((i) => base(i) === base(s))]),
+    rg = regionOf(s),
+    reg = !s.term && rg !== "alle";
+  near.delete(s);
+  const local = new Set(
+      [s, ...near, ...(s.term || reg ? [] : ALL_LESSONS.filter((i) => i.unitId === s.unitId))].flatMap((i) => i.items.flatMap((l) => [M(l).la, M(l).de])),
+    ),
+    area = (reg && regNames.get(rg)) || new Set(),
+    // no name holding a one-word name of the region ("Mittleres Keilbein" of the foot among the skull bones)
+    one = reg ? regOne.get(rg) || new Set() : new Set(s.items.flatMap((i) => [M(i).la, M(i).de]).filter((i) => i.length >= 5 && !/[\s/-]/.test(i))),
+    sk = ODD_SKIP[s.id],
+    ok = (i) => {
+      const l = M(i);
+      return (
+        ![l.la, l.de].some((d) => d && (local.has(d) || area.has(d))) && !own.some((d) => W(d, l.la) || W(l.la, d)) && !(sk && sk.test(i.la))
+      );
+    },
+    holds = (i) => [M(i).la, M(i).de].some((l) => /\s/.test(l) && l.split(/[\s/,-]+/).some((d) => one.has(d))),
+    c0 = oddCat(s),
+    far = ODD_FAR[rg] || [],
+    rel = ODD_REL[s.unitId] || ODD_REL[c0] || [c0],
+    mine = unit.get(s.unitId),
+    adjU = new Map(),
+    adj = (i) => (adjU.has(i.unitId) || adjU.set(i.unitId, [...unit.get(i.unitId)].some((l) => mine.has(l))), adjU.get(i.unitId)),
+    tier = (i, l) => i.flatMap((d) => d.items.filter((c) => !M(c).bad && (!l || l(M(c))) && ok(c) && !holds(c)).map((c) => ({ i: c, l: d, pen: 0 }))),
+    C = ALL_LESSONS.filter((i) => !i.term && i.unitId !== s.unitId && !near.has(i) && regionOf(i) !== "alle" && regionOf(i) !== rg),
+    same = (i) => i.kind === c0,
+    tiers = s.term
+      ? [
+          () =>
+            [
+              ...ALL_LESSONS.filter((i) => i.term && i !== s && !near.has(i)).flatMap((i) => i.items.map((l) => ({ i: l, l: i, pen: i.unitId === s.unitId ? 0 : 2 }))),
+              ...(ODD_EXTRA[s.id] || []).flatMap((i) => {
+                const l = ALL_LESSONS.find((d) => d.items.some((c) => c.la === i));
+                return l ? [{ i: l.items.find((d) => d.la === i), l, pen: 0 }] : [];
+              }),
+            ].filter((i) => ok(i.i)),
+        ]
+      : reg
+        ? [
+            () => tier(C.filter((i) => far.includes(regionOf(i))), same),
+            () => tier(C.filter((i) => !adj(i)), same),
+            () => tier(C.filter((i) => far.includes(regionOf(i)))),
+            () => tier(C),
+          ]
+        : // spinal cord and roots are nerves too
+          [() => tier(C.filter((i) => c0 !== "nerven" || regionOf(i) !== "neuro"), (i) => !rel.includes(i.kind))],
     e = Math.random() < 0.4,
     t = (i) => (e ? i.de : i.la),
-    n0 = sample(
-      s.items.filter((i, l, d) => d.findIndex((c) => t(c) === t(i)) === l),
-      3,
-    ),
-    a = o
-      .filter((i) => !n0.some((l) => bareLabel(t(l)).toLowerCase() === bareLabel(t(i)).toLowerCase()))
-      .map((i) => ({ i, d: Math.min(...n0.map((l) => formDist(formOf(t(l)), formOf(t(i))))) + Math.random() * 0.9 }))
+    key = (i) => (e ? M(i).de : M(i).la);
+  let pool = [];
+  for (const i of tiers) if ((pool = i()).length) break;
+  // the last resort: any other lesson, as before
+  pool.length ||
+    (pool = ALL_LESSONS.filter((i) => i !== s && !!i.term == !!s.term && !near.has(i))
+      .flatMap((i) => i.items.map((l) => ({ i: l, l: i, pen: 0 })))
+      .filter((i) => ok(i.i)));
+  const u0 = s.items.filter((i, l, d) => d.findIndex((c) => t(c) === t(i)) === l),
+    // a description among names ("Ausgangshaltung f\xFCr alle Lageangaben") would look odd: names only, where enough
+    u1 = u0.filter((i) => (e ? M(i).fde : M(i).fla).n <= 3),
+    n = sample(u1.length >= 3 ? u1 : u0, 3),
+    fo = (i) => (e ? M(i).fde : M(i).fla),
+    wo = (i) => (e ? M(i).wde : M(i).wla),
+    lw = s.items.flatMap(wo),
+    // of the four that fit best (alike in form, named alike - for terms above all), one by chance for some variety
+    top = [...new Map(pool.map((i) => [M(i.i).la, i])).values()]
+      .filter((i) => !n.some((l) => key(i.i).startsWith(key(l)) || key(l).startsWith(key(i.i))))
+      .map((i) => ({
+        c: i,
+        d: Math.min(...n.map((l) => formDist(fo(l), fo(i.i)))) + i.pen - (oddLike(wo(i.i), lw) ? (s.term ? 2 : 1) : 0) + Math.random() * 0.3,
+      }))
       .sort((i, l) => i.d - l.d)
-      .map((i) => i.i)[0],
-    n = n0;
+      .slice(0, 4),
+    pick = top.length ? top[Math.floor(Math.random() * top.length)].c : null;
+  if (!pick) return null;
+  const a = pick.i,
+    la = bareLabel(a.la),
+    de = bareLabel(a.de),
+    f = shortFact(a);
   return {
     prompt: s.term
       ? `Welcher Begriff geh\xF6rt NICHT zu \u201E${s.title}\u201C?`
@@ -9483,7 +9662,10 @@ function makeIntruder(s) {
     showFig: !1,
     figure: s.figure,
     hl: [],
-    explain: `${a.la} (${a.de}) geh\xF6rt zur Lektion \u201E${a.from}\u201C.`,
+    explain: `${la}${de && de !== la ? ` (${de})` : ""} geh\xF6rt zur Lektion \u201E${pick.l.title}\u201C${f && !f.toLowerCase().startsWith(de.toLowerCase()) ? `: ${f}` : ""}`.replace(
+      /([^\u2026])$/,
+      "$1.",
+    ),
     options: optionsOf([{ label: t(a), correct: !0 }, ...n.map((i) => ({ label: t(i), correct: !1 }))], !0),
   };
 }
@@ -9532,7 +9714,8 @@ function buildLessonQuiz(s, r = 8) {
   const n = mixOrder(Q, (i, l) => (i.k === l.k ? 1 : 0) + (i.i.id === l.i.id ? 2 : 0)).map(({ k, i }) =>
     k === "type" ? makeTypeQuestion(i, s, t[i.id], a) : k === "point" ? makePointQuestion(i, s, t[i.id], a) : makeQuestion(i, s, k),
   );
-  return (n.splice(1 + Math.floor(Math.random() * n.length), 0, makeIntruder(s)), n.slice(0, r));
+  const odd = makeIntruder(s);
+  return (odd && n.splice(1 + Math.floor(Math.random() * n.length), 0, odd), n.slice(0, r));
 }
 // mixed-up pairs that still lead to their cards, the most frequent first
 function confPairs(s) {
