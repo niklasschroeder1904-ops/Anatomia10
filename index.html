@@ -11814,9 +11814,11 @@ function BasicsCavitiesFig({ hl: h = [], accent: a = "#1C7ED6", pulse: p = !0 })
     cls = p ? "ana-part-glow" : void 0,
     SX = 44,
     FX = 112,
-    faint = { fill: "#FFFFFF", fillOpacity: 0.42, stroke: "#C99F86", strokeWidth: 0.8, strokeLinejoin: "round" },
-    strong = { fill: a, fillOpacity: 0.42, stroke: a, strokeWidth: 1.8, strokeLinejoin: "round", className: cls },
-    st = (id) => (k === id ? strong : faint),
+    // the asked cavity is framed, what lies in it shows clearly; the other cavities are veiled
+    hi = { fill: a, fillOpacity: 0.1, stroke: a, strokeWidth: 2.2, strokeLinejoin: "round", className: cls },
+    veil = { fill: "#FFFFFF", fillOpacity: 0.66, stroke: "#C99F86", strokeWidth: 0.8, strokeLinejoin: "round" },
+    rim = { fill: "none", stroke: "#C99F86", strokeWidth: 0.8, strokeLinejoin: "round" },
+    st = (id) => (k === id ? hi : (k === "peritoneum" && id === "abdominis") || (k === "mediastinum" && id === "thoracis") ? rim : veil),
     tube = (id) =>
       k === id
         ? { fill: "none", stroke: a, strokeWidth: 5, strokeLinecap: "round", className: cls }
@@ -11825,37 +11827,90 @@ function BasicsCavitiesFig({ hl: h = [], accent: a = "#1C7ED6", pulse: p = !0 })
       k === id
         ? { fill: "none", stroke: a, strokeWidth: 3.6, strokeLinecap: "round", className: cls }
         : { fill: "none", stroke: "#C9765F", strokeWidth: 2, strokeLinecap: "round" },
-    peri = k === "peritoneum" ? { fill: a, fillOpacity: 0.16, stroke: a, strokeWidth: 2.4, strokeLinejoin: "round", className: cls } : null,
-    P = bmP;
+    peri = k === "peritoneum" ? { fill: "none", stroke: a, strokeWidth: 2.4, strokeLinejoin: "round", className: cls } : null,
+    P = bmP,
+    // profile
+    CR = "M -23.6,50 C -28.4,38 -26.4,22 -16.6,15 C -8,9.4 6,9 14.4,14.6 C 20.4,18.8 22.4,26.4 21.4,34.4 C 21,37 19.6,39 17,40 C 9,41.4 1,44.4 -6,49 C -12,52.4 -19,53.6 -23.6,50 Z",
+    CANAL = "M -16,55 C -16,70 -15,86 -14.6,100 C -15.6,112 -16.4,124 -15,136 C -13,148 -11.4,160 -11.4,172 C -11.4,182 -13,192 -15.6,202 C -17.4,212 -17.4,220 -15.6,228",
+    TH = "M -9,98 C -2,93.6 8,94 14,99.6 C 18.6,108 19.6,122 17.6,133 C 16.6,139 15.4,144 14.6,148 C 9,142 1,140.6 -6,146 C -8,148 -9.4,152 -10,156 C -11.4,140 -11.6,118 -9,98 Z",
+    AB = "M 14.6,148 C 9,142 1,140.6 -6,146 C -8,148 -9.4,152 -10,156 C -10.4,172 -10.6,186 -11.6,198 L 15,198 C 15.6,188 14.6,176 14,166 C 13.6,158 14,152 14.6,148 Z",
+    PE = "M -11.6,198 L 15,198 C 14.6,206 12.6,214 9.6,221 C 6,227 0,230 -6,230.4 C -11,230.6 -14.6,226 -15.6,220 C -16,212 -14.4,204 -11.6,198 Z",
+    DIA = "M 14.6,148 C 9,142 1,140.6 -6,146 C -8,148 -9.4,152 -10,156",
+    // front, in the coordinates of the menu figure
+    fCR = "M 120,16.4 C 129,16.4 135.2,22.2 135.4,30 C 135.6,36 133.4,40.4 129,41.6 L 111,41.6 C 106.6,40.4 104.4,36 104.6,30 C 104.8,22.2 111,16.4 120,16.4 Z",
+    fTH = "M 108,84 C 100,84 92,90 89,100 C 86.6,112 87,128 88.6,148 C 94,141 104,139 112,145 C 116,148 124,148 128,145 C 136,139 146,141 151.4,148 C 153,128 153.4,112 151,100 C 148,90 140,84 132,84 C 128,86 124,87 120,87 C 116,87 112,86 108,84 Z",
+    fME = "M 113.4,86.4 C 116,87.4 124,87.4 126.6,86.4 C 127.4,96 128.4,104 131.6,111 C 139,116 141.6,130 138,143 C 132,145.6 126,146.4 120,146 C 114,146.4 108,145.6 102.6,143.6 C 99,132 101.6,121 108.4,114 C 111.4,106 112.6,96 113.4,86.4 Z",
+    fAB = "M 88.6,148 C 94,141 104,139 112,145 C 116,148 124,148 128,145 C 136,139 146,141 151.4,148 C 152,160 153,172 154,184 C 154.4,188 154,191 153,193 L 87,193 C 86,191 85.6,188 86,184 C 87,172 88,160 88.6,148 Z",
+    fPE = "M 87,193 L 153,193 C 151,200 146,207 138,211 C 132,214 126,215 120,215 C 114,215 108,214 102,211 C 94,207 89,200 87,193 Z",
+    fDIA = "M 88.6,148 C 94,141 104,139 112,145 C 116,148 124,148 128,145 C 136,139 146,141 151.4,148",
+    tube3 = (d, c, w) => ({ d, fill: "none", stroke: c, strokeWidth: w, strokeLinecap: "round", strokeLinejoin: "round" });
+  // only head and trunk, where the cavities are, fading out below the pelvis
   return s(
     "svg",
-    { viewBox: "-2 -10 332 436", width: "100%", height: "100%", role: "img", "aria-label": "Körperhöhlen" },
+    { viewBox: "-2 -6 332 258", width: "100%", height: "100%", role: "img", "aria-label": "Körperhöhlen" },
     s(BodyDefs, null),
-    // profile: cranial cavity, vertebral canal, chest, belly and pelvis, separated by the diaphragm
+    s(
+      "defs",
+      null,
+      s("clipPath", { id: "bcav-front" }, [fCR, fTH, fAB, fPE].map((d, i) => s("path", { key: i, d: bmW(d) }))),
+      s(
+        "linearGradient",
+        { id: "bcav-fadeg", x1: 0, y1: 0, x2: 0, y2: 1 },
+        s("stop", { offset: "0.88", stopColor: "#fff" }),
+        s("stop", { offset: "1", stopColor: "#000" }),
+      ),
+      s("mask", { id: "bcav-fade", maskUnits: "userSpaceOnUse", x: -2, y: -6, width: 332, height: 258 }, s("rect", { x: -2, y: -6, width: 332, height: 258, fill: "url(#bcav-fadeg)" })),
+    ),
+    s(
+      "g",
+      { mask: "url(#bcav-fade)" },
+    // profile: brain, spine with the spinal cord, lungs and heart, liver and gut, bladder and rectum
     s(
       "g",
       { transform: `translate(${SX},0)` },
       s(BodySideCut, null),
-      s("path", { d: "M -23.6,50 C -28.4,38 -26.4,22 -16.6,15 C -8,9.4 6,9 14.4,14.6 C 20.4,18.8 22.4,26.4 21.4,34.4 C 21,37 19.6,39 17,40 C 9,41.4 1,44.4 -6,49 C -12,52.4 -19,53.6 -23.6,50 Z", ...st("cranii") }),
-      s("path", { d: "M -16,55 C -16,70 -15,86 -14.6,100 C -15.6,112 -16.4,124 -15,136 C -13,148 -11.4,160 -11.4,172 C -11.4,182 -13,192 -15.6,202 C -17.4,212 -17.4,220 -15.6,228", ...tube("vertebralis") }),
-      s("path", { d: "M -9,98 C -2,93.6 8,94 14,99.6 C 18.6,108 19.6,122 17.6,133 C 16.6,139 15.4,144 14.6,148 C 9,142 1,140.6 -6,146 C -8,148 -9.4,152 -10,156 C -11.4,140 -11.6,118 -9,98 Z", ...st("thoracis") }),
-      s("path", { d: "M 14.6,148 C 9,142 1,140.6 -6,146 C -8,148 -9.4,152 -10,156 C -10.4,172 -10.6,186 -11.6,198 L 15,198 C 15.6,188 14.6,176 14,166 C 13.6,158 14,152 14.6,148 Z", ...st("abdominis") }),
-      s("path", { d: "M -11.6,198 L 15,198 C 14.6,206 12.6,214 9.6,221 C 6,227 0,230 -6,230.4 C -11,230.6 -14.6,226 -15.6,220 C -16,212 -14.4,204 -11.6,198 Z", ...st("pelvis") }),
-      s("path", { d: "M 14.6,148 C 9,142 1,140.6 -6,146 C -8,148 -9.4,152 -10,156", ...dia("diaphragma") }),
+      s("path", { d: CR, fill: "#F2AFC0", stroke: "#CF8399", strokeWidth: 0.8 }),
+      s("path", { d: "M -20,30 C -14,24 -8,31 -2,26 C 4,21 9,28 15,24 M -22,40 C -15,35 -9,42 -2,37 C 4,32 10,39 17,34 M -12,18 C -9,22 -6,22 -3,19", fill: "none", stroke: "#CF8399", strokeWidth: 0.8, strokeLinecap: "round" }),
+      s("ellipse", { cx: -16.4, cy: 47.4, rx: 5.4, ry: 3.4, fill: "#E89AAF", stroke: "#CF8399", strokeWidth: 0.7 }),
+      s("path", { ...tube3(CANAL, "#A8915E", 6.6), transform: "translate(4.4,0)" }),
+      s("path", { ...tube3(CANAL, "#F1E7CC", 5.2), transform: "translate(4.4,0)", strokeDasharray: "5.4 1.7", strokeLinecap: "butt" }),
+      s("path", { d: CANAL, ...tube("vertebralis") }),
+      s("path", tube3("M -16,55 C -16,70 -15,86 -14.6,100 C -15.6,112 -16.4,124 -15,136 C -13,148 -11.4,160 -11.4,172", "#F2C14E", 1.8)),
+      s("path", { d: TH, fill: "#F5BDC6", stroke: "#DE919E", strokeWidth: 0.8 }),
+      s("path", { d: "M -4,108 C -1,112 -4,118 -1,124 M -6,128 C -3,132 -5,138 -2,142", fill: "none", stroke: "#E39AA7", strokeWidth: 0.8, strokeLinecap: "round" }),
+      s("path", { d: "M 4.6,116.6 C 10.6,112.6 17.4,116.6 17.8,124.6 C 18.2,132.6 13.4,139.6 7.4,141.6 C 2.4,139.6 -0.6,132.6 -0.2,125.6 C 0,120.6 1.6,117.6 4.6,116.6 Z", fill: "#D9363E", stroke: "#A82525", strokeWidth: 0.8 }),
+      s("path", { d: "M 6,116.8 C 6.4,110 8.6,105 12,102", fill: "none", stroke: "#C42B33", strokeWidth: 2.2, strokeLinecap: "round" }),
+      s("path", { d: AB, fill: "#F7D6D2", stroke: "none" }),
+      s("path", { d: "M -2.6,151.6 C 3,147.4 11,147.6 14.4,150.6 C 14.8,156.6 12.8,161.4 7.6,162.6 C 2.4,162.8 -1.6,158.6 -2.6,151.6 Z", fill: "#A0522D", stroke: "#7A3E22", strokeWidth: 0.8 }),
+      s("path", tube3("M -6,168 C -2,163.4 6,163.4 9,168 C 12,173 6,177.4 2,174.4 C -2,171.4 -6,175.6 -4.4,180 C -2.6,185 6,185 10,181 C 13,186 8.4,192.4 2.4,191.4 C -3,191 -7,188 -7,184", "#E28E97", 3.4)),
+      s("path", tube3("M -6,168 C -2,163.4 6,163.4 9,168 C 12,173 6,177.4 2,174.4 C -2,171.4 -6,175.6 -4.4,180 C -2.6,185 6,185 10,181 C 13,186 8.4,192.4 2.4,191.4 C -3,191 -7,188 -7,184", "#F6B9BE", 1.6)),
+      s("path", { d: PE, fill: "#F7D6D2", stroke: "none" }),
+      s("ellipse", { cx: 6.4, cy: 212.6, rx: 5.6, ry: 5.2, fill: "#F2D16B", stroke: "#C9A43C", strokeWidth: 0.8 }),
+      s("path", tube3("M -9.6,200 C -8.4,208 -9.6,216 -6,224.6", "#C47A6B", 3.6)),
+      // the cavities over their contents
+      s("path", { d: CR, ...st("cranii") }),
+      s("path", { d: TH, ...(k === "mediastinum" ? rim : st("thoracis")) }),
+      s("path", { d: AB, ...st("abdominis") }),
+      s("path", { d: PE, ...st("pelvis") }),
+      s("path", { d: DIA, ...dia("diaphragma") }),
       peri && s("path", { d: "M 11.6,153 C 12.4,162 12.8,172 12.8,182 C 12.8,192 12.2,200 10.4,207 C 8.4,214 5,218 1.4,217.2 C -2.2,214.6 -4.2,209 -5.8,204 C -7,196 -6.6,186 -6.8,174 C -6.8,164 -6.2,157 -4.4,151.4 C -0.4,147.2 7,147.6 11.6,153 Z", ...peri }),
     ),
-    // front: the same cavities, the mediastinum between the lungs
+    // front: the organs of the menu figure in the cavities, the mediastinum with the heart between the lungs
     s(
       "g",
       { transform: `translate(${FX},0)` },
       s(BodyPlainBald, null),
-      P("M 120,16.4 C 129,16.4 135.2,22.2 135.4,30 C 135.6,36 133.4,40.4 129,41.6 L 111,41.6 C 106.6,40.4 104.4,36 104.6,30 C 104.8,22.2 111,16.4 120,16.4 Z", st("cranii"), "cr"),
-      P("M 108,84 C 100,84 92,90 89,100 C 86.6,112 87,128 88.6,148 C 94,141 104,139 112,145 C 116,148 124,148 128,145 C 136,139 146,141 151.4,148 C 153,128 153.4,112 151,100 C 148,90 140,84 132,84 C 128,86 124,87 120,87 C 116,87 112,86 108,84 Z", st("thoracis"), "th"),
-      P("M 113.4,86.4 C 116,87.4 124,87.4 126.6,86.4 C 127.4,96 128.4,104 131.6,111 C 139,116 141.6,130 138,143 C 132,145.6 126,146.4 120,146 C 114,146.4 108,145.6 102.6,143.6 C 99,132 101.6,121 108.4,114 C 111.4,106 112.6,96 113.4,86.4 Z", k === "mediastinum" ? strong : { ...faint, fillOpacity: 0.7 }, "me"),
-      P("M 88.6,148 C 94,141 104,139 112,145 C 116,148 124,148 128,145 C 136,139 146,141 151.4,148 C 152,160 153,172 154,184 C 154.4,188 154,191 153,193 L 87,193 C 86,191 85.6,188 86,184 C 87,172 88,160 88.6,148 Z", st("abdominis"), "ab"),
-      P("M 87,193 L 153,193 C 151,200 146,207 138,211 C 132,214 126,215 120,215 C 114,215 108,214 102,211 C 94,207 89,200 87,193 Z", st("pelvis"), "pe"),
-      P("M 88.6,148 C 94,141 104,139 112,145 C 116,148 124,148 128,145 C 136,139 146,141 151.4,148", dia("diaphragma"), "di"),
+      s("g", { clipPath: "url(#bcav-front)" }, s(BodyArt, null)),
+      P(fCR, st("cranii"), "cr"),
+      k === "mediastinum"
+        ? s("path", { key: "th", d: bmW(fTH) + " " + bmW(fME), fillRule: "evenodd", ...veil })
+        : P(fTH, st("thoracis"), "th"),
+      P(fME, k === "mediastinum" ? hi : { fill: "none", stroke: "#C99F86", strokeWidth: 0.8 }, "me"),
+      P(fAB, st("abdominis"), "ab"),
+      P(fPE, st("pelvis"), "pe"),
+      P(fDIA, dia("diaphragma"), "di"),
       peri && P("M 91.6,153 C 96,148 104,147 111,151 C 116,153.6 124,153.6 129,151 C 136,147 144,148 148.4,153 C 149.6,163 150.4,174 150.6,184 C 150.6,194 147,203 140,207.6 C 134,211 127,212 120,212 C 113,212 106,211 100,207.6 C 93,203 89.4,194 89.4,184 C 89.6,174 90.4,163 91.6,153 Z", peri, "pt"),
+    ),
     ),
   );
 }
