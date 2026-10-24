@@ -12329,7 +12329,9 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
     g = (v) => {
       const W = OL.find((E) => E.id === v);
       W && (i(v), d(!1), o(W.region));
-    };
+    },
+    // back to the plain figure: no organ, no region chosen
+    clr = () => (i(null), d(!1), r && o(null));
   useEffect(() => {
     const v = c.current;
     if (!v) return;
@@ -12428,7 +12430,13 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
     null,
     e(
       "div",
-      { style: { position: "relative" } },
+      {
+        style: { position: "relative" },
+        // a tap beside the figure (not on an organ, region, count or button) clears the choice
+        onClick: (v) => {
+          v.target.closest("[data-hit],button,[role=button]") || clr();
+        },
+      },
       e(
         "svg",
         {
@@ -12465,7 +12473,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
           "g",
           null,
           Object.entries(RG).map(([v, W]) =>
-            e("path", { key: v, d: W, fill: "#000", fillOpacity: 0, onClick: () => (i(null), o(v)), style: { cursor: "pointer" } }),
+            e("path", { key: v, d: W, fill: "#000", fillOpacity: 0, "data-hit": 1, onClick: () => (i(null), o(v)), style: { cursor: "pointer" } }),
           ),
           OL.map((v) =>
             v.hit.map((W, E) =>
@@ -12478,6 +12486,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
                   fillOpacity: n === v.id ? 0.1 : 0,
                   stroke: n === v.id ? "#FFFFFF" : "none",
                   strokeWidth: n === v.id ? 2.4 / Math.sqrt(B) : 0,
+                  "data-hit": 1,
                   onClick: () => g(v.id),
                   style: { cursor: "pointer" },
                 },
