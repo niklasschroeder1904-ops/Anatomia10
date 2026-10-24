@@ -9680,6 +9680,175 @@ function mixOrder(s, r) {
   }
   return o;
 }
+// questions on the numbers the cards teach ("Rund 206 Knochen ..."), by the Latin name of the structure whose card
+// says it: the question and the answers in the order shown, the right one marked "*". Asked only where the card holds
+// the numbers of the right answer
+const NUM_QUESTIONS = {
+    "Systema skeletale": [["Wie viele Knochen hat das Skelett eines Erwachsenen?", "156", "*206", "256", "306"]],
+    "Systema musculare": [["Wie viele Skelettmuskeln hat der Mensch?", "über 60", "über 200", "*über 600", "über 2000"]],
+    "Textus muscularis": [["Wie viele Arten von Muskelgewebe gibt es?", "2", "*3", "4", "5"]],
+    "Pulmones": [["Wie viele Lappen hat die rechte Lunge?", "1", "2", "*3", "4"], ["Wie viele Lappen hat die linke Lunge?", "1", "*2", "3", "4"]],
+    "Lobus medius": [["Wie viele Lappen hat die linke Lunge?", "1", "*2", "3", "4"]],
+    "Bronchi lobares": [["Wie viele Lappenbronchien gehen rechts ab?", "1", "2", "*3", "4"]],
+    "Bronchus lobaris": [["Wie viele Lappenbronchien gehen rechts ab?", "1", "2", "*3", "4"]],
+    "Segmenta bronchopulmonalia": [["Wie viele Segmente hat die rechte Lunge?", "3", "8", "*10", "12"]],
+    "Bronchus segmentalis": [["Wie viele Segmente hat die rechte Lunge?", "3", "8", "*10", "12"]],
+    "Alveolus pulmonis": [["Wie viele Lungenbläschen hat der Mensch etwa?", "3–5 Millionen", "30–50 Millionen", "*300–500 Millionen", "3–5 Milliarden"]],
+    "Cupula pleurae": [["Wie weit überragt die Pleurakuppel die 1. Rippe?", "0,5 cm", "*2–3 cm", "5–6 cm", "10 cm"]],
+    "Cavea thoracis": [["Aus wie vielen Brustwirbeln und Rippenpaaren besteht der Brustkorb?", "5 und 12", "7 und 12", "12 und 10", "*12 und 12"]],
+    "Costae": [["Wie viele Rippenpaare hat der Mensch?", "7", "10", "*12", "24"]],
+    "Costae (durchtrennt)": [["Wie viele Rippenpaare hat der Mensch?", "7", "10", "*12", "24"]],
+    "Costae verae (I–VII)": [["Wie viele echte Rippen (Costae verae) gibt es auf jeder Seite?", "3", "5", "*7", "10"]],
+    "Costae spuriae (VIII–X)": [["Welche Rippen sind falsche Rippen (Costae spuriae)?", "1.–7.", "*8.–10.", "9.–11.", "11.–12."]],
+    "Costae fluitantes (XI–XII)": [["Welche Rippen sind freie Rippen (Costae fluitantes)?", "1.–2.", "8.–10.", "10.–11.", "*11.–12."]],
+    "Angulus sterni": [["Auf Höhe welcher Rippe liegt der Angulus sterni?", "1. Rippe", "*2. Rippe", "4. Rippe", "6. Rippe"]],
+    "Corpus sterni": [["Welche Rippenknorpel setzen am Brustbeinkörper an?", "1.–5.", "*2.–7.", "3.–10.", "8.–12."]],
+    "Membrum superius": [["Wie viele Knochen hat eine obere Extremität (ohne Schultergürtel)?", "12", "27", "*30", "54"]],
+    "Ossa carpi": [["Wie viele Handwurzelknochen hat eine Hand?", "5", "7", "*8", "14"]],
+    "Ossa metacarpi": [["Wie viele Mittelhandknochen hat eine Hand?", "4", "*5", "8", "14"]],
+    "Ossa tarsi": [["Wie viele Fußwurzelknochen hat ein Fuß?", "5", "*7", "8", "14"]],
+    "Ossa metatarsi": [["Wie viele Mittelfußknochen hat ein Fuß?", "4", "*5", "7", "14"]],
+    "Phalanges": [["Wie viele Glieder hat die Großzehe?", "1", "*2", "3", "4"]],
+    "Vertebrae": [["Wie viele Halswirbel hat der Mensch?", "5", "*7", "8", "12"], ["Wie viele Brustwirbel hat der Mensch?", "7", "10", "*12", "14"], ["Wie viele Lendenwirbel hat der Mensch?", "4", "*5", "7", "12"]],
+    "Os sacrum": [["Aus wie vielen verschmolzenen Wirbeln besteht das Kreuzbein?", "2", "3", "*5", "7"]],
+    "Os coccygis": [["Aus wie vielen Wirbeln besteht das Steißbein?", "1–2", "*3–5", "6–8", "9–10"]],
+    "Discus intervertebralis": [["Wie viele Bandscheiben hat die Wirbelsäule?", "12", "*23", "26", "33"]],
+    "Fovea costalis processus transversi": [["An welchen Brustwirbeln fehlt die Rippengelenkfläche am Querfortsatz?", "Th1 und Th2", "Th5 und Th6", "Th9 und Th10", "*Th11 und Th12"]],
+    "Angulus inferior": [["Auf Höhe welches Brustwirbels liegt der untere Schulterblattwinkel?", "Th2", "Th4", "*Th7", "Th12"]],
+    "N. spinalis": [["Wie viele Spinalnervenpaare gibt es?", "12", "24", "*31", "33"]],
+    "Orbita": [["Aus wie vielen Knochen ist die Augenhöhle aufgebaut?", "3", "5", "*7", "9"]],
+    "Fossae cranii": [["Wie viele Schädelgruben hat die innere Schädelbasis?", "2", "*3", "4", "5"]],
+    "Fonticulus anterior": [["Wann schließt sich die große Fontanelle meist?", "in den ersten 2–3 Lebensmonaten", "um den 6. Lebensmonat", "*bis Ende des 2. Lebensjahres", "mit etwa 6 Jahren"]],
+    "Fonticulus posterior": [["Wann schließt sich die kleine Fontanelle?", "*in den ersten 2–3 Lebensmonaten", "um den 6. Lebensmonat", "bis Ende des 1. Lebensjahres", "bis Ende des 2. Lebensjahres"]],
+    "Processus palatinus": [["Welchen Teil des harten Gaumens bildet der Gaumenfortsatz des Oberkiefers?", "das vordere Drittel", "die Hälfte", "*die vorderen zwei Drittel", "den ganzen Gaumen"]],
+    "A. carotis externa": [["Wie viele Äste gibt die A. carotis externa ab?", "3", "5", "*8", "12"]],
+    "Arcus aortae": [["Wie viele große Äste gehen vom Aortenbogen ab?", "1", "2", "*3", "5"]],
+    "Bulbus oculi": [["Wie groß ist der Durchmesser des Augapfels etwa?", "12 mm", "*24 mm", "36 mm", "48 mm"]],
+    "Meatus acusticus externus": [["Wie lang ist der äußere Gehörgang etwa?", "1 cm", "*3 cm", "6 cm", "10 cm"]],
+    "Canales semicirculares": [["Wie viele Bogengänge hat das Innenohr?", "2", "*3", "4", "6"]],
+    "Ductus semicirculares": [["Wie viele Bogengänge hat das Innenohr?", "2", "*3", "4", "6"]],
+    "Paries osseus cochleae": [["Wie viele Windungen hat die Schnecke?", "1", "1,5", "*2,5", "4"]],
+    "Dentes": [["Wie viele bleibende Zähne hat das vollständige Gebiss?", "20", "28", "*32", "36"]],
+    "Zahnformel": [["Wie viele bleibende Zähne hat das vollständige Gebiss?", "20", "28", "*32", "36"]],
+    "Dentes decidui": [["Wie viele Milchzähne hat ein Kind?", "16", "*20", "24", "32"]],
+    "Dentes maxillares": [["Wie viele Zähne hat der Oberkiefer im bleibenden Gebiss?", "8", "12", "*16", "20"]],
+    "Dentes molares": [["Wie viele Mahlzähne hat eine Kieferhälfte im bleibenden Gebiss?", "1", "2", "*3", "4"]],
+    "Dentes premolares": [["Wie viele Vormahlzähne hat eine Kieferhälfte?", "1", "*2", "3", "4"]],
+    "Dentes incisivi": [["Wie viele Schneidezähne hat eine Kieferhälfte?", "1", "*2", "3", "4"]],
+    "Papilla vallata": [["Wie viele Wallpapillen hat die Zunge?", "2–3", "*7–12", "20–30", "über 100"]],
+    "Mm. constrictores pharyngis": [["In wie vielen Etagen liegen die Schlundschnürer?", "2", "*3", "4", "5"]],
+    "Plexus intraparotideus": [["In wie viele Endastgruppen teilt sich der N. facialis in der Ohrspeicheldrüse?", "2", "3", "*5", "7"]],
+    "Gll. salivariae": [["Wie viel Speichel bilden die Speicheldrüsen pro Tag?", "50–100 ml", "200–300 ml", "*1–1,5 l", "5–6 l"]],
+    "Gl. thyroidea": [["Aus wie vielen Lappen besteht die Schilddrüse?", "1", "*2", "3", "4"]],
+    "Glandula thyroidea": [["Aus wie vielen Lappen besteht die Schilddrüse?", "1", "*2", "3", "4"]],
+    "Glandulae parathyroideae": [["Wie viele Nebenschilddrüsen hat der Mensch meist?", "1", "2", "*4", "6"]],
+    "Gll. parathyroideae (dorsal der Schilddrüse)": [["Wie viele Nebenschilddrüsen hat der Mensch meist?", "1", "2", "*4", "6"]],
+    "Glandulae parathyroideae sinistrae": [["Wie viele Nebenschilddrüsen hat der Mensch meist?", "1", "2", "*4", "6"]],
+    "Glandulae parathyroideae dextrae": [["Wie viele Nebenschilddrüsen hat der Mensch meist?", "1", "2", "*4", "6"]],
+    "Gll. parathyroideae dextrae": [["Wie viele Nebenschilddrüsen hat der Mensch meist?", "1", "2", "*4", "6"]],
+    "Gll. parathyroideae sinistrae": [["Wie viele Nebenschilddrüsen hat der Mensch meist?", "1", "2", "*4", "6"]],
+    "Gll. parathyroideae superiores et inferiores": [["Wie viele Nebenschilddrüsen hat der Mensch meist?", "1", "2", "*4", "6"]],
+    "Lobus thymi": [["Aus wie vielen Lappen besteht der Thymus?", "1", "*2", "3", "4"]],
+    "Trachea": [["Wie lang ist die Luftröhre etwa?", "3–5 cm", "*10–12 cm", "20–25 cm", "30–40 cm"]],
+    "Cartilagines tracheales": [["Wie viele Knorpelspangen hat die Luftröhre?", "4–6", "8–10", "*16–20", "30–40"]],
+    "Cartilago hyalina": [["Wie viele Knorpelspangen hat die Luftröhre?", "4–6", "8–10", "*16–20", "30–40"]],
+    "Glandula mammaria": [["Aus wie vielen Drüsenlappen besteht die Brustdrüse?", "3–5", "6–8", "*15–20", "40–50"]],
+    "Lymphabfluss der Mamma": [["Wie viel der Lymphe der Brust fließt zu den Achsellymphknoten?", "etwa 10 %", "etwa 25 %", "etwa 50 %", "*etwa 75 %"]],
+    "Papilla mammaria": [["In welchem Zwischenrippenraum liegt die Brustwarze beim Mann?", "2. Interkostalraum", "*4. Interkostalraum", "6. Interkostalraum", "8. Interkostalraum"]],
+    "Ductus thoracicus": [["Welchen Teil des Körpers drainiert der Ductus thoracicus?", "ein Viertel", "die Hälfte", "*drei Viertel", "den ganzen Körper"]],
+    "Liquor interstitialis": [["Wie viel Gewebsflüssigkeit nehmen die Lymphkapillaren pro Tag auf?", "20–30 ml", "200–300 ml", "*2–3 l", "20–30 l"]],
+    "Atrium sinistrum": [["Wie viele Lungenvenen münden in den linken Vorhof?", "1", "2", "*4", "6"]],
+    "Vv. pulmonales dextrae": [["Wie viele rechte Lungenvenen gibt es meist?", "1", "*2", "3", "4"]],
+    "Valva tricuspidalis": [["Wie viele Segel hat die Klappe zwischen rechtem Vorhof und rechter Kammer?", "1", "2", "*3", "4"]],
+    "Valva mitralis": [["Wie viele Segel hat die Klappe zwischen linkem Vorhof und linker Kammer?", "1", "*2", "3", "4"]],
+    "Valva aortae": [["Wie viele Taschen hat die Aortenklappe?", "1", "2", "*3", "4"]],
+    "Nodus sinuatrialis": [["In welcher Frequenz gibt der Sinusknoten den Takt vor?", "20–30/min", "40–50/min", "*60–80/min", "120–140/min"]],
+    "Nodus atrioventricularis": [["Welchen Ersatzrhythmus hat der AV-Knoten?", "20–30/min", "*40–50/min", "60–80/min", "100–120/min"]],
+    "Apex cordis": [["In welchem Zwischenrippenraum tastet man den Herzspitzenstoß?", "2. Interkostalraum", "3. Interkostalraum", "*5. Interkostalraum", "7. Interkostalraum"]],
+    "Limbus fossae ovalis": [["Wie häufig ist ein offenes Foramen ovale bei Erwachsenen?", "etwa 1 %", "etwa 5 %", "*etwa 25 %", "etwa 60 %"]],
+    "Oesophagus": [["Wie lang ist die Speiseröhre etwa?", "10 cm", "*25 cm", "50 cm", "1 m"], ["Auf welcher Höhe tritt die Speiseröhre durch das Zwerchfell?", "Th4", "Th8", "*Th10", "Th12"]],
+    "Constrictio pharyngooesophagealis": [["Wie weit von der Zahnreihe liegt die obere Ösophagusenge?", "5 cm", "*15 cm", "25 cm", "40 cm"]],
+    "Constrictio aortica et bronchialis": [["Wie weit von der Zahnreihe liegt die mittlere Ösophagusenge?", "5 cm", "15 cm", "*25 cm", "40 cm"]],
+    "Constrictio diaphragmatica": [["Wie weit von der Zahnreihe liegt die untere Ösophagusenge?", "15 cm", "25 cm", "*40 cm", "60 cm"]],
+    "Intestinum tenue": [["Wie lang ist der Dünndarm etwa?", "30–50 cm", "1 m", "*3–5 m", "10–12 m"]],
+    "Jejunum & Ileum": [["Wie lang ist der Dünndarm etwa?", "30–50 cm", "1 m", "*3–5 m", "10–12 m"]],
+    "Rectum": [["Wie lang ist das Rektum etwa?", "4 cm", "*15 cm", "40 cm", "1 m"]],
+    "Canalis analis": [["Wie lang ist der Analkanal etwa?", "1 cm", "*4 cm", "15 cm", "25 cm"]],
+    "Taeniae coli": [["Wie viele Tänien hat der Dickdarm?", "1", "2", "*3", "4"]],
+    "Diverticulum ilei (Meckel)": [["Bei wie vielen Menschen kommt ein Meckel-Divertikel vor?", "etwa 0,1 %", "*etwa 2 %", "etwa 20 %", "etwa 50 %"]],
+    "Corpus vesicae biliaris": [["Wie viel Galle fasst die Gallenblase?", "5–10 ml", "*40–70 ml", "200–300 ml", "1 l"]],
+    "Lebersegmente (Couinaud)": [["Wie viele Lebersegmente gibt es nach Couinaud?", "4", "6", "*8", "10"]],
+    "V. hepatica": [["Wie viele Lebervenen münden in die untere Hohlvene?", "1", "2", "*3", "5"]],
+    "A. hepatica": [["Wie viel des Leberblutes liefert die A. hepatica?", "etwa 5 %", "*etwa 25 %", "etwa 50 %", "etwa 75 %"]],
+    "A. gastrica sinistra": [["Wie viele Äste hat der Truncus coeliacus?", "2", "*3", "4", "5"]],
+    "Aa. jejunales et ileales": [["Wie viele Dünndarmarterien gibt die A. mesenterica superior ab?", "2–3", "5–6", "*15–20", "40–50"]],
+    "Splen": [["Wie groß ist die Milz etwa?", "2×3×5 cm", "*4×7×11 cm", "8×14×22 cm", "15×20×30 cm"]],
+    "Insulae pancreaticae": [["Welchen Anteil am Pankreas haben die Langerhans-Inseln?", "*etwa 2 %", "etwa 20 %", "etwa 50 %", "etwa 80 %"]],
+    "Insula pancreatica": [["Wie viele Langerhans-Inseln hat das Pankreas etwa?", "1000", "100 000", "*1 Million", "100 Millionen"]],
+    "Cellulae beta": [["Welchen Anteil der Inselzellen machen die B-Zellen aus?", "ca. 5 %", "ca. 20 %", "*ca. 70 %", "ca. 95 %"]],
+    "A. suprarenalis": [["Aus wie vielen Arterien wird die Nebenniere versorgt?", "1", "2", "*3", "5"]],
+    "Renes": [["Wie viel Primärharn filtern die Nieren pro Tag?", "etwa 1,5 l", "etwa 18 l", "*etwa 180 l", "etwa 1800 l"], ["Welchen Anteil des Herzzeitvolumens erhalten die Nieren?", "etwa 2 %", "*etwa 20 %", "etwa 50 %", "etwa 80 %"]],
+    "Glomerulus": [["Wie viel Primärharn wird pro Tag gefiltert?", "etwa 1,5 l", "etwa 18 l", "*etwa 180 l", "etwa 1800 l"]],
+    "Calix renalis major": [["Wie viele große Nierenkelche hat eine Niere?", "1", "*2–3", "5–6", "10–12"]],
+    "Ureter": [["Wie lang ist ein Harnleiter etwa?", "5–10 cm", "*25–30 cm", "50–60 cm", "1 m"]],
+    "Urethra": [["Wie lang ist die Harnröhre der Frau etwa?", "*3–5 cm", "10–12 cm", "20 cm", "30 cm"], ["Wie lang ist die Harnröhre des Mannes etwa?", "3–5 cm", "10 cm", "*20 cm", "40 cm"]],
+    "Vesica urinaria": [["Wie viel fasst die Harnblase etwa?", "50–100 ml", "*300–500 ml", "1–2 l", "3–4 l"]],
+    "Aa. lumbales": [["Wie viele Paare Lendenarterien gehen von der Bauchaorta ab?", "2", "*4", "5", "12"]],
+    "A. lumbalis": [["Wie viele Paare Lendenarterien gehen von der Bauchaorta ab?", "2", "*4", "5", "12"]],
+    "Intersectiones tendineae": [["Wie viele Zwischensehnen hat der gerade Bauchmuskel?", "1", "*3–4", "6–8", "10–12"]],
+    "Conjugata vera (obstetrica)": [["Wie lang ist die Conjugata vera normalerweise?", "etwa 5 cm", "etwa 8 cm", "*etwa 11 cm", "etwa 16 cm"]],
+    "Angulus subpubicus": [["Wie weit ist der Schambogenwinkel bei der Frau?", "etwa 45°", "etwa 70°", "*90–100°", "etwa 140°"]],
+    "Arcus pubis": [["Wie weit ist der Schambogenwinkel bei der Frau?", "etwa 45°", "etwa 70°", "*90–100°", "etwa 140°"]],
+    "Mm. interossei plantares": [["Wie viele Mm. interossei plantares hat ein Fuß?", "2", "*3", "4", "5"]],
+    "Mm. interossei dorsales pedis": [["Wie viele Mm. interossei dorsales hat ein Fuß?", "2", "3", "*4", "5"]],
+    "Liquor cerebrospinalis": [["Wie viel Liquor wird pro Tag gebildet?", "etwa 50 ml", "etwa 150 ml", "*etwa 500 ml", "etwa 5 l"], ["Wie viel Liquor enthält das Liquorsystem etwa?", "etwa 15 ml", "*etwa 150 ml", "etwa 500 ml", "etwa 1,5 l"]],
+    "Cortex cerebri": [["Wie dick ist die Großhirnrinde?", "0,2–0,4 mm", "*2–4 mm", "1–2 cm", "4–5 cm"], ["Wie viele Nervenzellen hat die Großhirnrinde etwa?", "16 Millionen", "160 Millionen", "*16 Milliarden", "1,6 Billionen"]],
+    "Decussatio pyramidum": [["Wie viele Fasern der Pyramidenbahn kreuzen in der Pyramidenkreuzung?", "10–20 %", "50 %", "*80–90 %", "100 %"]],
+    "Nuclei vestibulares": [["Wie viele Vestibulariskerne gibt es?", "2", "3", "*4", "6"]],
+  },
+  NUM_WORDS = { zwei: 2, drei: 3, vier: 4, "f\xFCnf": 5, sechs: 6, sieben: 7, acht: 8, neun: 9, zehn: 10, elf: 11, "zw\xF6lf": 12 },
+  // the numbers in a text, number words too ("rechts drei, links zwei Lappen")
+  numsOf = (s) =>
+    (
+      (s || "")
+        .toLowerCase()
+        .replace(/[a-z\xE4\xF6\xFC\xDF]+/g, (r) => (NUM_WORDS[r] ? ` ${NUM_WORDS[r]} ` : " "))
+        .match(/\d+(?:,\d+)?/g) || []
+    ).map((r) => parseFloat(r.replace(",", "."))),
+  // the number questions of a lesson (or of one of its structures)
+  numQuestionsFor = (s, r) =>
+    s
+      ? s.items
+          .filter((o) => !r || o === r)
+          .flatMap((o) =>
+            (NUM_QUESTIONS[o.la] || [])
+              .filter((e) => {
+                const t = numsOf(o.fact);
+                return numsOf(e.find((a) => a[0] === "*")).every((a) => t.includes(a));
+              })
+              .map((e) => ({ item: o, q: e })),
+          )
+      : [];
+function makeNumQuestion(s, r) {
+  const o = numQuestionsFor(s, r);
+  if (!o.length) return null;
+  const {
+    item: e,
+    q: [t, ...a],
+  } = o[Math.floor(Math.random() * o.length)];
+  return {
+    prompt: t,
+    sub: "",
+    showFig: !1,
+    figure: s.figure,
+    hl: [],
+    explain: `${e.la} \u2014 ${e.de}. ${e.fact}`,
+    item: e,
+    lesson: s,
+    num: !0,
+    options: a.map((n) => ({ label: n.replace(/^\*/, ""), correct: n[0] === "*" })),
+  };
+}
 function buildLessonQuiz(s, r = 8) {
   const t = quizMarksFor(s.id) || {},
     a = platesFor(s.id),
@@ -9714,8 +9883,10 @@ function buildLessonQuiz(s, r = 8) {
   const n = mixOrder(Q, (i, l) => (i.k === l.k ? 1 : 0) + (i.i.id === l.i.id ? 2 : 0)).map(({ k, i }) =>
     k === "type" ? makeTypeQuestion(i, s, t[i.id], a) : k === "point" ? makePointQuestion(i, s, t[i.id], a) : makeQuestion(i, s, k),
   );
-  const odd = makeIntruder(s);
-  return (odd && n.splice(1 + Math.floor(Math.random() * n.length), 0, odd), n.slice(0, r));
+  // one odd-one-out question and, where the cards teach a number, one number question
+  const x = [makeIntruder(s), makeNumQuestion(s)].filter(Boolean),
+    m = n.slice(0, r - x.length);
+  return (x.forEach((i) => m.splice(1 + Math.floor(Math.random() * m.length), 0, i)), m);
 }
 // mixed-up pairs that still lead to their cards, the most frequent first
 function confPairs(s) {
@@ -9747,7 +9918,12 @@ function buildUnitTest(s, r = 12) {
       const n = shuffle(a.items);
       for (let i = 0; i < t; i++) o.push(makeQuestion(n[i % n.length], a, e[(i + o.length) % e.length]));
     }),
-    shuffle(o).slice(0, r)
+    (() => {
+      // one number question, where the topic's cards teach numbers
+      const a = shuffle(o).slice(0, r),
+        n = makeNumQuestion(sample(s.lessons.filter((i) => numQuestionsFor(i).length), 1)[0]);
+      return (n && a.splice(Math.floor(Math.random() * a.length), 1, n), a);
+    })()
   );
 }
 const STORAGE_KEY = "anatomia-v1",
@@ -15425,7 +15601,7 @@ function AnswerPicture({ q: s, color: r, chosen: ch }) {
         React.createElement(
           "div",
           { className: "ana-body", style: { fontSize: 12.5, color: "#5B6B80", padding: "6px 4px 2px", textAlign: "center" } },
-          "Richtige Antwort im Bild: ",
+          s.num ? "Im Bild: " : "Richtige Antwort im Bild: ",
           React.createElement("b", { style: { color: "#1E2836" } }, s.item.la),
           o && o.nt && t && a && o.li != null ? " \xB7 " + o.nt : null,
         ),
@@ -15922,7 +16098,10 @@ const TOPICS = [
       const l = (quizMarksFor(n.id) || {})[a.id],
         d = platesFor(n.id),
         c = k[i];
-      return c === "type" && l && l.li != null && d.length
+      // now and then a number question, where the card teaches a number
+      return Math.random() < 0.2 && numQuestionsFor(n, a).length
+        ? makeNumQuestion(n, a)
+        : c === "type" && l && l.li != null && d.length
         ? makeTypeQuestion(a, n, l, d)
         : c === "point" && l && !l.np && d.length
           ? makePointQuestion(a, n, l, d)
