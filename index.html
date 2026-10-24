@@ -5186,9 +5186,24 @@ body { margin: 0; }
 .ana-ping { animation: ana-ping 1.8s ease-out infinite; }
 @keyframes ana-fall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(540deg); opacity: 0.85; } }
 .ana-fall { animation-name: ana-fall; animation-timing-function: linear; animation-iteration-count: 1; animation-fill-mode: both; }
+@keyframes ana-vb-shine { 0% { transform: translateX(0); } 45%, 100% { transform: translateX(38px); } }
+.ana-vb-shine { animation: ana-vb-shine 3.4s ease-in-out infinite; }
+@keyframes ana-vb-twinkle { 0%, 68%, 100% { transform: scale(0) rotate(0deg); opacity: 0; } 82% { transform: scale(1) rotate(45deg); opacity: 1; } }
+.ana-vb-twinkle { animation: ana-vb-twinkle 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes ana-vb-pulse { 0%, 100% { filter: drop-shadow(0 0 1.5px var(--gc)); } 50% { filter: drop-shadow(0 0 6px var(--gc)); } }
+.ana-vb-pulse { animation: ana-vb-pulse 2.2s ease-in-out infinite; }
+@property --vb-h { syntax: '<number>'; inherits: false; initial-value: 0; }
+@keyframes ana-vb-hue { from { --vb-h: 0; } to { --vb-h: 360; } }
+.ana-vb-hue { animation: ana-vb-hue 6s linear infinite; }
+@keyframes ana-vb-cordpulse { 0%, 100% { box-shadow: 0 0 3px var(--gc); } 50% { box-shadow: 0 0 10px var(--gc); } }
+.ana-vb-cordpulse { animation: ana-vb-cordpulse 2.2s ease-in-out infinite; }
+@keyframes ana-vb-next { 0% { box-shadow: 0 0 0 0 var(--gc); } 75%, 100% { box-shadow: 0 0 0 8px rgba(0,0,0,0); } }
+.ana-vb-next { animation: ana-vb-next 1.9s ease-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .ana-fall { display: none; }
   .ana-pop, .ana-slide-up, .ana-shake, .ana-part-glow, .ana-ping { animation: none; }
+  .ana-vb-shine, .ana-vb-twinkle, .ana-vb-pulse, .ana-vb-hue, .ana-vb-cordpulse, .ana-vb-next { animation: none; }
+  .ana-vb-twinkle { opacity: 0; }
 }
 `,
   C = {
@@ -8253,6 +8268,23 @@ function SvgDefs() {
     React.createElement(
       "defs",
       null,
+      // learning path: one gradient per material, and the outline of a vertebra for the shine
+      Object.entries(PATH_SKINS).map(([r, o]) =>
+        React.createElement(
+          "linearGradient",
+          { key: r, id: "ana-ps-" + r, gradientUnits: "userSpaceOnUse", x1: o.g[0], y1: o.g[1], x2: o.g[2], y2: o.g[3], spreadMethod: o.spread || "pad" },
+          o.stops.map(([e, t], a) => React.createElement("stop", { key: a, offset: e, stopColor: t })),
+          o.anim &&
+            !PATH_STILL &&
+            React.createElement("animateTransform", { attributeName: "gradientTransform", type: "translate", from: "0 0", to: o.anim, dur: o.dur, repeatCount: "indefinite" }),
+        ),
+      ),
+      React.createElement(
+        "clipPath",
+        { id: "ana-vb-clip" },
+        React.createElement("rect", { x: 0, y: 5.5, width: 20, height: 5, rx: 2.5 }),
+        React.createElement("rect", { x: 3, y: 0.75, width: 14, height: 14.5, rx: 4.5 }),
+      ),
       React.createElement(
         "linearGradient",
         { id: "anaBone", x1: "0", y1: "0", x2: "0.7", y2: "1" },
@@ -9973,16 +10005,104 @@ const STORAGE_KEY = "anatomia-v1",
     rose: { label: "Ros\xE9", paper: "#FBEEF4", card: "#FFFBFD", line: "#F0D3E0" },
     salbei: { label: "Salbei", paper: "#ECF2E9", card: "#FBFDFA", line: "#D4E0CD" },
   },
+  // the learning path beside the lessons, one vertebra per lesson, in the material bought in the shop: the fill (a
+  // gradient in SvgDefs, g = its line, anim = how it moves), the edge, the glow, the cord between the vertebrae (a
+  // glowing lava cord, a rainbow running through its colours) and the effects - a shine running down the spine,
+  // sparkles, a glow (pulsing for lava), coral pores, lava cracks and a rainbow that changes from vertebra to vertebra
   PATH_SKINS = {
-    knochen: { label: "Knochen", color: "#D9CBAA" },
-    gold: { label: "Gold", color: "#E8C05A" },
-    koralle: { label: "Koralle", color: "#E39C93" },
-    smaragd: { label: "Smaragd", color: "#2FB37A" },
-    saphir: { label: "Saphir", color: "#3B6FE0" },
-    silber: { label: "Silber", color: "linear-gradient(180deg,#F1F3F7,#A9B3C1)" },
-    lava: { label: "Lava", color: "linear-gradient(180deg,#FFB347,#E8430C)" },
-    regenbogen: { label: "Regenbogen", color: "linear-gradient(180deg,#FF6B6B,#FFD93D,#6BCB77,#4D96FF,#9B5DE5)" },
+    knochen: {
+      label: "Knochen",
+      color: "#D9CBAA",
+      edge: "#B09A68",
+      glow: "rgba(176,154,104,0.6)",
+      g: [0, 0, 0, 16],
+      stops: [["0", "#FBF5E6"], ["0.5", "#EFE6CF"], ["1", "#D2C08F"]],
+      rod: "linear-gradient(90deg,#CDBB8F,#F4ECD6,#CDBB8F)",
+    },
+    gold: {
+      label: "Gold",
+      color: "#E8C05A",
+      edge: "#9A6F06",
+      glow: "rgba(242,190,40,0.75)",
+      g: [0, 0, 20, 16],
+      stops: [["0", "#FFF6CC"], ["0.28", "#F5CF4E"], ["0.5", "#D49B12"], ["0.72", "#FFE48C"], ["1", "#B07F0A"]],
+      rod: "linear-gradient(90deg,#B07F0A,#FFE48C,#B07F0A)",
+      rodGlow: "0 0 6px rgba(242,190,40,0.7)",
+      fx: ["shine", "sparkle"],
+    },
+    koralle: {
+      label: "Koralle",
+      color: "#E39C93",
+      edge: "#B8503F",
+      glow: "rgba(227,120,105,0.7)",
+      g: [0, 0, 0, 16],
+      stops: [["0", "#FFDCD5"], ["0.5", "#F4A094"], ["1", "#D96A5C"]],
+      rod: "linear-gradient(90deg,#D96A5C,#FFDCD5,#D96A5C)",
+      fx: ["pores"],
+    },
+    smaragd: {
+      label: "Smaragd",
+      color: "#2FB37A",
+      edge: "#0B5C37",
+      glow: "rgba(47,200,130,0.85)",
+      g: [0, 0, 20, 16],
+      stops: [["0", "#A6F7CF"], ["0.33", "#A6F7CF"], ["0.33", "#36C686"], ["0.64", "#36C686"], ["0.64", "#11804F"], ["1", "#0D6A41"]],
+      rod: "linear-gradient(90deg,#11804F,#8CF5C2,#11804F)",
+      rodGlow: "0 0 6px rgba(47,200,130,0.7)",
+      fx: ["glow", "sparkle"],
+    },
+    saphir: {
+      label: "Saphir",
+      color: "#3B6FE0",
+      edge: "#14306E",
+      glow: "rgba(70,120,240,0.9)",
+      g: [0, 0, 20, 16],
+      stops: [["0", "#B5CBFF"], ["0.33", "#B5CBFF"], ["0.33", "#4A7BE8"], ["0.64", "#4A7BE8"], ["0.64", "#2244AD"], ["1", "#17337F"]],
+      rod: "linear-gradient(90deg,#1F3FA8,#A9C1FF,#1F3FA8)",
+      rodGlow: "0 0 6px rgba(70,120,240,0.7)",
+      fx: ["glow", "sparkle"],
+    },
+    silber: {
+      label: "Silber",
+      color: "linear-gradient(180deg,#F1F3F7,#A9B3C1)",
+      edge: "#6B7686",
+      glow: "rgba(150,165,185,0.8)",
+      g: [0, 0, 0, 16],
+      stops: [["0", "#FFFFFF"], ["0.3", "#C3CBD6"], ["0.52", "#F5F7FA"], ["0.78", "#8C97A6"], ["1", "#DCE2E9"]],
+      rod: "linear-gradient(90deg,#8C97A6,#FFFFFF,#8C97A6)",
+      fx: ["shine"],
+    },
+    lava: {
+      label: "Lava",
+      color: "linear-gradient(180deg,#FFB347,#E8430C)",
+      edge: "#7A1603",
+      glow: "rgba(255,110,20,0.9)",
+      g: [0, 0, 0, 16],
+      spread: "reflect",
+      stops: [["0", "#FFE27A"], ["0.35", "#FF9A2E"], ["0.7", "#E8430C"], ["1", "#7A1603"]],
+      anim: "0 32",
+      dur: "2.4s",
+      rod: "linear-gradient(90deg,#7A1603,#FF8A1E 30%,#FFE27A 50%,#FF8A1E 70%,#7A1603)",
+      rodGlow: "0 0 7px rgba(255,110,20,0.75)",
+      cordFx: "pulse",
+      fx: ["pulse", "cracks"],
+    },
+    regenbogen: {
+      label: "Regenbogen",
+      color: "linear-gradient(180deg,#FF6B6B,#FFD93D,#6BCB77,#4D96FF,#9B5DE5)",
+      edge: "rgba(30,40,54,0.35)",
+      glow: "rgba(155,93,229,0.8)",
+      g: [0, 0, 20, 16],
+      spread: "repeat",
+      stops: [["0", "#FF6B6B"], ["0.2", "#FFD93D"], ["0.4", "#6BCB77"], ["0.6", "#4D96FF"], ["0.8", "#9B5DE5"], ["1", "#FF6B6B"]],
+      anim: "20 16",
+      dur: "3s",
+      rod: "linear-gradient(180deg,#FF6B6B,#FFD93D,#6BCB77,#4D96FF,#9B5DE5,#FF6B6B)",
+      cordFx: "hue",
+      fx: ["sparkle", "hue"],
+    },
   },
+  PATH_STILL = typeof matchMedia == "function" && matchMedia("(prefers-reduced-motion: reduce)").matches,
   SHOP = [
     {
       id: "theme-sepia",
@@ -10407,36 +10527,125 @@ function LessonRow({ lesson: s, index: r, best: o, color: e, onOpen: t, locked: 
     !a && React.createElement("span", { className: "ana-display", style: { fontSize: 17, color: "#B6BECC" } }, "\u203A"),
   );
 }
-function SpineBone({ done: s, first: r, last: o }) {
-  const e = C.pathColor || "#D9CBAA";
+// one vertebra of the learning path: body and transverse processes, in the material once its lesson is done
+function Vertebra({ skin: s, done: r, i: o = 0, size: e = 1 }) {
+  const t = PATH_SKINS[s] || PATH_SKINS.knochen,
+    a = (l) => r && (t.fx || []).includes(l),
+    n = r ? `url(#ana-ps-${s in PATH_SKINS ? s : "knochen"})` : C.mute,
+    i = r ? t.edge : "rgba(127,140,160,0.5)",
+    d = [a("hue") ? `hue-rotate(${(o * 47) % 360}deg)` : "", a("glow") ? `drop-shadow(0 0 3px ${t.glow})` : r ? "drop-shadow(0 1px 1.2px rgba(30,40,54,0.28))" : ""]
+      .filter(Boolean)
+      .join(" ");
+  return React.createElement(
+    "svg",
+    {
+      width: 20 * e,
+      height: 16 * e,
+      viewBox: "0 0 20 16",
+      "aria-hidden": "true",
+      className: a("pulse") ? "ana-vb-pulse" : void 0,
+      style: { display: "block", overflow: "visible", filter: a("pulse") ? void 0 : d || void 0, "--gc": t.glow },
+    },
+    React.createElement("rect", { x: 0, y: 5.5, width: 20, height: 5, rx: 2.5, fill: n, stroke: i, strokeWidth: 1 }),
+    React.createElement("rect", { x: 3, y: 0.75, width: 14, height: 14.5, rx: 4.5, fill: n, stroke: i, strokeWidth: 1 }),
+    r && React.createElement("ellipse", { cx: 7.6, cy: 4, rx: 3.4, ry: 1.5, fill: "#fff", opacity: 0.55 }),
+    a("pores") &&
+      [
+        [6.5, 9],
+        [9.5, 11.8],
+        [12.8, 8.2],
+        [14, 11.6],
+        [10.2, 6.6],
+      ].map(([l, c], m) => React.createElement("circle", { key: m, cx: l, cy: c, r: 0.75, fill: "rgba(255,255,255,0.8)" })),
+    a("cracks") &&
+      React.createElement("path", {
+        d: "M6 2.5 L8.2 6.5 L6.4 10 L8 13.5 M13.6 2.2 L12.2 5.8 L14 8.6 L12.6 12.8",
+        fill: "none",
+        stroke: "rgba(90,14,2,0.6)",
+        strokeWidth: 0.9,
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+      }),
+    a("shine") &&
+      React.createElement(
+        "g",
+        { clipPath: "url(#ana-vb-clip)" },
+        React.createElement("path", { className: "ana-vb-shine", d: "M-10 -2 L-5 -2 L-11 18 L-16 18 Z", fill: "#fff", opacity: 0.85, style: { animationDelay: `${o * 0.18}s` } }),
+      ),
+    a("sparkle") &&
+      o % 3 === 1 &&
+      React.createElement("path", {
+        className: "ana-vb-twinkle",
+        d: "M18 -2.4 L18.9 0.1 L21.4 1 L18.9 1.9 L18 4.4 L17.1 1.9 L14.6 1 L17.1 0.1 Z",
+        fill: s === "gold" ? "#FFF7D1" : "#fff",
+        style: { animationDelay: `${(o % 5) * 0.55}s` },
+      }),
+  );
+}
+// the cord of the learning path between two vertebrae (k: the row; the rainbow runs on from one row to the next)
+const pathCord = (s, r, k) => {
+  const o = PATH_SKINS[s] || PATH_SKINS.knochen,
+    // hues turning with --vb-h (an animated property where the browser knows it, else a still rainbow)
+    e = (t) => `hsl(calc(var(--vb-h) + ${Math.round(t)}),90%,62%)`;
+  return r
+    ? {
+        className: PATH_STILL ? void 0 : o.cordFx === "hue" ? "ana-vb-hue" : o.cordFx === "pulse" ? "ana-vb-cordpulse" : void 0,
+        style: {
+          background:
+            o.cordFx !== "hue"
+              ? o.rod
+              : k != null
+                ? `linear-gradient(180deg,${e((k - 0.5) * 47)},${e(k * 47)} 45%,${e((k + 0.5) * 47)})`
+                : `linear-gradient(180deg,${[0, 60, 120, 180, 240, 300, 360].map(e).join(",")})`,
+          boxShadow: o.rodGlow || "none",
+          "--gc": o.glow,
+          "--vb-h": 0,
+        },
+      }
+    : { style: { background: C.line } };
+};
+function SpineBone({ done: s, first: r, last: o, next: n, i: k = 0 }) {
+  const e = C.pathSkin || "knochen",
+    t = PATH_SKINS[e] || PATH_SKINS.knochen,
+    c = pathCord(e, s, k);
   return React.createElement(
     "div",
-    { "aria-hidden": "true", style: { position: "relative", width: 20, flex: "0 0 20px" } },
+    { "aria-hidden": "true", style: { position: "relative", width: 24, flex: "0 0 24px" } },
     React.createElement("div", {
+      className: c.className,
       style: {
         position: "absolute",
-        left: 7,
-        width: 6,
+        left: 10,
+        width: 4,
         top: r ? "45%" : 0,
         bottom: o ? "55%" : 0,
-        background: s ? e : "#E1E6EF",
-        borderRadius: 3,
-        opacity: s ? 0.55 : 1,
+        borderRadius: `${r ? 2 : 0}px ${r ? 2 : 0}px ${o ? 2 : 0}px ${o ? 2 : 0}px`,
+        ...c.style,
       },
     }),
-    React.createElement("div", {
-      style: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        top: "calc(45% - 8px)",
-        height: 16,
-        borderRadius: 6,
-        background: s ? e : C.mute,
-        border: `1.5px solid ${s ? "rgba(30,40,54,0.18)" : "#D3DAE6"}`,
-        boxShadow: s ? "0 1px 3px rgba(30,40,54,0.18)" : "none",
-      },
-    }),
+    React.createElement(
+      "div",
+      { style: { position: "absolute", left: 0, top: "calc(45% - 10px)" } },
+      // the next lesson to do: a pulsing ring in the colour of the material
+      n &&
+        React.createElement("div", {
+          className: "ana-vb-next",
+          style: { position: "absolute", left: 3.5, top: 1, width: 17, height: 17.5, borderRadius: 5.5, "--gc": t.glow },
+        }),
+      React.createElement(Vertebra, { skin: e, done: s, i: k, size: 1.2 }),
+    ),
+  );
+}
+// a piece of the learning path in a material, for the shop
+function PathPreview({ skin: s }) {
+  return React.createElement(
+    "div",
+    { "aria-hidden": "true", style: { position: "relative", width: 34, height: 46, flex: "0 0 34px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between" } },
+    (() => {
+      const r = pathCord(s, !0);
+      return React.createElement("div", { className: r.className, style: { position: "absolute", left: 15, width: 4, top: 6, bottom: 6, borderRadius: 2, ...r.style } });
+    })(),
+    [0, 1, 2].map((r) => React.createElement("div", { key: r, style: { position: "relative" } }, React.createElement(Vertebra, { skin: s, done: !0, i: r, size: 0.8 }))),
   );
 }
 function ModeTile({ color: s, icon: r, title: o, sub: e, onClick: t }) {
@@ -13511,7 +13720,13 @@ function HomeScreen({
                     React.createElement(
                       "div",
                       { key: T.id, style: { display: "flex", gap: 8, alignItems: "stretch" } },
-                      React.createElement(SpineBone, { done: s.best[T.id] != null, first: K === 0, last: K === v.lessons.length - 1 }),
+                      React.createElement(SpineBone, {
+                        done: s.best[T.id] != null,
+                        first: K === 0,
+                        last: K === v.lessons.length - 1,
+                        i: K,
+                        next: s.best[T.id] == null && v.lessons.findIndex((L) => s.best[L.id] == null) === K,
+                      }),
                       React.createElement(
                         "div",
                         { style: { flex: 1, minWidth: 0 } },
@@ -13742,7 +13957,9 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
                 borderRadius: 14,
               },
             },
-            w
+            b.apply && b.apply.pathSkin
+              ? React.createElement(PathPreview, { skin: b.apply.pathSkin })
+              : w
               ? React.createElement(
                   "div",
                   {
@@ -16888,6 +17105,7 @@ function AnatomiaApp() {
         (C.card = u.card),
         (C.line = u.line),
         (C.pathColor = (PATH_SKINS[s.pathSkin] || PATH_SKINS.knochen).color),
+        (C.pathSkin = PATH_SKINS[s.pathSkin] ? s.pathSkin : "knochen"),
         a((p) => p + 1));
       try {
         document.body.style.background = u.paper;
