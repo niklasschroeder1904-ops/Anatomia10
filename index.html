@@ -10285,7 +10285,24 @@ function Hearts({ n: s, max: r = 3 }) {
     ),
   );
 }
+// the back actions of what is on show, newest last: the swipe from the left edge takes the newest
+const SWIPE_BACK = [];
+function useSwipeBack(s) {
+  const r = useRef(s);
+  r.current = s;
+  useEffect(() => {
+    const o = () => r.current && r.current();
+    return (
+      SWIPE_BACK.push(o),
+      () => {
+        const e = SWIPE_BACK.indexOf(o);
+        e >= 0 && SWIPE_BACK.splice(e, 1);
+      }
+    );
+  }, []);
+}
 function TopBar({ onBack: s, children: r, right: o }) {
+  useSwipeBack(s);
   return React.createElement(
     "div",
     { style: { display: "flex", alignItems: "center", gap: 10, padding: "12px 4px" } },
@@ -14722,6 +14739,7 @@ function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
   );
 }
 function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinish: a, onRate: n }) {
+  useSwipeBack(t);
   const [i, l] = useState(s),
     [d, c] = useState(0),
     [m, h] = useState(!1),
@@ -16773,6 +16791,92 @@ function AnatomiaApp() {
     const t = [80, 300].map((n) => setTimeout(() => window.scrollY < y - 2 && scrollTop(y), n));
     return () => t.forEach(clearTimeout);
   }, [o]);
+  // a swipe from the left edge to the right goes back, like the arrow at the top left: the screen follows the finger,
+  // an arrow at the edge turns dark once letting go goes back. Not on a 3D model or a zoomed picture, which use the
+  // finger themselves
+  useEffect(() => {
+    let g = null;
+    const b = document.createElement("div");
+    ((b.innerHTML =
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>'),
+      b.setAttribute("aria-hidden", "true"),
+      Object.assign(b.style, {
+        position: "fixed",
+        left: "8px",
+        top: "0",
+        width: "40px",
+        height: "40px",
+        borderRadius: "50%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        pointerEvents: "none",
+        opacity: "0",
+        zIndex: "60",
+        boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+      }),
+      document.body.appendChild(b));
+    const scr = () => document.getElementById("ana-screen"),
+      far = () => Math.min(110, window.innerWidth * 0.28),
+      back = (u) => {
+        const p = scr();
+        (p && ((p.style.transition = u ? "transform 0.18s ease-out" : "none"), (p.style.transform = ""), (p.style.boxShadow = "")), (b.style.opacity = "0"));
+      },
+      start = (u) => {
+        const p = u.touches[0];
+        g =
+          u.touches.length === 1 && p.clientX <= 28 && SWIPE_BACK.length && !(u.target.closest && u.target.closest('canvas,[style*="touch-action: none"]'))
+            ? { x: p.clientX, y: p.clientY, t: Date.now(), dx: 0, on: !1 }
+            : null;
+      },
+      move = (u) => {
+        if (!g) return;
+        const p = u.touches[0],
+          f = p.clientX - g.x,
+          k = p.clientY - g.y;
+        if (!g.on) {
+          // up or down first: a scroll, not a swipe
+          if (Math.abs(k) > 12 && Math.abs(k) > Math.abs(f)) return void (g = null);
+          if (f < 12) return;
+          g.on = !0;
+        }
+        (u.cancelable && u.preventDefault(), (g.dx = Math.max(0, f)));
+        const w = scr(),
+          z = g.dx >= far();
+        (w && ((w.style.transition = "none"), (w.style.transform = `translateX(${g.dx}px)`), (w.style.boxShadow = "-12px 0 24px rgba(0,0,0,0.10)")),
+          Object.assign(b.style, {
+            top: `${p.clientY - 20}px`,
+            opacity: String(Math.min(1, g.dx / far())),
+            background: z ? C.ink : C.card,
+            color: z ? C.card : C.inkSoft,
+          }));
+      },
+      end = () => {
+        if (!g || !g.on) return void (g = null);
+        const p = scr(),
+          f = g.dx >= far() || (g.dx > 40 && g.dx / (Date.now() - g.t) > 0.5);
+        if (((g = null), !f)) return back(!0);
+        (p && ((p.style.transition = "transform 0.15s ease-in"), (p.style.transform = `translateX(${window.innerWidth}px)`)),
+          (b.style.opacity = "0"),
+          setTimeout(() => {
+            const w = SWIPE_BACK[SWIPE_BACK.length - 1];
+            (w && w(), setTimeout(() => back(!1), 30));
+          }, 140));
+      };
+    return (
+      document.addEventListener("touchstart", start, { passive: !0 }),
+      document.addEventListener("touchmove", move, { passive: !1 }),
+      document.addEventListener("touchend", end),
+      document.addEventListener("touchcancel", end),
+      () => {
+        (document.removeEventListener("touchstart", start),
+          document.removeEventListener("touchmove", move),
+          document.removeEventListener("touchend", end),
+          document.removeEventListener("touchcancel", end),
+          b.remove());
+      }
+    );
+  }, []);
   (useEffect(() => {
     loadProgress().then(r);
   }, []),
@@ -17271,7 +17375,7 @@ function AnatomiaApp() {
     { className: "ana-body", style: { minHeight: "100vh", background: C.paper, color: C.ink } },
     React.createElement("style", null, FONT_CSS),
     React.createElement(SvgDefs, null),
-    React.createElement("div", { style: { maxWidth: 480, margin: "0 auto", padding: "0 14px" } }, A),
+    React.createElement("div", { id: "ana-screen", style: { maxWidth: 480, margin: "0 auto", padding: "0 14px" } }, A),
   );
 }
 function AortaFig({ hl: s = [], accent: r = "#DE3D3D", pulse: o = !0 }) {
