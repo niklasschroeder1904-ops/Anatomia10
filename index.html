@@ -9983,6 +9983,8 @@ const STORAGE_KEY = "anatomia-v1",
     owned: [],
     jokers: 0,
     freezes: 0,
+    tokens: 0,
+    unlocked: {},
     theme: "papier",
     pathSkin: "knochen",
     title: null,
@@ -10174,6 +10176,16 @@ const STORAGE_KEY = "anatomia-v1",
     { id: "fx-sterne", cat: "Effekte", icon: "\u{1F31F}", name: "Sternenregen", desc: "Goldene Sterne nach jedem Erfolg", price: 300, apply: { fx: "sterne" } },
     { id: "fx-herzen", cat: "Effekte", icon: "\u{1F496}", name: "Herzregen", desc: "Herzen f\xFCr jedes Erfolgserlebnis", price: 300, apply: { fx: "herzen" } },
     { id: "fx-knochen", cat: "Effekte", icon: "\u{1F9B4}", name: "Knochenregen", desc: "Es regnet Knochen und Sch\xE4del", price: 400, apply: { fx: "knochen" } },
+    {
+      id: "unlock1",
+      cat: "Hilfen",
+      icon: "\u{1F511}",
+      name: "Freischalt-Token",
+      desc: "\xD6ffnet eine gesperrte Lektion: im Men\xFC auf die Lektion mit dem Schloss tippen",
+      price: 200,
+      grant: { tokens: 1 },
+    },
+    { id: "unlock3", cat: "Hilfen", icon: "\u{1F511}", name: "Freischalt-Token \xD73", desc: "Drei gesperrte Lektionen \xF6ffnen, zum Sparpreis", price: 500, grant: { tokens: 3 } },
     {
       id: "heart4",
       cat: "Hilfen",
@@ -10442,16 +10454,16 @@ function TopBar({ onBack: s, children: r, right: o }) {
 function starsFor(s) {
   return s >= 0.999 ? 3 : s >= 0.85 ? 2 : 1;
 }
-function LessonRow({ lesson: s, index: r, best: o, color: e, onOpen: t, locked: a }) {
+function LessonRow({ lesson: s, index: r, best: o, color: e, onOpen: t, locked: a, onLocked: ol, tokens: tk = 0 }) {
   const n = o != null,
     i = n ? starsFor(o) : 0;
   return React.createElement(
     "button",
     {
-      onClick: a ? void 0 : t,
-      "aria-label": s.title,
+      onClick: a ? ol : t,
+      "aria-label": a ? `${s.title}, gesperrt` : s.title,
       className: "ana-body",
-      "aria-disabled": a ? "true" : void 0,
+      "aria-disabled": a && !ol ? "true" : void 0,
       style: {
         display: "flex",
         alignItems: "center",
@@ -10461,7 +10473,7 @@ function LessonRow({ lesson: s, index: r, best: o, color: e, onOpen: t, locked: 
         padding: "11px 12px",
         marginBottom: 6,
         background: a ? C.mute : C.card,
-        cursor: a ? "default" : "pointer",
+        cursor: a && !ol ? "default" : "pointer",
         opacity: a ? 0.75 : 1,
         border: `1.5px solid ${n ? e : C.line}`,
         borderRadius: 13,
@@ -10525,6 +10537,8 @@ function LessonRow({ lesson: s, index: r, best: o, color: e, onOpen: t, locked: 
         ),
       ),
     !a && React.createElement("span", { className: "ana-display", style: { fontSize: 17, color: "#B6BECC" } }, "\u203A"),
+    // a token at hand: the key shows that this lesson can be opened now
+    a && tk > 0 && React.createElement("span", { "aria-hidden": "true", style: { fontSize: 15 } }, "\u{1F511}"),
   );
 }
 // one vertebra of the learning path: body and transverse processes, in the material once its lesson is done
@@ -12255,7 +12269,7 @@ function BasicsMoveFig({ hl: h = [], accent: a = "#1C7ED6", pulse: p = !0 }) {
     s("g", { className: cls }, bfCurve([62, 96], [72, 60], [112, 50], [140, 70], dk, { w: 2.4 }), s("circle", { cx: 148, cy: 77, r: 5, fill: a, opacity: 0.45 })),
   );
 }
-function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOpen: io, lessons: ls, onBadge: ob }) {
+function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOpen: io, lessons: ls, onBadge: ob, onLocked: ul }) {
   const e = React.createElement,
     [t, a] = useState(BM_FULL),
     [n, i] = useState(null),
@@ -12617,7 +12631,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
             "button",
             {
               key: v.id,
-              onClick: W ? () => lo && lo(v.id) : void 0,
+              onClick: W ? () => lo && lo(v.id) : ul ? () => ul(v.id) : void 0,
               className: "ana-body",
               style: {
                 display: "flex",
@@ -12630,7 +12644,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
                 borderRadius: 10,
                 border: `1.5px solid ${E ? v.color : C.line}`,
                 background: W ? C.card : C.mute,
-                cursor: W ? "pointer" : "default",
+                cursor: W || ul ? "pointer" : "default",
                 opacity: W ? 1 : 0.75,
               },
             },
@@ -12665,6 +12679,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
               !W && e("span", { style: { fontSize: 11.5, color: "#9AA3B2" } }, "erst die Lektion dar\xFCber abschlie\xDFen"),
             ),
             W && e("span", { className: "ana-display", style: { fontSize: 16, color: "#B6BECC" } }, "›"),
+            !W && (s.tokens || 0) > 0 && e("span", { "aria-hidden": "true", style: { fontSize: 14 } }, "\u{1F511}"),
           );
         }),
         ]),
@@ -13114,6 +13129,9 @@ function HomeScreen({
   onDark: tgDark,
   onSecOpen: setSO,
   onReset: onReset,
+  onUnlock: unlock,
+  onShopFor: shopFor,
+  pendUnlock: pend,
 }) {
   const lv = s.level || "alle",
     VU = levelUnits(UNITS, lv),
@@ -13128,6 +13146,8 @@ function HomeScreen({
     os = s.secOpen || {},
     A = useRef({}),
     [jp, setJp] = useState(0),
+    // the locked lesson a token would open (back from the shop with a token: asked again right away)
+    [uk, setUk] = useState(() => (pend && (s.tokens || 0) > 0 ? pend : null)),
     RH = useRef(null),
     toList = (v) => (B(v), setJp((W) => W + 1)),
     u = REGIONS.find((v) => v.id === S),
@@ -13139,10 +13159,18 @@ function HomeScreen({
       : levelUnits(UNITS_BY_REGION, lv),
     k = (v) => v.lessons.filter((W) => s.best[W.id] != null).length,
     g = (v) => {
+      if ((s.unlocked || {})[v]) return !0;
       const W = VU.find((N) => N.lessons.some((Z) => Z.id === v));
       if (!W) return !0;
       const E = W.lessons.findIndex((N) => N.id === v);
       return E <= 0 ? !0 : s.best[W.lessons[E - 1].id] != null;
+    },
+    // what opens a locked lesson without a token: the first lesson before it that is not done yet
+    nextFor = (v) => {
+      const W = VU.find((N) => N.lessons.some((Z) => Z.id === v)),
+        E = W ? W.lessons.findIndex((N) => N.id === v) : -1,
+        N = E > 0 ? W.lessons.slice(0, E).find((Z) => s.best[Z.id] == null) : null;
+      return N ? { lesson: N, direct: W.lessons[E - 1].id === N.id } : null;
     },
     w = VL.length,
     M = VL.filter((v) => s.best[v.id] != null).length;
@@ -13405,8 +13433,8 @@ function HomeScreen({
               "button",
               {
                 key: v.id,
-                onClick: g(v.id) ? () => r(v.id) : void 0,
-                "aria-label": v.title,
+                onClick: g(v.id) ? () => r(v.id) : () => setUk(v.id),
+                "aria-label": g(v.id) ? v.title : `${v.title}, gesperrt`,
                 className: "ana-body",
                 style: {
                   display: "flex",
@@ -13420,7 +13448,7 @@ function HomeScreen({
                   border: `1.5px solid ${C.line}`,
                   borderLeft: `4px solid ${v.color}`,
                   borderRadius: 12,
-                  cursor: g(v.id) ? "pointer" : "default",
+                  cursor: "pointer",
                   opacity: g(v.id) ? 1 : 0.75,
                 },
               },
@@ -13576,7 +13604,7 @@ function HomeScreen({
               },
               "REGION W\xC4HLEN",
             ),
-            React.createElement(BodyMap, { progress: s, selected: S, onSelect: B, onOpenLesson: r, isOpen: g, lessons: VL, onBadge: toList }),
+            React.createElement(BodyMap, { progress: s, selected: S, onSelect: B, onOpenLesson: r, isOpen: g, lessons: VL, onBadge: toList, onLocked: setUk }),
             React.createElement(
               "div",
               { style: { display: "flex", gap: 6, flexWrap: "wrap", paddingTop: 4 } },
@@ -13800,6 +13828,8 @@ function HomeScreen({
                           best: s.best[T.id],
                           color: v.color,
                           locked: !g(T.id),
+                          onLocked: () => setUk(T.id),
+                          tokens: s.tokens || 0,
                           onOpen: () => r(T.id),
                         }),
                       ),
@@ -13859,9 +13889,125 @@ function HomeScreen({
       { className: "ana-body", style: { color: "#9AA3B2", fontSize: 12, textAlign: "center", padding: "14px 0 26px" } },
       "Abbildungen: OpenStax (CC BY 4.0) \xB7 3D-Modelle: BodyParts3D / Z-Anatomy (CC BY-SA) \xB7 Fortschritt bleibt auf diesem Ger\xE4t gespeichert",
     ),
+    // only while the lesson is still locked
+    uk &&
+      !g(uk) &&
+      (() => {
+        const v = findLesson(uk),
+          W = nextFor(uk);
+        return v
+          ? React.createElement(UnlockSheet, {
+              lesson: v,
+              next: W && W.lesson,
+              direct: W && W.direct,
+              tokens: s.tokens || 0,
+              coins: s.coins || 0,
+              onClose: () => setUk(null),
+              onUnlock: () => (setUk(null), unlock && unlock(uk)),
+              onShop: () => (setUk(null), shopFor ? shopFor(uk) : i()),
+            })
+          : null;
+      })(),
   );
 }
-function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t, onClaim: a }) {
+// a locked lesson: a token from the shop opens it for good, without a token the sheet points to the shop
+function UnlockSheet({ lesson: s, next: r, direct: o, tokens: e, coins: t, onClose: a, onUnlock: n, onShop: i }) {
+  useEffect(() => {
+    const l = (d) => d.key === "Escape" && a();
+    return (window.addEventListener("keydown", l), () => window.removeEventListener("keydown", l));
+  }, []);
+  const u = UNITS.find((l) => l.id === s.unitId) || {},
+    gold = { color: "#3D2F00" };
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement("div", {
+      onClick: a,
+      "aria-hidden": "true",
+      style: { position: "fixed", inset: 0, zIndex: 55, background: "rgba(20,26,36,0.45)", touchAction: "none" },
+    }),
+    React.createElement(
+      "div",
+      {
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-labelledby": "ana-unlock-t",
+        className: "ana-slide-up",
+        style: {
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 56,
+          background: C.card,
+          borderRadius: "20px 20px 0 0",
+          padding: "18px 16px calc(16px + env(safe-area-inset-bottom))",
+          boxShadow: "0 -8px 28px rgba(20,26,36,0.22)",
+        },
+      },
+      React.createElement(
+        "div",
+        { style: { maxWidth: 480, margin: "0 auto" } },
+        React.createElement(
+          "div",
+          { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 12 } },
+          React.createElement(
+            "div",
+            {
+              "aria-hidden": "true",
+              style: {
+                width: 46,
+                height: 46,
+                flex: "0 0 46px",
+                borderRadius: 14,
+                background: C.goldBg,
+                border: `1.5px solid ${C.gold}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 24,
+              },
+            },
+            "\u{1F511}",
+          ),
+          React.createElement(
+            "div",
+            { style: { flex: 1, minWidth: 0 } },
+            React.createElement("div", { id: "ana-unlock-t", className: "ana-display", style: { fontSize: 18, fontWeight: 700, color: C.ink } }, "Lektion freischalten"),
+            React.createElement(
+              "div",
+              { className: "ana-body", style: { fontSize: 13.5, color: C.inkSoft, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } },
+              u.icon ? u.icon + " " : "",
+              s.title,
+            ),
+          ),
+        ),
+        React.createElement(
+          "div",
+          { className: "ana-body", style: { fontSize: 14.5, color: C.ink, lineHeight: 1.5, marginBottom: 6 } },
+          e > 0
+            ? `Ein Token \xF6ffnet die Lektion sofort, danach bleibt sie offen. Du hast ${e} Token.`
+            : `Du hast noch keinen Token. Im Shop gibt es 1 Token f\xFCr 200 Taler oder 3 Token f\xFCr 500 Taler \u2013 du hast ${t} Taler.`,
+        ),
+        r &&
+          React.createElement(
+            "div",
+            { className: "ana-body", style: { fontSize: 13, color: C.inkSoft, lineHeight: 1.45 } },
+            o ? `Ohne Token: erst \u201E${r.title}\u201C abschlie\xDFen.` : `Ohne Token: erst die Lektionen davor abschlie\xDFen, als N\xE4chstes \u201E${r.title}\u201C.`,
+          ),
+        React.createElement(
+          "div",
+          { style: { marginTop: 14 } },
+          e > 0
+            ? React.createElement(Btn, { color: C.gold, dark: "#C99A04", onClick: n, style: gold }, "\u{1F511} Freischalten und starten")
+            : React.createElement(Btn, { color: C.gold, dark: "#C99A04", onClick: i, style: gold }, "Zum Shop"),
+          React.createElement(Btn, { ghost: !0, color: C.inkSoft, onClick: a, style: { marginTop: 8 } }, "Abbrechen"),
+        ),
+      ),
+    ),
+  );
+}
+function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t, onClaim: a, focus: fc }) {
   const n = s.owned || [],
     [i, l] = useState(!1),
     d = ACHIEVEMENTS.map((x) => ({ a: x, st: achState(s, x) })),
@@ -13885,6 +14031,12 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
       cursor: "pointer",
       whiteSpace: "nowrap",
     });
+  // opened from a locked lesson: the tokens are in view
+  useEffect(() => {
+    const x = fc && SHOP.find((b) => b.grant && b.grant[fc]),
+      b = x && document.getElementById("shop-" + x.id);
+    b && b.scrollIntoView && b.scrollIntoView({ block: "start" });
+  }, []);
   return React.createElement(
     "div",
     { style: { minHeight: "100vh" } },
@@ -13906,7 +14058,7 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
       { className: "ana-body", style: { color: C.inkSoft, fontSize: 13.5, padding: "0 4px 14px", lineHeight: 1.45 } },
       "Taler verdienst du beim Lernen: 20 pro abgeschlossener Lektion, 40 extra f\xFCr ein fehlerfreies Quiz, 100 f\xFCr einen bestandenen Themen-Test, 1 pro gewusster Karteikarte, 5 pro gel\xF6stem Fall und Extra-Taler f\xFCr jeden Erfolg. Gekaufte Designs kannst du jederzeit an- und wieder ausschalten.",
     ),
-    s.jokers > 0 || s.freezes > 0 || h
+    s.jokers > 0 || s.freezes > 0 || s.tokens > 0 || h
       ? React.createElement(
           "div",
           {
@@ -13925,7 +14077,9 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
           s.jokers || 0,
           " Joker \xB7 \u{1F9CA} ",
           s.freezes || 0,
-          " Serien-Schutz",
+          " Serien-Schutz \xB7 \u{1F511} ",
+          s.tokens || 0,
+          " Token",
           h ? " \xB7 \u{1F680} Doppel-XP aktiv" : "",
         )
       : null,
@@ -14005,20 +14159,23 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
             k = b.apply && Object.entries(b.apply).every(([N, Z]) => s[N] === Z),
             g = (s.coins || 0) >= b.price,
             w = y(b),
-            M = b.boost && h;
+            M = b.boost && h,
+            fo = fc && b.grant && b.grant[fc];
           return React.createElement(
             "div",
             {
               key: b.id,
+              id: "shop-" + b.id,
               style: {
                 display: "flex",
                 alignItems: "center",
                 gap: 11,
                 padding: "11px 13px",
                 marginBottom: 8,
-                background: C.card,
-                border: `1.5px solid ${k ? C.good : C.line}`,
+                background: fo ? C.goldBg : C.card,
+                border: `1.5px solid ${k ? C.good : fo ? C.gold : C.line}`,
                 borderRadius: 14,
+                scrollMarginTop: 70,
               },
             },
             b.apply && b.apply.pathSkin
@@ -17304,6 +17461,15 @@ function AnatomiaApp() {
         return (saveProgress(f), f);
       });
     },
+    // a token opens a locked lesson for good, and the lesson starts
+    unlockLesson = (u) => {
+      (s.tokens || 0) > 0 &&
+        (r((p) => {
+          const f = { ...p, tokens: Math.max(0, (p.tokens || 0) - 1), unlocked: { ...(p.unlocked || {}), [u]: 1 } };
+          return (saveProgress(f), f);
+        }),
+        i(u));
+    },
     // mixed-up pairs: counted on every mix-up, gone after three right answers in a row in the training
     confuse = (u, p) => {
       const f = cardKey(u.lessonId, u.itemId),
@@ -17409,6 +17575,9 @@ function AnatomiaApp() {
       onDark: toggleDark,
       onSecOpen: setSecOpen,
       onReset: () => e({ name: "reset" }),
+      onUnlock: unlockLesson,
+      onShopFor: (u) => e({ name: "shop", focus: "tokens", pend: u }),
+      pendUnlock: o.unlock,
     });
   else if (o.name === "reset")
     A = React.createElement(ResetScreen, {
@@ -17573,7 +17742,16 @@ function AnatomiaApp() {
       onFail: () => e({ name: "home" }),
     });
   } else if (o.name === "shop")
-    A = React.createElement(ShopScreen, { progress: s, onExit: () => e({ name: "home" }), onBuy: m, onEquip: h, onUnequip: unequipItem, onClaim: claimAch });
+    A = React.createElement(ShopScreen, {
+      progress: s,
+      focus: o.focus,
+      // came from a locked lesson: back on the menu it is offered again
+      onExit: () => e(o.pend ? { name: "home", unlock: o.pend } : { name: "home" }),
+      onBuy: m,
+      onEquip: h,
+      onUnequip: unequipItem,
+      onClaim: claimAch,
+    });
   else if (o.name === "deck")
     A = React.createElement(DeckSetupScreen, {
       progress: s,
