@@ -9074,7 +9074,9 @@ const bareLabel = (s) => (s || "").replace(/\s*\([^()]*\)/g, "").trim(),
     Math.min(2, 0.6 * Math.abs(a.n - b.n)) +
     Math.min(1.5, Math.abs(a.l - b.l) / 18);
 function pickD(s, r, o, e = 3, syn = null) {
-  const F = formOf(o(r)),
+  const F0 = formOf(o(r)),
+    // a German name of word parts for one Latin term ("Binde- und Stützgewebe" for Textus connectivus) is one name, not a list
+    F = F0.un && /- (und|oder) /.test(bareLabel(o(r))) && !/&/.test(r.la || "") && !["sl", "co", "un"].some((k) => formOf(r.la)[k]) ? { ...F0, un: !1 } : F0,
     K = (i) => bareLabel(i).toLowerCase(),
     // the language must not single an option out: a German-worded one among Latin names ("Anatomische
     // Grundstellung"), or among German names the one that is just the Latin term ("Thalamus", "Foramen ovale")
@@ -9224,6 +9226,12 @@ const itemByLabel = (s, r) => {
     systema: ["ein System", "kein System"],
     textus: ["ein Gewebe", "kein Gewebe"],
   },
+  // a tissue or an organ system: a picture can show either (a nerve cell for the nerve tissue or the nervous system),
+  // so a question on the picture names the kind asked for
+  markKind = (s) => {
+    const o = ((s && s.la) || "").toLowerCase().split(/\s+/)[0];
+    return o === "textus" ? "Gewebe" : o === "systema" ? "Organsystem" : null;
+  },
   // "Planum transversale" chosen as "Axis transversalis": the same qualifier, but another kind of structure
   nearMissHint = (s, r) => {
     const o = (n) => (n || "").replace(/\([^)]*\)/g, " ").toLowerCase().split(/\s+/).map((i) => i.replace(/[.,;:]/g, "")).filter(Boolean),
@@ -9258,7 +9266,7 @@ const itemByLabel = (s, r) => {
     const e = s.item,
       t = r.item,
       a = s.lesson,
-      n = ((quizMarksFor(a.id) || {})[e.id] && platesFor(a.id).length) || (hasSchema(a) && e.hl && e.hl.length),
+      n = !markKind(e) && !markKind(t) && (((quizMarksFor(a.id) || {})[e.id] && platesFor(a.id).length) || (hasSchema(a) && e.hl && e.hl.length)),
       i = makeQuestion(e, a, n && Math.random() < 0.6 ? "fig" : "fact"),
       l = i.options && i.options.find((c) => c.correct),
       d = l && l.label === e.de && e.de !== e.la ? "de" : "la",
@@ -9297,6 +9305,14 @@ function makeQuestion(s, r, o) {
     w = g(s) ? siblingItems(r, s).filter(g).map((i) => ({ ...i, __pen: 0.5 })) : [],
     a = shuffle([...e, ...t, ...w]),
     n = { figure: r.figure, hl: s.hl, explain: `${s.la} \u2014 ${s.de}. ${s.fact}`, item: s, lesson: r };
+  // asked for a tissue or a system the question says so; asked for anything else, no tissue or system is offered,
+  // as the marked part may be made of that tissue or belong to that system
+  const K = markKind(s),
+    // asked for a tissue: other tissues first, then systems (Textus or Systema?), anything else only to fill up
+    aK = K ? a.map((h) => ({ ...h, __pen: (h.__pen || 0) + (markKind(h) === K ? 0 : markKind(h) ? 1 : 3) })) : a.filter((h) => !markKind(h)),
+    aF = aK.length >= 3 ? aK : a,
+    // look-alike pairs for a pair answer are joined from the same kind only
+    sK = r.items.filter((h) => markKind(h) === K);
   if (o === "fig") {
     const i = (quizMarksFor(r.id) || {})[s.id],
       l = platesFor(r.id);
@@ -9309,15 +9325,19 @@ function makeQuestion(s, r, o) {
         lang: c ? "de" : "la",
         prompt:
           i.li != null
-            ? "Was geh\xF6rt an die Stelle des Fragezeichens?"
-            : r.term
-              ? "Was ist im Bild markiert?"
-              : "Welche Struktur ist im Bild markiert?",
+            ? K
+              ? `Welches ${K} geh\xF6rt an die Stelle des Fragezeichens?`
+              : "Was geh\xF6rt an die Stelle des Fragezeichens?"
+            : K
+              ? `Welches ${K} ist im Bild markiert?`
+              : r.term
+                ? "Was ist im Bild markiert?"
+                : "Welche Struktur ist im Bild markiert?",
         sub: c ? "Gesucht ist der deutsche Begriff." : void 0,
         showFig: !1,
         mark: i,
         plates: l,
-        options: optionsOf([{ label: m(s), correct: !0 }, ...pickD(a, s, m, 3, r.items).map((h) => ({ label: m(h), correct: !1 }))], !0),
+        options: optionsOf([{ label: m(s), correct: !0 }, ...pickD(aF, s, m, 3, sK).map((h) => ({ label: m(h), correct: !1 }))], !0),
       };
     }
     // only when the highlight shows this structure alone ("~" = location hint, shared mesh = parent structure)
@@ -9354,10 +9374,10 @@ function makeQuestion(s, r, o) {
       l = (d) => (i ? d.de : d.la);
     return {
       ...n,
-      prompt: r.term ? "Was ist markiert?" : "Welche Struktur ist markiert?",
+      prompt: K ? `Welches ${K} ist markiert?` : r.term ? "Was ist markiert?" : "Welche Struktur ist markiert?",
       sub: i ? "Gesucht ist der deutsche Begriff." : void 0,
       showFig: !0,
-      options: optionsOf([{ label: l(s), correct: !0 }, ...pickD(a, s, l, 3, r.items).map((d) => ({ label: l(d), correct: !1 }))], !0),
+      options: optionsOf([{ label: l(s), correct: !0 }, ...pickD(aF, s, l, 3, sK).map((d) => ({ label: l(d), correct: !1 }))], !0),
     };
   }
   // the asked name already contains the answer ("Medianebene" - "Planum medianum"): ask for the definition instead
@@ -9467,7 +9487,8 @@ const ABBR_FULL = [
     return !1;
   };
 function makeTypeQuestion(s, r, o, e) {
-  const t = o && o.li != null && e && e.length && (!r.figure || Math.random() < 0.7);
+  const t = o && o.li != null && e && e.length && (!r.figure || Math.random() < 0.7),
+    K = markKind(s);
   return {
     kind: "type",
     figure: r.figure,
@@ -9478,10 +9499,14 @@ function makeTypeQuestion(s, r, o, e) {
     mark: t ? o : void 0,
     plates: t ? e : void 0,
     prompt: t
-      ? "Was geh\xF6rt an die Stelle des Fragezeichens?"
-      : r.term
-        ? "Wie hei\xDFt das Markierte?"
-        : "Wie hei\xDFt die markierte Struktur?",
+      ? K
+        ? `Welches ${K} geh\xF6rt an die Stelle des Fragezeichens?`
+        : "Was geh\xF6rt an die Stelle des Fragezeichens?"
+      : K
+        ? `Wie hei\xDFt das markierte ${K}?`
+        : r.term
+          ? "Wie hei\xDFt das Markierte?"
+          : "Wie hei\xDFt die markierte Struktur?",
     sub: "Lateinisch oder deutsch eintippen \u2014 kleine Tippfehler sind erlaubt.",
     explain: `${s.la} \u2014 ${s.de}. ${s.fact}`,
     options: [],
@@ -15265,10 +15290,14 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
               "div",
               { className: "ana-display", style: { fontSize: 19, fontWeight: 700, color: C.ink, textAlign: "center" } },
               H === "blind" && F.li != null
-                ? "Was geh\xF6rt an die Stelle des Fragezeichens?"
-                : g.term
-                  ? "Was ist markiert?"
-                  : "Welche Struktur ist markiert?",
+                ? markKind(k)
+                  ? `Welches ${markKind(k)} geh\xF6rt an die Stelle des Fragezeichens?`
+                  : "Was geh\xF6rt an die Stelle des Fragezeichens?"
+                : markKind(k)
+                  ? `Welches ${markKind(k)} ist markiert?`
+                  : g.term
+                    ? "Was ist markiert?"
+                    : "Welche Struktur ist markiert?",
             ),
             React.createElement(
               "div",
