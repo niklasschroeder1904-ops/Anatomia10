@@ -16107,6 +16107,7 @@ function QuizScreen({
   onUseJoker: c,
   onConfuse: oc,
   onPair: op,
+  retryWrong: rw = !1,
 }) {
   const [m, h] = useState(0),
     [y, b] = useState(l),
@@ -16115,7 +16116,10 @@ function QuizScreen({
     [u, p] = useState(null),
     [f, k] = useState(null),
     [g, w] = useState(""),
-    M = s[m],
+    // the questions still to come: in a lesson a wrongly answered one is asked again at the end, until it is answered right
+    [qs, setQs] = useState(s),
+    [cl, setCl] = useState(0),
+    M = qs[m],
     z = M.kind === "type" || M.kind === "point",
     I = z ? f != null : u != null,
     F = z ? f === !0 : u != null && M.options[u].correct,
@@ -16124,10 +16128,13 @@ function QuizScreen({
     CH = CL ? itemByLabel(M.lesson, CL) : null,
     NM = CL ? nearMissHint(M.options.find((E) => E.correct).label, CL) : null,
     H = (E) => {
-      (E ? A((N) => N + 1) : o && b((N) => N - 1),
-        i && M.item && M.lesson && i(M.lesson.id, M.item.id, E),
-        i && M.itemRef && i(M.itemRef.lessonId, M.itemRef.itemId, E),
+      // a question asked again costs no heart and counts for neither the score nor the error book: the first answer did
+      const R = M.retry;
+      (E ? (R || A((N) => N + 1), setCl((N) => N + 1)) : o && !R && b((N) => N - 1),
+        !R && i && M.item && M.lesson && i(M.lesson.id, M.item.id, E),
+        !R && i && M.itemRef && i(M.itemRef.lessonId, M.itemRef.itemId, E),
         op && M.pair && op(M.pair, E));
+      rw && !E && setQs((N) => [...N, { ...M, retry: !0, options: M.options && M.options.length ? shuffle(M.options) : M.options }]);
     },
     D = (E) => {
       if (I) return;
@@ -16146,7 +16153,7 @@ function QuizScreen({
         n();
         return;
       }
-      m + 1 < s.length ? (h(m + 1), p(null), k(null), w(""), S([])) : a(B, s.length);
+      m + 1 < qs.length ? (h(m + 1), p(null), k(null), w(""), S([])) : a(B, s.length);
     };
   useScrollTop(m);
   return React.createElement(
@@ -16160,11 +16167,31 @@ function QuizScreen({
           ? React.createElement(Hearts, { n: y, max: l })
           : React.createElement("span", { className: "ana-display", style: { fontSize: 13, fontWeight: 600, color: C.inkSoft } }, e),
       },
-      React.createElement(ProgressBar, { value: m / s.length, color: r.color }),
+      React.createElement(ProgressBar, { value: (rw ? cl : m) / s.length, color: r.color }),
     ),
     React.createElement(
       "div",
       { key: m, className: "ana-pop", style: { flex: 1, paddingBottom: I && !F ? 300 : 210 } },
+      M.retry &&
+        React.createElement(
+          "div",
+          {
+            className: "ana-display",
+            style: {
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 12.5,
+              fontWeight: 700,
+              color: C.badText,
+              background: C.badBg,
+              borderRadius: 999,
+              padding: "4px 11px",
+              margin: "2px 2px 6px",
+            },
+          },
+          "\u21BB Nochmal \u2013 diese Frage war vorhin falsch",
+        ),
       React.createElement(
         "div",
         { className: "ana-display", style: { fontSize: 18.5, fontWeight: 700, color: C.ink, lineHeight: 1.3, padding: "4px 2px" } },
@@ -16325,6 +16352,14 @@ function QuizScreen({
               CL === CH.la ? ` \u2013 ${CH.de}` : "",
               shortFact(CH) ? `: ${shortFact(CH)}` : "",
               ".",
+            ),
+          rw &&
+            !F &&
+            !(o && y === 0) &&
+            React.createElement(
+              "div",
+              { className: "ana-body", style: { fontSize: 13, fontWeight: 700, color: C.badText, margin: "0 0 10px" } },
+              "\u21BB Diese Frage kommt am Ende der Lektion nochmal.",
             ),
           React.createElement(Btn, { color: F ? C.good : C.bad, dark: F ? C.goodDark : C.badDark, onClick: W }, "Weiter"),
         ),
@@ -17713,6 +17748,7 @@ function AnatomiaApp() {
       heartsEnabled: !0,
       title: u.title,
       onAnswer: y,
+      retryWrong: !0,
       maxHearts: (s.owned || []).includes("heart4") ? 4 : 3,
       jokers: s.jokers || 0,
       onUseJoker: () =>
