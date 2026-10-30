@@ -7366,6 +7366,11 @@ function BlindImage({ src: s, mark: r, color: o, height: e = 260 }) {
       "div",
       { style: { position: "relative", display: "inline-block", maxWidth: "100%" } },
       React.createElement("img", { src: s, alt: "", style: { display: "block", maxWidth: "100%", maxHeight: e, width: "auto" } }),
+      n &&
+        React.createElement("div", {
+          "data-zf": "2",
+          style: { position: "absolute", left: `${n[0] * 100}%`, top: `${n[1] * 100}%`, width: 1, height: 1, pointerEvents: "none" },
+        }),
       a.map((l, d) =>
         React.createElement("div", {
           key: d,
@@ -7661,6 +7666,7 @@ function LabelLayer({
       {
         key: x,
         style: F,
+        "data-zf": B ? "1" : void 0,
         onClick: l
           ? (H) => {
               (H.stopPropagation(), l(x));
@@ -7698,6 +7704,7 @@ function LabeledImage({
       i &&
         React.createElement("div", {
           className: "ana-ping",
+          "data-zf": "2",
           style: {
             position: "absolute",
             left: `${i[0] * 100}%`,
@@ -15742,7 +15749,7 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) {
 }
 // zoom for quiz pictures: two fingers (or + / -) zoom, one finger moves the zoomed picture;
 // with onTap a short tap is the answer, without it a double tap zooms
-function ZoomPane({ onTap: s, reset: r, tap: f = !0, children: o }) {
+function ZoomPane({ onTap: s, reset: r, tap: f = !0, focus: fz = !1, children: o }) {
   const [e, t] = useState({ s: 1, x: 0, y: 0 }),
     a = useRef(null),
     n = useRef(e),
@@ -15840,7 +15847,27 @@ function ZoomPane({ onTap: s, reset: r, tap: f = !0, children: o }) {
     useEffect(() => {
       t({ s: 1, x: 0, y: 0 });
     }, [r]));
-  const S = (k, g, w, M) =>
+  // "+" with an asked spot in the picture (the ring, else the "?"): zoom onto it, it comes to the middle as far as the
+  // picture allows; without one, into the middle
+  const zin = () => {
+      const w = n.current,
+        M = Math.min(4, w.s * 1.6),
+        P = a.current,
+        z = fz && P && (P.querySelector('[data-zf="2"]') || P.querySelector("[data-zf]"));
+      if (!z) return h({ x: 0, y: 0 }, M);
+      let T = { a: w.s, e: w.x, f: w.y };
+      try {
+        // the transform as it is now, also while the last zoom is still moving
+        const D = new DOMMatrix(getComputedStyle(P.firstChild).transform);
+        D.a > 0 && (T = D);
+      } catch {}
+      const R = P.getBoundingClientRect(),
+        Q = z.getBoundingClientRect(),
+        qx = Q.left + Q.width / 2 - (R.left + R.width / 2),
+        qy = Q.top + Q.height / 2 - (R.top + R.height / 2);
+      t(c(M, (-M * (qx - T.e)) / T.a, (-M * (qy - T.f)) / T.a));
+    },
+    S = (k, g, w, M) =>
     React.createElement(
       "button",
       {
@@ -15911,7 +15938,7 @@ function ZoomPane({ onTap: s, reset: r, tap: f = !0, children: o }) {
               : "Zwei Finger oder + zum Zoomen",
       ),
       S("−", "Herauszoomen", () => h({ x: 0, y: 0 }, n.current.s / 1.6), e.s <= 1),
-      S("+", "Hineinzoomen", () => h({ x: 0, y: 0 }, n.current.s * 1.6), e.s >= 4),
+      S("+", "Hineinzoomen", () => zin(), e.s >= 4),
       S("⟲", "Ganzes Bild", () => t({ s: 1, x: 0, y: 0 }), e.s <= 1),
     ),
   );
@@ -16270,7 +16297,7 @@ function QuizScreen({
         React.createElement(
           "div",
           { style: { background: "#fff", borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
-          React.createElement(ZoomPane, null, (E) =>
+          React.createElement(ZoomPane, { focus: !0 }, (E) =>
             React.createElement(QuizPlate, {
               plate: M.plates[Math.min(M.mark.i, M.plates.length - 1)],
               mark: M.mark,
