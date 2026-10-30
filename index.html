@@ -7791,8 +7791,11 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
     y = useRef({ time: 0, x: 0, y: 0 }),
     b = useRef(null),
     x = useRef(d),
-    zb = useBoxSize(b);
+    zb = useBoxSize(b),
+    rt = useRef(null);
   x.current = d;
+  // a swipe from the left edge closes the picture, the way back to where it was opened
+  useSwipeBack(n, rt);
   const S = (k, g, w) => {
       const M = b.current,
         z = M ? M.clientWidth : 360,
@@ -7813,6 +7816,8 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
       c(M === 1 ? { s: 1, x: 0, y: 0 } : S(M, k.x - M * z, k.y - M * I));
     },
     u = (k) => {
+      // a touch at the left edge starts the swipe back, it does not move the picture
+      if (k.pointerType === "touch" && k.clientX <= 28) return;
       try {
         k.currentTarget.setPointerCapture(k.pointerId);
       } catch {}
@@ -7879,7 +7884,7 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
     ReactDOM.createPortal(
     React.createElement(
       "div",
-      { className: "ana-body", onClick: (D) => D.stopPropagation(), style: { position: "fixed", inset: 0, zIndex: 60, background: "#fff", display: "flex", flexDirection: "column", height: "100dvh" } },
+      { ref: rt, className: "ana-body", onClick: (D) => D.stopPropagation(), style: { position: "fixed", inset: 0, zIndex: 60, background: "#fff", display: "flex", flexDirection: "column", height: "100dvh" } },
       React.createElement(
         "div",
         { style: { display: "flex", alignItems: "center", gap: 8, padding: "calc(10px + env(safe-area-inset-top)) 12px 10px", borderBottom: `1px solid ${C.line}`, background: "#fff" } },
@@ -10443,12 +10448,14 @@ function Hearts({ n: s, max: r = 3 }) {
   );
 }
 // the back actions of what is on show, newest last: the swipe from the left edge takes the newest
+// (v: the view that follows the finger, a layer over the screen; else the screen itself)
 const SWIPE_BACK = [];
-function useSwipeBack(s) {
+function useSwipeBack(s, v) {
   const r = useRef(s);
   r.current = s;
   useEffect(() => {
     const o = () => r.current && r.current();
+    o.view = () => v && v.current;
     return (
       SWIPE_BACK.push(o),
       () => {
@@ -17294,8 +17301,8 @@ function AnatomiaApp() {
     return () => t.forEach(clearTimeout);
   }, [o]);
   // a swipe from the left edge to the right goes back, like the arrow at the top left: the screen follows the finger,
-  // an arrow at the edge turns dark once letting go goes back. Not on a 3D model or a zoomed picture, which use the
-  // finger themselves
+  // an arrow at the edge turns dark once letting go goes back. Not on a 3D model or a zoomed picture in a screen, which
+  // use the finger themselves; a picture opened large over the screen closes this way
   useEffect(() => {
     let g = null;
     const b = document.createElement("div");
@@ -17314,11 +17321,15 @@ function AnatomiaApp() {
         justifyContent: "center",
         pointerEvents: "none",
         opacity: "0",
-        zIndex: "60",
+        zIndex: "70",
         boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
       }),
       document.body.appendChild(b));
-    const scr = () => document.getElementById("ana-screen"),
+    const top = () => SWIPE_BACK[SWIPE_BACK.length - 1],
+      scr = () => {
+        const t = top();
+        return (t && t.view && t.view()) || document.getElementById("ana-screen");
+      },
       far = () => Math.min(110, window.innerWidth * 0.28),
       back = (u) => {
         const p = scr();
@@ -17326,8 +17337,14 @@ function AnatomiaApp() {
       },
       start = (u) => {
         const p = u.touches[0];
+        const t = top(),
+          v = t && t.view && t.view(),
+          c = u.target.closest ? u.target : null;
         g =
-          u.touches.length === 1 && p.clientX <= 28 && SWIPE_BACK.length && !(u.target.closest && u.target.closest('canvas,[style*="touch-action: none"]'))
+          u.touches.length === 1 &&
+          p.clientX <= 28 &&
+          SWIPE_BACK.length &&
+          !(c && (c.closest("canvas") || (c.closest('[style*="touch-action: none"]') && !(v && v.contains(c)))))
             ? { x: p.clientX, y: p.clientY, t: Date.now(), dx: 0, on: !1 }
             : null;
       },
