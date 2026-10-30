@@ -7969,22 +7969,52 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
     )
   );
 }
-function AtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 270 }) {
+// the plates of a lesson that show a card's structure: the one it is marked on and every one with a label of the same
+// Latin or German name, each with the labels to light up; if none shows it, all plates (hl: null)
+const atlasNorm = (s) =>
+    bareLabel(s || "")
+      .toLowerCase()
+      .replace(/[^a-z\xE4\xF6\xFC\xDF0-9 ]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim(),
+  atlasPlatesFor = (s, r, o, n) => {
+    const it = r.items.find((x) => x.id === o),
+      same = (a, b) => !!a && a === b,
+      L = s.map((x, k) => {
+        if (n && n.i === k && n.li != null) return { x, k, hl: n.al ? [n.li, ...n.al] : n.li, mk: !0 };
+        const S = it && labelsFor(x.src),
+          m = S
+            ? S.labels
+                .map((l, j) => (l.k === "l" && (same(atlasNorm(l.la), atlasNorm(it.la)) || same(atlasNorm(l.de), atlasNorm(it.de))) ? j : -1))
+                .filter((j) => j >= 0)
+            : [];
+        return { x, k, hl: m.length ? (m.length === 1 ? m[0] : m) : null, mk: !1 };
+      }),
+      V = L.filter((q) => q.hl != null),
+      list = V.length ? V : L.map((q) => ({ ...q, hl: null, mk: !1 }));
+    return { list, start: Math.max(0, list.findIndex((q) => q.mk)) };
+  };
+function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270 }) {
   const n = (marksFor(r.id) || {})[o],
-    [i, l] = useState(n ? Math.min(n.i, s.length - 1) : 0),
+    // only the plates on which this structure is to be seen, lit up on each
+    P = useMemo(() => atlasPlatesFor(s0, r, o, n), [s0, r, o]),
+    s = P.list,
+    [i, l] = useState(P.start),
     [d, c] = useState("la"),
     [m, h] = useState(!1),
     [y, b] = useState(!1);
   useEffect(() => {
-    n && n.i !== i && n.i < s.length && l(n.i);
+    l(P.start);
   }, [o]);
-  const x = s[Math.min(i, s.length - 1)];
+  const ix = Math.min(i, s.length - 1),
+    q = s[ix],
+    x = q && q.x;
   if (!x) return null;
   const S = labelsFor(x.src);
-  if (!S) return React.createElement(OldAtlasView, { plates: s, lesson: r, itemId: o, color: e, height: t });
-  const B = n && n.i === i && n.li != null ? n.li : null,
-    G = B != null && n.al ? [B, ...n.al] : B,
-    F = B != null ? focusRect(S, B, n.a) : null,
+  if (!S) return React.createElement(OldAtlasView, { plates: s0, lesson: r, itemId: o, color: e, height: t });
+  const G = q.hl,
+    B = G == null ? null : Array.isArray(G) ? G[0] : G,
+    F = q.mk && B != null ? focusRect(S, B, n.a) : null,
     A = F && (!n.al || n.al.every((D) => F.members.has(D))) ? F : null;
   return React.createElement(
     "div",
@@ -7998,7 +8028,7 @@ function AtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 270 
       "div",
       { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, marginTop: 7, lineHeight: 1.35 } },
       x.cap,
-      B != null && n.nt && React.createElement("span", { style: { color: C.ink } }, " \xB7 ", n.nt),
+      q.mk && n.nt && React.createElement("span", { style: { color: C.ink } }, " \xB7 ", n.nt),
       A &&
         React.createElement(
           React.Fragment,
@@ -8014,7 +8044,7 @@ function AtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 270 
             y ? "Ausschnitt" : "Ganzes Bild",
           ),
         ),
-      !n &&
+      G == null &&
         React.createElement("span", { style: { color: "#9AA3B2" } }, " \xB7 Diese Struktur ist auf dieser Abbildung nicht beschriftet."),
     ),
     React.createElement(
@@ -8027,18 +8057,18 @@ function AtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 270 
           React.createElement(
             "button",
             {
-              onClick: (D) => (D.stopPropagation(), l((i - 1 + s.length) % s.length)),
+              onClick: (D) => (D.stopPropagation(), l((ix - 1 + s.length) % s.length)),
               className: "ana-display",
               "aria-label": "Vorige Abbildung",
               style: { padding: "4px 10px", border: "none", background: "none", color: C.inkSoft, fontSize: 16, fontWeight: 700, cursor: "pointer" },
             },
             "\u2039",
           ),
-          React.createElement("span", { className: "ana-body", style: { fontSize: 12, color: "#9AA3B2" } }, i + 1, "/", s.length),
+          React.createElement("span", { className: "ana-body", style: { fontSize: 12, color: "#9AA3B2" } }, ix + 1, "/", s.length),
           React.createElement(
             "button",
             {
-              onClick: (D) => (D.stopPropagation(), l((i + 1) % s.length)),
+              onClick: (D) => (D.stopPropagation(), l((ix + 1) % s.length)),
               className: "ana-display",
               "aria-label": "N\xE4chste Abbildung",
               style: { padding: "4px 10px", border: "none", background: "none", color: C.inkSoft, fontSize: 16, fontWeight: 700, cursor: "pointer" },
