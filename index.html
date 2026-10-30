@@ -7546,6 +7546,17 @@ function useBoxSize(s, r = "") {
   );
 }
 const ROT_CSS = { 90: -90, 270: 90, 45: 45, "-45": -45 };
+// the width of a lit-up label as drawn (bold label font): it decides whether the label still fits beside its line
+let LBL_CV = null;
+const labelTextW = (s, k) => {
+  try {
+    LBL_CV = LBL_CV || document.createElement("canvas").getContext("2d");
+    LBL_CV.font = `700 ${k}px 'Atkinson Hyperlegible', system-ui, sans-serif`;
+    return LBL_CV.measureText(String(s)).width * 1.04;
+  } catch {
+    return String(s).length * k * 0.6;
+  }
+};
 function LabelLayer({
   data: s,
   w: r,
@@ -7559,6 +7570,13 @@ function LabelLayer({
   view: d = null,
   zs: Z = 1,
 }) {
+  // measured in the label font: once it has loaded, the labels are measured again
+  const [, fr] = useState(0);
+  useEffect(() => {
+    try {
+      document.fonts && document.fonts.status !== "loaded" && document.fonts.ready.then(() => fr(1));
+    } catch {}
+  }, []);
   if (!s || !r || !o) return null;
   const [c, m, h] = d || [0, 0, 1, 1],
     y = d && d.members;
@@ -7613,7 +7631,8 @@ function LabelLayer({
     if (S || B) {
       const H = B ? Math.max(3, k * 0.32) : Math.max(1.5, k * 0.25);
       wr && (F.maxWidth = F.maxWidth * 1.2 + 2 * H);
-      const D = wr ? Math.min(String(M).length * k * 0.6 + 2 * H, F.maxWidth) : String(M).length * k * 0.6 + 2 * H;
+      const tw = labelTextW(M, k),
+        D = wr ? Math.min(tw + 2 * H, F.maxWidth) : tw + 2 * H;
       if (
         (Object.assign(F, {
           background: B && a.reveal === "bad" ? C.bad : n,
