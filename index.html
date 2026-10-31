@@ -9512,17 +9512,22 @@ const ABBR_FULL = [
     [/\bnn\./g, "nervi "], [/\bn\./g, "nervus "], [/\bligg\./g, "ligamenta "], [/\blig\./g, "ligamentum "], [/\bprocc\./g, "processus "], [/\bproc\./g, "processus "],
     [/\bgll\./g, "glandulae "], [/\bgl\./g, "glandula "], [/\brr\./g, "rami "], [/\br\./g, "ramus "], [/\btr\./g, "truncus "], [/\bfor\./g, "foramen "],
   ],
-  normAnswer = (s) =>
-    ABBR_FULL.reduce((r, [o, e]) => r.replace(o, e), (s || "").toLowerCase())
-      .replace(/^\s*(musculi|musculus|muskel|arteriae|arteria|arterie|venae|vena|vene|nervi|nervus|nerv|ligamenta|ligamentum|band|processus|glandulae|glandula|rami|ramus|truncus|os|ossa)\s+/, "")
-      .replace(/[äÄ]/g, "a")
-      .replace(/[öÖ]/g, "o")
-      .replace(/[üÜ]/g, "u")
-      .replace(/ß/g, "ss")
-      .replace(/^(m|a|v|n|lig|aa|vv|mm|nn|proc|gl)\.\s*/i, "")
+  // f: the full name, with the word in front kept ("vena femoralis"), which tells one structure from another;
+  // without f that word is left out, so "biceps brachii" counts for "M. biceps brachii"
+  normAnswer = (s, f) => {
+    let r = ABBR_FULL.reduce((r, [o, e]) => r.replace(o, e), (s || "").toLowerCase());
+    f ||
+      (r = r.replace(
+        /^\s*(musculi|musculus|muskel|arteriae|arteria|arterie|venae|vena|vene|nervi|nervus|nerv|ligamenta|ligamentum|band|processus|glandulae|glandula|rami|ramus|truncus|os|ossa)\s+/,
+        "",
+      ));
+    r = r.replace(/[äÄ]/g, "a").replace(/[öÖ]/g, "o").replace(/[üÜ]/g, "u").replace(/ß/g, "ss");
+    f || (r = r.replace(/^(m|a|v|n|lig|aa|vv|mm|nn|proc|gl)\.\s*/i, ""));
+    return r
       .replace(/[^a-z0-9 ]/g, " ")
       .replace(/\s+/g, " ")
-      .trim(),
+      .trim();
+  },
   levenshtein = (s, r) => {
     const o = s.length,
       e = r.length;
@@ -9535,19 +9540,59 @@ const ABBR_FULL = [
     }
     return t[e];
   },
+  // every name in the app, short and full, with the structure that carries it (its full Latin name without additions:
+  // "N. trigeminus (V)" is the same nerve as "N. trigeminus")
+  ansVocab = () => {
+    if (!ansVocab.l) {
+      const l = [],
+        seen = new Set();
+      ALL_LESSONS.forEach((L) =>
+        L.items.forEach((i) => {
+          const id = normAnswer(bareLabel(i.la), 1);
+          [i.la, i.de, ...(i.alt || [])].forEach((n) => {
+            const s = normAnswer(n),
+              f = normAnswer(n, 1),
+              k = f + "|" + id;
+            s && !seen.has(k) && (seen.add(k), l.push({ s, f, id }));
+          });
+        }),
+      );
+      ansVocab.l = l;
+    }
+    return ansVocab.l;
+  },
   answerMatches = (s, r) => {
-    const o = normAnswer(s);
+    const o = normAnswer(s),
+      of = normAnswer(s, 1);
     if (!o) return !1;
     // alt: other names that count as right ("Kompakta" for "Kompakte Knochensubstanz (Kompakta)")
-    for (const e of [r.la, r.de, ...(r.alt || [])]) {
-      const t = normAnswer(e);
-      if (!t) continue;
+    const N = [r.la, r.de, ...(r.alt || [])].filter(Boolean),
+      own = N.map((x) => normAnswer(x)).filter(Boolean),
+      ownF = N.map((x) => normAnswer(x, 1)).filter(Boolean),
+      two = (t) => t.split(" ").slice(-2).join(" ");
+    // how near the answer comes to this structure's names (also to their last two words: "biceps brachii"); small
+    // typos are allowed, the more the longer the name
+    let d = 1 / 0;
+    for (const t of own) {
       const a = t.length > 14 ? 3 : t.length > 8 ? 2 : 1;
-      if (levenshtein(o, t) <= a) return !0;
-      const n = t.split(" ").slice(-2).join(" ");
-      if (n.length >= 6 && levenshtein(o, n) <= a) return !0;
+      for (const x of [t, two(t)]) {
+        if (x !== t && x.length < 6) continue;
+        const k = levenshtein(o, x);
+        k <= a && (d = Math.min(d, k));
+      }
     }
-    return !1;
+    if (d === 1 / 0) return !1;
+    // not right after all: another term of the app as it stands ("Adductio" for "Abductio", "V. femoralis" for
+    // "A. femoralis", "M. pectoralis minor" for "major"), or a typo that comes as near to another term as to this one
+    // (word in front counted, so "V. portaa hepatis" is still the portal vein, not the porta hepatis)
+    const df = Math.min(...ownF.flatMap((t) => [t, two(t)]).map((x) => levenshtein(of, x))),
+      me = normAnswer(bareLabel(r.la), 1);
+    for (const v of ansVocab()) {
+      if (v.id === me || ownF.includes(v.f)) continue;
+      if (v.f === of) return !1;
+      if (d > 0 && Math.abs(v.s.length - o.length) <= d && levenshtein(o, v.s) <= d && levenshtein(of, v.f) <= df) return !1;
+    }
+    return !0;
   };
 function makeTypeQuestion(s, r, o, e) {
   const t = o && o.li != null && e && e.length && (!r.figure || Math.random() < 0.7),
