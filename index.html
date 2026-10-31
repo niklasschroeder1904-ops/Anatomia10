@@ -5172,6 +5172,7 @@ const { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } = R
   FONT_CSS = `
 * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 body { margin: 0; }
+html, body { overscroll-behavior-x: none; }
 .ana-display { font-family: 'Fredoka', ui-rounded, system-ui, sans-serif; }
 .ana-body { font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; }
 @keyframes ana-pop { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
@@ -10504,7 +10505,7 @@ function Hearts({ n: s, max: r = 3 }) {
   );
 }
 // the back actions of what is on show, newest last: the swipe from the left edge takes the newest
-// (v: the view that follows the finger, a layer over the screen; else the screen itself)
+// (v: the view that follows the finger, a layer over the screen; else the screen itself; no action: no swipe there)
 const SWIPE_BACK = [];
 function useSwipeBack(s, v) {
   const r = useRef(s);
@@ -10512,6 +10513,7 @@ function useSwipeBack(s, v) {
   useEffect(() => {
     const o = () => r.current && r.current();
     o.view = () => v && v.current;
+    o.on = () => !!r.current;
     return (
       SWIPE_BACK.push(o),
       () => {
@@ -10521,8 +10523,8 @@ function useSwipeBack(s, v) {
     );
   }, []);
 }
-function TopBar({ onBack: s, children: r, right: o }) {
-  useSwipeBack(s);
+function TopBar({ onBack: s, children: r, right: o, swipe: sw = !0 }) {
+  useSwipeBack(sw ? s : null);
   return React.createElement(
     "div",
     { style: { display: "flex", alignItems: "center", gap: 10, padding: "12px 4px" } },
@@ -16246,6 +16248,8 @@ function QuizScreen({
       TopBar,
       {
         onBack: t,
+        // in a round of questions only the arrow goes back: a swipe from the edge would end the round by mistake
+        swipe: !1,
         right: o
           ? React.createElement(Hearts, { n: y, max: l })
           : React.createElement("span", { className: "ana-display", style: { fontSize: 13, fontWeight: 600, color: C.inkSoft } }, e),
@@ -17419,7 +17423,8 @@ function AnatomiaApp() {
         g =
           u.touches.length === 1 &&
           p.clientX <= 28 &&
-          SWIPE_BACK.length &&
+          t &&
+          (!t.on || t.on()) &&
           !(c && (c.closest("canvas") || (c.closest('[style*="touch-action: none"]') && !(v && v.contains(c)))))
             ? { x: p.clientX, y: p.clientY, t: Date.now(), dx: 0, on: !1 }
             : null;
