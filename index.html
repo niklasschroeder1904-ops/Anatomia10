@@ -9734,6 +9734,21 @@ function oddInit() {
   });
   return (ODD = { meta, unit, byName, regNames, regOne });
 }
+// the intruders of the last rounds of each lesson (on this device): a repeated lesson brings another one
+const ODD_RECENT = "ana:odd-recent",
+  oddRecent = (s) => {
+    try {
+      return JSON.parse(localStorage.getItem(ODD_RECENT) || "{}")[s] || [];
+    } catch {
+      return [];
+    }
+  },
+  oddRemember = (s, r) => {
+    try {
+      const o = JSON.parse(localStorage.getItem(ODD_RECENT) || "{}");
+      ((o[s] = [r, ...(o[s] || []).filter((e) => e !== r)].slice(0, 3)), localStorage.setItem(ODD_RECENT, JSON.stringify(o)));
+    } catch {}
+  };
 function makeIntruder(s) {
   const { meta, unit, byName, regNames, regOne } = oddInit(),
     M = (i) => meta.get(i),
@@ -9805,17 +9820,21 @@ function makeIntruder(s) {
     fo = (i) => (e ? M(i).fde : M(i).fla),
     wo = (i) => (e ? M(i).wde : M(i).wla),
     lw = s.items.flatMap(wo),
-    // of the four that fit best (alike in form, named alike - for terms above all), one by chance for some variety
-    top = [...new Map(pool.map((i) => [M(i.i).la, i])).values()]
+    // of the four that fit best (alike in form, named alike - for terms above all), one by chance for some variety;
+    // none of the last rounds of this lesson while others of the best are left
+    rc = oddRecent(s.id),
+    cs = [...new Map(pool.map((i) => [M(i.i).la, i])).values()]
       .filter((i) => !n.some((l) => key(i.i).startsWith(key(l)) || key(l).startsWith(key(i.i))))
       .map((i) => ({
         c: i,
         d: Math.min(...n.map((l) => formDist(fo(l), fo(i.i)))) + i.pen - (oddLike(wo(i.i), lw) ? (s.term ? 2 : 1) : 0) + Math.random() * 0.3,
       }))
-      .sort((i, l) => i.d - l.d)
-      .slice(0, 4),
+      .sort((i, l) => i.d - l.d),
+    fr = cs.filter((i) => !rc.includes(M(i.c.i).la)),
+    top = (fr.length ? fr : cs).slice(0, 4),
     pick = top.length ? top[Math.floor(Math.random() * top.length)].c : null;
   if (!pick) return null;
+  oddRemember(s.id, M(pick.i).la);
   const a = pick.i,
     la = bareLabel(a.la),
     de = bareLabel(a.de),
