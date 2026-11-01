@@ -16564,6 +16564,8 @@ function ResultScreen({
   boosted: bst,
   next: nx,
   onNext: goNext,
+  test: ts,
+  onTest: goTest,
 }) {
   const d = starsFor(r),
     c = s !== "test" || e;
@@ -16656,11 +16658,25 @@ function ResultScreen({
             nx.title,
           ),
         ),
+      // the last lesson of a topic: its test comes next
+      ts &&
+        goTest &&
+        React.createElement(
+          Btn,
+          { color: C.good, dark: C.goodDark, onClick: goTest },
+          "Themen-Test starten",
+          React.createElement(
+            "div",
+            { className: "ana-body", style: { fontSize: 13.5, fontWeight: 600, letterSpacing: 0, opacity: 0.92, marginTop: 3, lineHeight: 1.3 } },
+            ts.title,
+            " \xB7 12 Fragen",
+          ),
+        ),
       React.createElement(
         Btn,
         {
-          ghost: (s === "test" && !e) || !!(nx && goNext) || !!l,
-          color: (s === "test" && !e) || (nx && goNext) || l ? C.inkSoft : C.good,
+          ghost: (s === "test" && !e) || !!(nx && goNext) || !!(ts && goTest) || !!l,
+          color: (s === "test" && !e) || (nx && goNext) || (ts && goTest) || l ? C.inkSoft : C.good,
           dark: C.goodDark,
           onClick: n,
         },
@@ -18043,10 +18059,13 @@ function AnatomiaApp() {
     const u = findLesson(o.lessonId);
     A = React.createElement(FailScreen, { color: u.color, dark: u.dark, onRetry: () => l(u.id), onHome: () => e({ name: "home" }) });
   } else if (o.name === "result") {
-    // after a lesson: straight on to the next lesson of the menu
+    // after a lesson: straight on to the next lesson of the menu; after the last lesson of a topic to its test (unless
+    // passed already); after a passed test on to the next topic
     const u = o.kind === "quiz" && o.lessonId ? findLesson(o.lessonId) : null,
-      p = u ? nextLessonAfter(u.id, s.level) : null,
-      f = p && p.unitId !== u.unitId ? UNITS.find((k) => k.id === p.unitId) : null;
+      tu = o.kind === "test" && o.passed ? levelUnits(UNITS, s.level).find((k) => k.id === o.unitId) : null,
+      p = u ? nextLessonAfter(u.id, s.level) : tu ? nextLessonAfter(tu.lessons[tu.lessons.length - 1].id, s.level) : null,
+      f = p && p.unitId !== (u ? u.unitId : o.unitId) ? UNITS.find((k) => k.id === p.unitId) : null,
+      T = u && (!p || p.unitId !== u.unitId) && !(((s.tests || {})[u.unitId] || 0) >= 0.8) ? UNITS.find((k) => k.id === u.unitId) : null;
     A = React.createElement(ResultScreen, {
       ...o,
       fx: s.fx,
@@ -18054,8 +18073,10 @@ function AnatomiaApp() {
       onHome: () => e({ name: "home" }),
       onBack: o.back && o.back.name ? () => e(o.back) : void 0,
       onRetry: () => b(o.unitId),
-      next: p ? { title: p.title, topic: f ? f.title : null } : null,
-      onNext: p ? () => i(p.id) : void 0,
+      next: p && !T ? { title: p.title, topic: f ? f.title : null } : null,
+      onNext: p && !T ? () => i(p.id) : void 0,
+      test: T ? { title: T.title } : null,
+      onTest: T ? () => b(T.id) : void 0,
     });
   }
   return React.createElement(
