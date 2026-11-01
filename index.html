@@ -9235,6 +9235,8 @@ const itemByLabel = (s, r) => {
   itemRefByLabel = (s, r) => {
     const o = itemByLabel(s, r);
     if (!o) return null;
+    // a part of a name of two ("Inferior" of "Caudalis / inferior") stands for the card of the whole name
+    if (o.__part) return { lessonId: s.id, itemId: String(o.id).split("~")[0] };
     const e = s && s.items && s.items.includes(o) ? s.id : ITEM_LESSON && ITEM_LESSON.get(o);
     return e ? { lessonId: e, itemId: o.id } : null;
   },
@@ -10033,6 +10035,102 @@ function makeNumQuestion(s, r) {
     options: a.map((n) => ({ label: n.replace(/^\*/, ""), correct: n[0] === "*" })),
   };
 }
+// names of two ("Os irregulare / sesamoideum"): each part on its own, with its German name and what it is; syn: two
+// names of one and the same, so the other part is never a wrong answer to it
+const PAIR_GONAD_A = {
+    parts: [
+      ["A. ovarica", "Eierstockarterie", "Keimdrüsenarterie der Frau: entspringt auf Höhe L2 aus der Bauchaorta und zieht zum Eierstock."],
+      ["A. testicularis", "Hodenarterie", "Keimdrüsenarterie des Mannes: entspringt auf Höhe L2 aus der Bauchaorta und zieht durch den Leistenkanal zum Hoden."],
+    ],
+  },
+  PAIR_GONAD_V = {
+    parts: [
+      ["V. ovarica", "Eierstockvene", "Keimdrüsenvene der Frau: mündet rechts in die untere Hohlvene, links in die linke Nierenvene."],
+      ["V. testicularis", "Hodenvene", "Keimdrüsenvene des Mannes aus dem Plexus pampiniformis: mündet rechts in die untere Hohlvene, links in die linke Nierenvene."],
+    ],
+  },
+  PAIR_PARTS = {
+    "Cranialis / superior": {
+      syn: !0,
+      parts: [
+        ["Cranialis", "kopfwärts", "Zum Kopf hin gelegen, z. B. das Herz im Vergleich zum Zwerchfell."],
+        ["Superior", "oben", "Weiter oben gelegen; beim aufrecht Stehenden gleichbedeutend mit kopfwärts."],
+      ],
+    },
+    "Caudalis / inferior": {
+      syn: !0,
+      parts: [
+        ["Caudalis", "steißwärts", "Zum Steiß hin gelegen, z. B. die Nieren im Vergleich zu den Nebennieren."],
+        ["Inferior", "unten", "Weiter unten gelegen; beim aufrecht Stehenden gleichbedeutend mit steißwärts."],
+      ],
+    },
+    "Ventralis / anterior": {
+      syn: !0,
+      parts: [
+        ["Ventralis", "bauchwärts", "Zur Bauchseite hin, z. B. das Brustbein im Vergleich zum Herzen."],
+        ["Anterior", "vorn", "Weiter vorn gelegen; am Rumpf gleichbedeutend mit bauchwärts."],
+      ],
+    },
+    "Dorsalis / posterior": {
+      syn: !0,
+      parts: [
+        ["Dorsalis", "rückenwärts", "Zur Rückenseite hin, z. B. die Wirbelsäule im Vergleich zur Speiseröhre."],
+        ["Posterior", "hinten", "Weiter hinten gelegen; am Rumpf gleichbedeutend mit rückenwärts."],
+      ],
+    },
+    "Superficialis / profundus": {
+      parts: [
+        ["Superficialis", "oberflächlich", "Nahe der Körperoberfläche, z. B. die V. saphena magna direkt unter der Haut."],
+        ["Profundus", "tief", "Weiter von der Körperoberfläche entfernt, z. B. die V. femoralis zwischen den Muskeln."],
+      ],
+    },
+    "Planum frontale / coronale": {
+      syn: !0,
+      parts: [
+        ["Planum frontale", "Frontalebene", "Senkrechte Ebene parallel zur Stirn; trennt Vorder- und Rückseite."],
+        ["Planum coronale", "Koronalebene", "Anderer Name der Frontalebene, nach der Kranznaht des Schädels; trennt Vorder- und Rückseite."],
+      ],
+    },
+    "Rotatio interna / externa": {
+      parts: [
+        ["Rotatio interna", "Innendrehung", "Drehung um die Längsachse nach innen, z. B. die Hand hinter den Rücken legen (Schulter)."],
+        ["Rotatio externa", "Außendrehung", "Drehung um die Längsachse nach außen, z. B. bei angelegtem Ellbogen den Unterarm zur Seite führen (Schulter)."],
+      ],
+    },
+    "Os irregulare / sesamoideum": {
+      parts: [
+        ["Os irregulare", "unregelmäßiger Knochen", "Knochen ohne einfache Grundform, z. B. ein Wirbel."],
+        ["Os sesamoideum", "Sesambein", "In eine Sehne eingelagerter Knochen; das größte ist die Kniescheibe."],
+      ],
+    },
+    "A. ovarica / testicularis": PAIR_GONAD_A,
+    "A. testicularis / ovarica": PAIR_GONAD_A,
+    "V. ovarica / testicularis": PAIR_GONAD_V,
+    "V. testicularis / ovarica": PAIR_GONAD_V,
+  },
+  pairParts = (s) => PAIR_PARTS[bareLabel((s && s.la) || "").replace(/\s*\/\s*/g, " / ")] || null,
+  // one part of such a name on its own; the other part (unless the same thing) and the parts of the lesson's other names
+  // of two among the wrong answers. The answer counts for the card of the whole name, whose picture shows after it
+  partQuestion = (s, r, o) => {
+    const P = pairParts(s);
+    if (!P) return null;
+    const k = Math.random() < 0.5 ? 0 : 1,
+      mk = (it, q, id) => ({ id, la: q[0], de: q[1], fact: q[2], hl: it.hl || [], __part: !0 }),
+      me = mk(s, P.parts[k], s.id),
+      items = [me];
+    P.syn || items.push(mk(s, P.parts[1 - k], s.id + "~" + (1 - k)));
+    r.items.forEach((i) => {
+      if (i.id === s.id) return;
+      const Q = pairParts(i);
+      Q ? Q.parts.forEach((q, n) => items.push(mk(i, q, i.id + "~" + n))) : items.push(i);
+    });
+    // without the lesson's picture and marks: a part has no spot of its own in them
+    const L = { ...r, id: r.id + "~parts", figure: null, items },
+      q = makeQuestion(me, L, o === "fact" && hasQuizFact(me) ? "fact" : Math.random() < 0.5 ? "term-de" : "term-la");
+    return q && { ...q, lesson: { ...L, id: r.id, figure: r.figure } };
+  },
+  // a question on a structure; a name of two is asked half the time by one of its parts (not in picture questions)
+  askItem = (s, r, o) => (o !== "fig" && Math.random() < 0.5 && partQuestion(s, r, o)) || makeQuestion(s, r, o);
 function buildLessonQuiz(s, r = 8) {
   const t = quizMarksFor(s.id) || {},
     a = platesFor(s.id),
@@ -10065,7 +10163,7 @@ function buildLessonQuiz(s, r = 8) {
   for (const k of ["term-de", "term-la", "fact"]) pick(k, 1) || pick(k);
   for (let k = 0; Q.length < r - 1 && k < 3 * (r - 1); k++) pick(["fact", "term-la", "term-de", "fig"][k % 4]);
   const n = mixOrder(Q, (i, l) => (i.k === l.k ? 1 : 0) + (i.i.id === l.i.id ? 2 : 0)).map(({ k, i }) =>
-    k === "type" ? makeTypeQuestion(i, s, t[i.id], a) : k === "point" ? makePointQuestion(i, s, t[i.id], a) : makeQuestion(i, s, k),
+    k === "type" ? makeTypeQuestion(i, s, t[i.id], a) : k === "point" ? makePointQuestion(i, s, t[i.id], a) : askItem(i, s, k),
   );
   // one odd-one-out question and, where the cards teach a number, one number question
   const x = [makeIntruder(s), makeNumQuestion(s)].filter(Boolean),
@@ -10100,7 +10198,7 @@ function buildUnitTest(s, r = 12) {
   return (
     s.lessons.forEach((a) => {
       const n = shuffle(a.items);
-      for (let i = 0; i < t; i++) o.push(makeQuestion(n[i % n.length], a, e[(i + o.length) % e.length]));
+      for (let i = 0; i < t; i++) o.push(askItem(n[i % n.length], a, e[(i + o.length) % e.length]));
     }),
     (() => {
       // one number question, where the topic's cards teach numbers
@@ -16815,7 +16913,7 @@ const TOPICS = [
         ? makeTypeQuestion(a, n, l, d)
         : c === "point" && l && !l.np && d.length
           ? makePointQuestion(a, n, l, d)
-          : makeQuestion(a, n, c === "type" ? "term-de" : c === "point" ? "term-la" : c);
+          : askItem(a, n, c === "type" ? "term-de" : c === "point" ? "term-la" : c);
     });
   };
 function ChipToggle({ on: s, onClick: r, children: o, color: e = EXAM_COLOR }) {
