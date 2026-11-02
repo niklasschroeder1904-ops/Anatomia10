@@ -15925,6 +15925,8 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
     ),
   );
 }
+// keys of the recorded pronunciations in say/ (written by the audio generator)
+const SAY_KEYS = new Set("".split(",").filter(Boolean));
 const LA_ABBR = [
     [/\bMm\./g, "Musculi"], [/\bM\./g, "Musculus"], [/\bAa\./g, "Arteriae"], [/\bA\./g, "Arteria"], [/\bVv\./g, "Venae"], [/\bV\./g, "Vena"],
     [/\bNn\./g, "Nervi"], [/\bN\./g, "Nervus"], [/\bLigg\./g, "Ligamenta"], [/\bLig\./g, "Ligamentum"], [/\bProcc\./g, "Processus"], [/\bProc\./g, "Processus"],
@@ -15937,11 +15939,24 @@ const LA_ABBR = [
       return !1;
     }
   },
-  speakTerm = (s, r = "de-DE") => {
-    if (!speechOk() || !s) return;
-    let o = String(s).replace(/\([^)]*\)/g, " ").replace(/[–—/]/g, ", ").replace(/:/g, " ");
-    LA_ABBR.forEach(([t, a]) => (o = o.replace(t, a)));
-    o = o.replace(/\s+/g, " ").trim();
+  // the words as they are spoken: no brackets, abbreviations written out
+  speakText = (s) => {
+    let r = String(s || "").replace(/\([^)]*\)/g, " ").replace(/[–—/]/g, ", ").replace(/:/g, " ");
+    return (LA_ABBR.forEach(([o, e]) => (r = r.replace(o, e))), r.replace(/\s+/g, " ").trim());
+  },
+  // the file of a spoken name: say/<key>.m4a (FNV-1a over the text, base 36)
+  sayKey = (s) => {
+    let r = 2166136261;
+    for (let o = 0; o < s.length; o++) r = Math.imul(r ^ s.charCodeAt(o), 16777619);
+    return (r >>> 0).toString(36);
+  },
+  sayHas = (s) => !!s && SAY_KEYS.has(sayKey(speakText(s))),
+  // the names are played as recorded audio, like a video: the iPhone's media volume sets the loudness and the silent
+  // switch does not mute them (the device voice does both the other way round). The device voice speaks what has no
+  // recording, or when the recording cannot be loaded (offline before it was ever played)
+  SAY = { el: null },
+  speakVoice = (o, r) => {
+    if (!speechOk() || !o) return;
     try {
       const e = window.speechSynthesis;
       e.cancel();
@@ -15952,9 +15967,34 @@ const LA_ABBR = [
       a.length && (t.voice = a.find((n) => /google|anna|petra|markus|helena|katja/i.test(n.name)) || a[0]);
       e.speak(t);
     } catch {}
+  },
+  speakTerm = (s, r = "de-DE") => {
+    const o = speakText(s);
+    if (!o) return;
+    try {
+      speechOk() && window.speechSynthesis.cancel();
+    } catch {}
+    const e = sayKey(o);
+    if (!/^de/i.test(r) || !SAY_KEYS.has(e) || typeof Audio > "u") return speakVoice(o, r);
+    try {
+      const t = SAY.el || (SAY.el = new Audio());
+      t.pause();
+      t.onerror = null;
+      t.src = `say/${e}.m4a`;
+      t.preload = "auto";
+      let a = !1;
+      const n = () => {
+        a || ((a = !0), speakVoice(o, r));
+      };
+      t.onerror = n;
+      const i = t.play();
+      i && i.catch && i.catch(n);
+    } catch {
+      speakVoice(o, r);
+    }
   };
 function SpeakBtn({ text: s, color: r = C.inkSoft, size: o = 30, lang: e = "de-DE", label: t = "Aussprechen" }) {
-  return speechOk()
+  return speechOk() || sayHas(s)
     ? React.createElement(
         "button",
         {
