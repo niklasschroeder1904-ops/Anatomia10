@@ -10532,7 +10532,7 @@ const STORAGE_KEY = "anatomia-v1",
     return o.done && !o.claimed;
   }).length;
 // ---------- daily challenges: three a day (easy, medium, hard), picked from the date and kept all day; each one done pays
-// an unlock token, all three a bonus in Taler. m = what is counted today (xp: the day's XP log, run: the longest row of right
+// Taler, the harder the more, and all three a bonus on top. m = what is counted today (xp: the day's XP log, run: the longest row of right
 // answers, regions: the regions learned in), ok = only offered when the learner can do it
 const DAILY_POOL = [
     { id: "e-lesson", tier: 0, m: "lessons", goal: 1, icon: "\u{1F4D7}", text: "1 Lektion abschlie\xDFen" },
@@ -10553,8 +10553,10 @@ const DAILY_POOL = [
     { id: "h-xp", tier: 2, m: "xp", goal: 500, icon: "\u26A1\uFE0F", text: "500 XP sammeln" },
   ],
   DAILY_BY = Object.fromEntries(DAILY_POOL.map((s) => [s.id, s])),
-  DAILY_TOKENS = 1,
-  DAILY_BONUS = 100,
+  // Taler for an easy, a medium and a hard challenge; the bonus when all three are done
+  DAILY_PAY = [25, 50, 100],
+  DAILY_BONUS = 50,
+  dailyPay = (s) => DAILY_PAY[s.tier] || DAILY_PAY[0],
   // one challenge per tier, never two that count the same thing; the date seeds the choice
   dailyPick = (s, r) => {
     let o = 2166136261;
@@ -10579,7 +10581,7 @@ const DAILY_POOL = [
   },
   dailyVal = (s, r, o) => (o.m === "xp" ? (s.log || {})[r.day] || 0 : o.m === "regions" ? (r.n.regions || []).length : o.m === "run" ? r.n.best || 0 : r.n[o.m] || 0),
   // counts what just happened (lessons: 1, correct: 1, hit: right or wrong for the row, region: "arm", ...) and pays the
-  // challenges it completes: a token each, the bonus with the last one
+  // challenges it completes: their Taler, and the bonus with the last one
   dailyBump = (s, r = {}) => {
     const o = dailyOf(s),
       e = { ...o.n };
@@ -10599,8 +10601,7 @@ const DAILY_POOL = [
     return {
       ...s,
       daily: { ...t, done: n },
-      tokens: (s.tokens || 0) + a.length * DAILY_TOKENS,
-      coins: (s.coins || 0) + (n.length >= t.ids.length ? DAILY_BONUS : 0),
+      coins: (s.coins || 0) + a.reduce((i, l) => i + dailyPay(DAILY_BY[l]), 0) + (n.length >= t.ids.length ? DAILY_BONUS : 0),
     };
   },
   // done today but not shown yet (on a result screen or the menu); all = the bonus came with them
@@ -13515,9 +13516,9 @@ function DailyBanner({ fresh: s }) {
           "div",
           { className: "ana-display", style: { fontSize: 14.5, fontWeight: 700, color: "#C29204", marginTop: 5 } },
           "+",
-          r.length * DAILY_TOKENS,
-          " \u{1F511} Freischalt-Token",
-          s.all ? ` \xB7 +${DAILY_BONUS} Taler Bonus` : "",
+          r.reduce((o, e) => o + dailyPay(e), 0),
+          " \u{1FA99} Taler",
+          s.all ? ` \xB7 +${DAILY_BONUS} Taler Bonus f\xFCr alle drei` : "",
         ),
       )
     : null;
@@ -13605,7 +13606,7 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o }) {
             { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 4 } },
             React.createElement("span", { style: { fontSize: 11, fontWeight: 700, color: h, letterSpacing: 0.4, textTransform: "uppercase" } }, m),
             d
-              ? React.createElement("span", { style: { fontSize: 12, color: C.okText } }, "geschafft \xB7 Token erhalten")
+              ? React.createElement("span", { style: { fontSize: 12, color: C.okText } }, `geschafft \xB7 ${dailyPay(l)} Taler erhalten`)
               : React.createElement(
                   React.Fragment,
                   null,
@@ -13629,14 +13630,14 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o }) {
               whiteSpace: "nowrap",
             },
           },
-          d ? "\u{1F511} \u2713" : `\u{1F511} +${DAILY_TOKENS}`,
+          d ? "\u{1FA99} \u2713" : `\u{1FA99} +${dailyPay(l)}`,
         ),
       );
     }),
     React.createElement(
       "div",
       { className: "ana-body", style: { fontSize: 12, color: C.inkSoft, lineHeight: 1.4, padding: "0 2px 2px" } },
-      `Jede Challenge bringt einen Freischalt-Token f\xFCr eine gesperrte Lektion, alle drei zusammen +${DAILY_BONUS} Taler. Du hast \u{1F511} ${s.tokens || 0}.`,
+      `Leicht ${DAILY_PAY[0]}, mittel ${DAILY_PAY[1]}, schwer ${DAILY_PAY[2]} Taler \u2013 wer alle drei schafft, bekommt noch ${DAILY_BONUS} Taler dazu.`,
     ),
   );
 }
