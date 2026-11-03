@@ -10530,10 +10530,13 @@ const STORAGE_KEY = "anatomia-v1",
     claimed: [],
     xpBoost: null,
     bestStreak: 0,
-    voice: "rec",
+    // the names are spoken by the device's own voice (on the iPhone the Apple voice); the recordings are a choice
+    voice: "dev",
     voiceUri: "",
-    // the recorded voice (REC_VOICES), voice 3 at the start
-    recVoice: "mls8769",
+    // the recorded voice (REC_VOICES) when the learner picks the recordings
+    recVoice: "thorsten",
+    // 2: everyone was moved back to the device voice once (it had been the recordings for a while)
+    voiceV: 2,
   },
   THEMES = {
     papier: { label: "Papierwei\xDF", paper: "#F4F6FB", card: "#FFFFFF", line: "#E3E8F0" },
@@ -10953,7 +10956,15 @@ function migrateCurriculum(s) {
 async function loadProgress() {
   try {
     const s = await window.storage.get(STORAGE_KEY);
-    if (s && s.value) return migrateCurriculum({ ...DEFAULT_STATE, ...JSON.parse(s.value) });
+    if (s && s.value) {
+      const o = JSON.parse(s.value),
+        m = { ...DEFAULT_STATE, ...o };
+      // back to the device voice once (the saved progress says whether that happened, not the defaults); of the
+      // recorded voices only Thorsten and Kerstin are left
+      (o.voiceV || 0) < 2 && ((m.voice = "dev"), (m.voiceV = 2));
+      REC_VOICES.some((v) => v.id === m.recVoice) || (m.recVoice = REC_DEFAULT);
+      return migrateCurriculum(m);
+    }
   } catch {}
   return { ...DEFAULT_STATE, curV: (CURRICULUM && CURRICULUM.version) || 0 };
 }
@@ -14951,7 +14962,7 @@ function HomeScreen({
     React.createElement(
       "div",
       { className: "ana-body", style: { color: "#9AA3B2", fontSize: 12, textAlign: "center", padding: "14px 0 26px" } },
-      "Abbildungen: OpenStax (CC BY 4.0) \xB7 3D-Modelle: BodyParts3D / Z-Anatomy (CC BY-SA) \xB7 Aussprache: Piper-Stimmen (Thorsten, Kerstin: CC0; Stimmen 3\u20136 aus Multilingual LibriSpeech: CC BY 4.0) \xB7 Fortschritt bleibt auf diesem Ger\xE4t gespeichert",
+      "Abbildungen: OpenStax (CC BY 4.0) \xB7 3D-Modelle: BodyParts3D / Z-Anatomy (CC BY-SA) \xB7 Aussprache-Aufnahmen: Piper-Stimmen Thorsten und Kerstin (CC0) \xB7 Fortschritt bleibt auf diesem Ger\xE4t gespeichert",
     ),
     // only while the lesson is still locked
     uk &&
@@ -16464,20 +16475,16 @@ const LA_ABBR = [
   // progress): on the iPhone that is the iPhone's own voice, which is stored on the phone, so it works offline. It is
   // only ever used live on the device: Apple's licence does not allow recording its voices and passing them on
   SAY = { el: null },
-  // the recorded voices, all made with Piper from free recordings, in say2/<id>/, each with every name, read as Latin
-  // (stress and sounds of the Latin names, not by German spelling rules). Voice 3 is the one used until the learner
-  // picks another
+  // the recorded voices, made with Piper from free recordings, in say2/<id>/, each with every name, read as Latin
+  // (stress and sounds of the Latin names, not by German spelling rules); for the silent switch, as the device voice
+  // is the one used
   REC_VOICES = [
-    { id: "thorsten", dir: "say2/thorsten/", label: "Stimme 1 \xB7 Thorsten (m\xE4nnlich)" },
-    { id: "kerstin", dir: "say2/kerstin/", label: "Stimme 2 \xB7 Kerstin (weiblich)" },
-    { id: "mls8769", dir: "say2/mls8769/", label: "Stimme 3 \xB7 weiblich (Standard)" },
-    { id: "mls4576", dir: "say2/mls4576/", label: "Stimme 4 \xB7 weiblich" },
-    { id: "mls3990", dir: "say2/mls3990/", label: "Stimme 5 \xB7 weiblich" },
-    { id: "mls144", dir: "say2/mls144/", label: "Stimme 6 \xB7 m\xE4nnlich" },
+    { id: "thorsten", dir: "say2/thorsten/", label: "Thorsten (m\xE4nnlich)" },
+    { id: "kerstin", dir: "say2/kerstin/", label: "Kerstin (weiblich)" },
   ],
-  REC_DEFAULT = "mls8769",
+  REC_DEFAULT = "thorsten",
   recVoiceOf = (id) => REC_VOICES.find((v) => v.id === id) || REC_VOICES.find((v) => v.id === REC_DEFAULT),
-  VOICE = { pref: "rec", uri: "", rec: REC_DEFAULT },
+  VOICE = { pref: "dev", uri: "", rec: REC_DEFAULT },
   appleTouch = () => {
     try {
       return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
