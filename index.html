@@ -10357,6 +10357,8 @@ const STORAGE_KEY = "anatomia-v1",
     claimed: [],
     xpBoost: null,
     bestStreak: 0,
+    voice: "rec",
+    voiceUri: "",
   },
   THEMES = {
     papier: { label: "Papierwei\xDF", paper: "#F4F6FB", card: "#FFFFFF", line: "#E3E8F0" },
@@ -13758,6 +13760,133 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o }) {
     ),
   );
 }
+// how the names are spoken, at the end of the menu: the recordings, which also play when the iPhone is set to silent,
+// or the device's own voice (on the iPhone the iPhone voice, stored on the phone and so offline), with a choice of
+// its German voices
+function VoiceCard({ progress: s, onVoice: sv }) {
+  const [vl, setVl] = useState(() => voicesFor("de-DE"));
+  useEffect(() => {
+    if (!speechOk()) return;
+    const e = window.speechSynthesis,
+      f = () => setVl(voicesFor("de-DE"));
+    f();
+    try {
+      e.addEventListener("voiceschanged", f);
+    } catch {}
+    // some browsers fill the list a moment later without telling
+    const t = setTimeout(f, 900);
+    return () => {
+      clearTimeout(t);
+      try {
+        e.removeEventListener("voiceschanged", f);
+      } catch {}
+    };
+  }, []);
+  if (!speechOk()) return null;
+  const dev = s.voice === "dev",
+    on = dev ? "dev" : "rec",
+    ap = appleTouch(),
+    pad = ap && (/iPad/.test(navigator.userAgent) || navigator.platform === "MacIntel"),
+    cur = (s.voiceUri && vl.find((n) => n.voiceURI === s.voiceUri)) || vl[0] || null,
+    lab = (n) =>
+      String(n.name || "Stimme").replace(/\s*\(.*\)\s*$/, "") +
+      (/premium/i.test(n.voiceURI || "") ? " (Premium)" : /enhanced/i.test(n.voiceURI || "") ? " (Erweitert)" : "") +
+      ((n.lang || "").replace("_", "-").toLowerCase() === "de-de" ? "" : ` \xB7 ${n.lang}`),
+    set = (u) => {
+      ("voice" in u && (VOICE.pref = u.voice), "voiceUri" in u && (VOICE.uri = u.voiceUri), sv && sv(u));
+    },
+    seg = (v, t) =>
+      React.createElement(
+        "button",
+        {
+          key: v,
+          onClick: () => on !== v && set({ voice: v }),
+          "aria-pressed": on === v,
+          className: "ana-body",
+          style: {
+            flex: 1,
+            padding: "8px 10px",
+            borderRadius: 999,
+            border: "none",
+            fontSize: 13.5,
+            fontWeight: 700,
+            cursor: "pointer",
+            background: on === v ? C.ink : "transparent",
+            color: on === v ? C.card : C.inkSoft,
+          },
+        },
+        t,
+      ),
+    hint = !dev
+      ? "Aufgenommene Namen: Sie spielen auch im Stumm-Modus, die Lautst\xE4rke regelst du mit den Lautst\xE4rketasten."
+      : ap
+        ? `Die Stimme deines ${pad ? "iPads" : "iPhones"}: Sie ist auf dem Ger\xE4t gespeichert und funktioniert offline. Sch\xF6nere Stimmen l\xE4dst du in den Einstellungen unter Bedienungshilfen \u203A Gesprochene Inhalte \u203A Stimmen \u203A Deutsch. H\xF6rst du im Stumm-Modus nichts, nimm \u201EAufnahme\u201C.`
+        : "Die Stimme deines Ger\xE4ts. Ob sie offline funktioniert, h\xE4ngt vom Ger\xE4t ab.";
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(SectionLabel, null, "AUSSPRACHE"),
+    React.createElement(
+      "div",
+      { style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 14, padding: 12, marginBottom: 4 } },
+      React.createElement(
+        "div",
+        { role: "group", "aria-label": "Stimme f\xFCr die Aussprache", style: { display: "flex", borderRadius: 999, padding: 3, background: C.mute } },
+        seg("dev", ap ? (pad ? "iPad-Stimme" : "iPhone-Stimme") : "Ger\xE4testimme"),
+        seg("rec", "Aufnahme"),
+      ),
+      dev &&
+        vl.length > 1 &&
+        React.createElement(
+          "label",
+          { className: "ana-body", style: { display: "flex", alignItems: "center", gap: 10, marginTop: 10, fontSize: 13.5, fontWeight: 700, color: C.ink } },
+          "Stimme",
+          React.createElement(
+            "select",
+            {
+              value: cur ? cur.voiceURI : "",
+              onChange: (e) => set({ voiceUri: e.target.value }),
+              className: "ana-body",
+              style: { flex: 1, minWidth: 0, padding: "7px 8px", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.paper, color: C.ink, fontSize: 14 },
+            },
+            vl.map((n, i) => React.createElement("option", { key: i, value: n.voiceURI }, lab(n))),
+          ),
+        ),
+      dev &&
+        !vl.length &&
+        React.createElement(
+          "div",
+          { className: "ana-body", style: { marginTop: 10, fontSize: 13, color: C.bad } },
+          "Auf diesem Ger\xE4t ist keine deutsche Stimme installiert.",
+        ),
+      React.createElement(
+        "div",
+        { style: { display: "flex", alignItems: "flex-start", gap: 10, marginTop: 10 } },
+        React.createElement("div", { className: "ana-body", style: { flex: 1, fontSize: 12.5, color: C.inkSoft, lineHeight: 1.45 } }, hint),
+        React.createElement(
+          "button",
+          {
+            onClick: () => speakTerm("Musculus sternocleidomastoideus"),
+            "aria-label": "Probe h\xF6ren",
+            className: "ana-body",
+            style: {
+              flex: "0 0 auto",
+              padding: "7px 12px",
+              borderRadius: 999,
+              border: `1.5px solid ${C.line}`,
+              background: C.card,
+              color: C.ink,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+            },
+          },
+          "\u25B6 Probe",
+        ),
+      ),
+    ),
+  );
+}
 function HomeScreen({
   progress: s,
   onOpenLesson: r,
@@ -13774,6 +13903,7 @@ function HomeScreen({
   onStats: goStats,
   onDark: tgDark,
   onSecOpen: setSO,
+  onVoice: sv,
   onReset: onReset,
   onUnlock: unlock,
   onShopFor: shopFor,
@@ -14545,6 +14675,7 @@ function HomeScreen({
             return hdr ? React.createElement(React.Fragment, { key: "f-" + v.id }, hdr, card) : card;
           }),
         ),
+    React.createElement(VoiceCard, { progress: s, onVoice: sv }),
     React.createElement(
       "div",
       { style: { textAlign: "center", paddingTop: 10 } },
@@ -16069,9 +16200,81 @@ const LA_ABBR = [
   },
   sayHas = (s) => !!s && SAY_KEYS.has(sayKey(speakText(s))),
   // the names are played as recorded audio, like a video: the iPhone's media volume sets the loudness and the silent
-  // switch does not mute them (the device voice does both the other way round). The device voice speaks what has no
-  // recording, or when the recording cannot be loaded (offline before it was ever played)
+  // switch does not mute them. The device voice speaks what has no recording, or when the recording cannot be loaded
+  // (offline before it was ever played), and every name when the learner chose it (VOICE.pref "dev", set from the
+  // progress): on the iPhone that is the iPhone's own voice, which is stored on the phone, so it works offline. It is
+  // only ever used live on the device: Apple's licence does not allow recording its voices and passing them on
   SAY = { el: null },
+  VOICE = { pref: "rec", uri: "" },
+  appleTouch = () => {
+    try {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    } catch {
+      return !1;
+    }
+  },
+  // the device's voices of a language, the best first: Premium and enhanced ones (downloaded in the iPhone settings)
+  // before the compact ones, the usual voices before the novelty ones (Eddy, Flo, Grandpa ...), the country (de-DE)
+  // before the other countries of the language; otherwise in the device's order
+  voicesFor = (r = "de-DE") => {
+    if (!speechOk()) return [];
+    try {
+      const l = r.slice(0, 2).toLowerCase(),
+        q = (n) =>
+          (/premium/i.test(n.voiceURI || "") ? 6 : /enhanced/i.test(n.voiceURI || "") ? 4 : 0) +
+          (/eloquence|novelty/i.test(n.voiceURI || "") ||
+          /\b(eddy|flo|grandma|grandpa|oma|opa|reed|rocko|sandy|shelley|albert|bahh|bells|boing|bubbles|cellos|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|kathy|fred|ralph)\b/i.test(n.name || "")
+            ? -10
+            : 0) +
+          (/anna|helena|petra|markus|yannick|martin|google|katja|hedda|conrad|amala|killian|seraphina|florian/i.test(n.name || "") ? 1 : 0) +
+          ((n.lang || "").replace("_", "-").toLowerCase() === r.toLowerCase() ? 0.5 : 0);
+      return (window.speechSynthesis.getVoices() || [])
+        .filter((n) => (n.lang || "").toLowerCase().startsWith(l))
+        .map((n, i) => ({ n, s: q(n), i }))
+        .sort((a, b) => b.s - a.s || a.i - b.i)
+        .map((x) => x.n);
+    } catch {
+      return [];
+    }
+  },
+  // the chosen voice if the device still has it, else the best one
+  pickVoice = (r = "de-DE") => {
+    const a = voicesFor(r);
+    return (VOICE.uri && a.find((n) => n.voiceURI === VOICE.uri)) || a[0] || null;
+  },
+  // the device voice plays like a video too where the system allows it: the page asks for the playback audio session
+  // (Safari 17 and later) and plays a twentieth of a second of silence, which also moves older versions into it;
+  // otherwise the iPhone's silent switch mutes the voice. Runs in the tap, before speechSynthesis.speak (an audio
+  // element may only start from a tap)
+  SILENT = { el: null },
+  preferPlayback = () => {
+    if (!appleTouch()) return;
+    try {
+      const a = navigator.audioSession;
+      a && a.type !== "playback" && (a.type = "playback");
+    } catch {}
+    try {
+      if (typeof Audio > "u") return;
+      if (!SILENT.el) {
+        const n = 400,
+          b = new Uint8Array(44 + n),
+          d = new DataView(b.buffer),
+          w = (o, t) => {
+            for (let i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i);
+          };
+        // a WAV file: 8 kHz, 8 bit, mono, 400 samples at the middle value (silence)
+        (w(0, "RIFF"), d.setUint32(4, 36 + n, !0), w(8, "WAVE"), w(12, "fmt "), d.setUint32(16, 16, !0), d.setUint16(20, 1, !0), d.setUint16(22, 1, !0),
+          d.setUint32(24, 8e3, !0), d.setUint32(28, 8e3, !0), d.setUint16(32, 1, !0), d.setUint16(34, 8, !0), w(36, "data"), d.setUint32(40, n, !0), b.fill(128, 44));
+        const el = new Audio(URL.createObjectURL(new Blob([b], { type: "audio/wav" })));
+        (el.setAttribute("playsinline", ""), (el.preload = "auto"), (SILENT.el = el));
+      }
+      try {
+        SILENT.el.currentTime = 0;
+      } catch {}
+      const p = SILENT.el.play();
+      p && p.catch && p.catch(() => {});
+    } catch {}
+  },
   speakVoice = (o, r) => {
     if (!speechOk() || !o) return;
     try {
@@ -16080,9 +16283,9 @@ const LA_ABBR = [
       const t = new SpeechSynthesisUtterance(o);
       t.lang = r;
       t.rate = 0.82;
-      const a = (e.getVoices() || []).filter((n) => (n.lang || "").toLowerCase().startsWith(r.slice(0, 2)));
-      a.length && (t.voice = a.find((n) => /google|anna|petra|markus|helena|katja/i.test(n.name)) || a[0]);
-      e.speak(t);
+      const v = pickVoice(r);
+      v && (t.voice = v);
+      (preferPlayback(), e.speak(t));
     } catch {}
   },
   speakTerm = (s, r = "de-DE") => {
@@ -16092,7 +16295,13 @@ const LA_ABBR = [
       speechOk() && window.speechSynthesis.cancel();
     } catch {}
     const e = sayKey(o);
-    if (!/^de/i.test(r) || !SAY_KEYS.has(e) || typeof Audio > "u") return speakVoice(o, r);
+    // the device voice when chosen and the device has a voice of the language (else the recording, if there is one)
+    if ((VOICE.pref === "dev" && voicesFor(r).length > 0) || !/^de/i.test(r) || !SAY_KEYS.has(e) || typeof Audio > "u") {
+      try {
+        SAY.el && SAY.el.pause();
+      } catch {}
+      return speakVoice(o, r);
+    }
     try {
       const t = SAY.el || (SAY.el = new Audio());
       t.pause();
@@ -18151,6 +18360,10 @@ function AnatomiaApp() {
         (p && p.setAttribute("content", s.dark ? "#11161E" : "#1E2836"), (document.documentElement.style.colorScheme = s.dark ? "dark" : "light"));
       } catch {}
     }, [s && s.theme, s && s.pathSkin, s && s.dark]));
+  // the voice for the names, for speakTerm, which every screen calls
+  useEffect(() => {
+    s && ((VOICE.pref = s.voice === "dev" ? "dev" : "rec"), (VOICE.uri = s.voiceUri || ""));
+  }, [s && s.voice, s && s.voiceUri]);
   // save a finished round (u: the progress as the round leaves it, worked out from s), then count it for the daily
   // challenges (ev). Laid over the latest progress: an answer saved in the same moment (the last flashcard) stays, and
   // numbers the round changed (XP, Taler) are added as differences
@@ -18231,6 +18444,13 @@ function AnatomiaApp() {
     setSecOpen = (u) => {
       r((p) => {
         const f = { ...p, secOpen: u };
+        return (saveProgress(f), f);
+      });
+    },
+    // the voice for the names (VoiceCard): voice "rec" or "dev", voiceUri the chosen device voice
+    setVoice = (u) => {
+      r((p) => {
+        const f = { ...p, ...u };
         return (saveProgress(f), f);
       });
     };
@@ -18429,6 +18649,7 @@ function AnatomiaApp() {
       onStats: goStats,
       onDark: toggleDark,
       onSecOpen: setSecOpen,
+      onVoice: setVoice,
       onReset: () => e({ name: "reset" }),
       onUnlock: unlockLesson,
       onShopFor: (u) => e({ name: "shop", focus: "tokens", pend: u }),
