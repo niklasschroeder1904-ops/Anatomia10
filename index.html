@@ -10359,6 +10359,8 @@ const STORAGE_KEY = "anatomia-v1",
     bestStreak: 0,
     voice: "rec",
     voiceUri: "",
+    // the recorded voice (REC_VOICES), voice 3 at the start
+    recVoice: "mls8769",
   },
   THEMES = {
     papier: { label: "Papierwei\xDF", paper: "#F4F6FB", card: "#FFFFFF", line: "#E3E8F0" },
@@ -13764,7 +13766,9 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o }) {
 // or the device's own voice (on the iPhone the iPhone voice, stored on the phone and so offline), with a choice of
 // its German voices
 function VoiceCard({ progress: s, onVoice: sv }) {
-  const [vl, setVl] = useState(() => voicesFor("de-DE"));
+  const [vl, setVl] = useState(() => voicesFor("de-DE")),
+    [dl, setDl] = useState(null),
+    busy = useRef(!1);
   useEffect(() => {
     if (!speechOk()) return;
     const e = window.speechSynthesis,
@@ -13782,9 +13786,45 @@ function VoiceCard({ progress: s, onVoice: sv }) {
       } catch {}
     };
   }, []);
-  if (!speechOk()) return null;
-  const dev = s.voice === "dev",
+  // without a device voice (no speech in the browser) only the recordings are offered
+  const can = speechOk(),
+    dev = can && s.voice === "dev",
     on = dev ? "dev" : "rec",
+    rv = recVoiceOf(s.recVoice),
+    sw = (() => {
+      try {
+        return !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+      } catch {
+        return !1;
+      }
+    })(),
+    // every name of the chosen recorded voice into the app's storage at once (the service worker keeps what is loaded),
+    // so the voice also works offline for names never played yet; four at a time
+    saveAll = async () => {
+      if (busy.current) return;
+      busy.current = !0;
+      const v = rv,
+        ks = [...SAY_KEYS];
+      let i = 0,
+        n = 0,
+        err = 0;
+      setDl({ id: v.id, n: 0, total: ks.length });
+      const run = async () => {
+        for (; i < ks.length; ) {
+          const k = ks[i++];
+          try {
+            const r = await fetch(`${v.dir}${k}.m4a`);
+            r.ok ? await r.arrayBuffer() : err++;
+          } catch {
+            err++;
+          }
+          ++n % 40 || setDl({ id: v.id, n, total: ks.length });
+        }
+      };
+      await Promise.all([run(), run(), run(), run()]);
+      busy.current = !1;
+      setDl({ id: v.id, n, total: ks.length, done: !0, err });
+    },
     ap = appleTouch(),
     pad = ap && (/iPad/.test(navigator.userAgent) || navigator.platform === "MacIntel"),
     cur = (s.voiceUri && vl.find((n) => n.voiceURI === s.voiceUri)) || vl[0] || null,
@@ -13793,8 +13833,28 @@ function VoiceCard({ progress: s, onVoice: sv }) {
       (/premium/i.test(n.voiceURI || "") ? " (Premium)" : /enhanced/i.test(n.voiceURI || "") ? " (Erweitert)" : "") +
       ((n.lang || "").replace("_", "-").toLowerCase() === "de-de" ? "" : ` \xB7 ${n.lang}`),
     set = (u) => {
-      ("voice" in u && (VOICE.pref = u.voice), "voiceUri" in u && (VOICE.uri = u.voiceUri), sv && sv(u));
+      ("voice" in u && (VOICE.pref = u.voice),
+        "voiceUri" in u && (VOICE.uri = u.voiceUri),
+        "recVoice" in u && (VOICE.rec = u.recVoice),
+        sv && sv(u));
     },
+    // a row with a list to choose from (the device's voices, or the recorded voices)
+    pickRow = (value, opts, onPick) =>
+      React.createElement(
+        "label",
+        { className: "ana-body", style: { display: "flex", alignItems: "center", gap: 10, marginTop: 10, fontSize: 13.5, fontWeight: 700, color: C.ink } },
+        "Stimme",
+        React.createElement(
+          "select",
+          {
+            value,
+            onChange: (e) => onPick(e.target.value),
+            className: "ana-body",
+            style: { flex: 1, minWidth: 0, padding: "7px 8px", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.paper, color: C.ink, fontSize: 14 },
+          },
+          opts.map(([v, t], i) => React.createElement("option", { key: i, value: v }, t)),
+        ),
+      ),
     seg = (v, t) =>
       React.createElement(
         "button",
@@ -13829,28 +13889,54 @@ function VoiceCard({ progress: s, onVoice: sv }) {
     React.createElement(
       "div",
       { style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 14, padding: 12, marginBottom: 4 } },
-      React.createElement(
-        "div",
-        { role: "group", "aria-label": "Stimme f\xFCr die Aussprache", style: { display: "flex", borderRadius: 999, padding: 3, background: C.mute } },
-        seg("dev", ap ? (pad ? "iPad-Stimme" : "iPhone-Stimme") : "Ger\xE4testimme"),
-        seg("rec", "Aufnahme"),
-      ),
+      can &&
+        React.createElement(
+          "div",
+          { role: "group", "aria-label": "Stimme f\xFCr die Aussprache", style: { display: "flex", borderRadius: 999, padding: 3, background: C.mute } },
+          seg("dev", ap ? (pad ? "iPad-Stimme" : "iPhone-Stimme") : "Ger\xE4testimme"),
+          seg("rec", "Aufnahme"),
+        ),
       dev &&
         vl.length > 1 &&
+        pickRow(
+          cur ? cur.voiceURI : "",
+          vl.map((n) => [n.voiceURI, lab(n)]),
+          (v) => set({ voiceUri: v }),
+        ),
+      !dev &&
+        pickRow(
+          rv.id,
+          REC_VOICES.map((v) => [v.id, v.label]),
+          (v) => set({ recVoice: v }),
+        ),
+      !dev &&
+        sw &&
         React.createElement(
-          "label",
-          { className: "ana-body", style: { display: "flex", alignItems: "center", gap: 10, marginTop: 10, fontSize: 13.5, fontWeight: 700, color: C.ink } },
-          "Stimme",
-          React.createElement(
-            "select",
-            {
-              value: cur ? cur.voiceURI : "",
-              onChange: (e) => set({ voiceUri: e.target.value }),
-              className: "ana-body",
-              style: { flex: 1, minWidth: 0, padding: "7px 8px", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.paper, color: C.ink, fontSize: 14 },
+          "button",
+          {
+            onClick: saveAll,
+            disabled: !!(dl && !dl.done),
+            className: "ana-body",
+            style: {
+              marginTop: 10,
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: 12,
+              border: `1.5px dashed ${C.line}`,
+              background: "transparent",
+              color: dl && dl.done && dl.id === rv.id && !dl.err ? C.good : C.inkSoft,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
             },
-            vl.map((n, i) => React.createElement("option", { key: i, value: n.voiceURI }, lab(n))),
-          ),
+          },
+          dl && !dl.done
+            ? `Wird gespeichert \u2026 ${dl.n} von ${dl.total}`
+            : dl && dl.id === rv.id
+              ? dl.err
+                ? `${dl.total - dl.err} von ${dl.total} gespeichert \u2013 nochmal tippen f\xFCr den Rest`
+                : `\u2713 Alle ${dl.total} Namen offline gespeichert`
+              : "\u2B07 Alle Namen dieser Stimme offline speichern (ca. 20 MB)",
         ),
       dev &&
         !vl.length &&
@@ -14692,7 +14778,7 @@ function HomeScreen({
     React.createElement(
       "div",
       { className: "ana-body", style: { color: "#9AA3B2", fontSize: 12, textAlign: "center", padding: "14px 0 26px" } },
-      "Abbildungen: OpenStax (CC BY 4.0) \xB7 3D-Modelle: BodyParts3D / Z-Anatomy (CC BY-SA) \xB7 Fortschritt bleibt auf diesem Ger\xE4t gespeichert",
+      "Abbildungen: OpenStax (CC BY 4.0) \xB7 3D-Modelle: BodyParts3D / Z-Anatomy (CC BY-SA) \xB7 Aussprache: Piper-Stimmen (Thorsten, Kerstin: CC0; Stimmen 3\u20136 aus Multilingual LibriSpeech: CC BY 4.0) \xB7 Fortschritt bleibt auf diesem Ger\xE4t gespeichert",
     ),
     // only while the lesson is still locked
     uk &&
@@ -16205,7 +16291,19 @@ const LA_ABBR = [
   // progress): on the iPhone that is the iPhone's own voice, which is stored on the phone, so it works offline. It is
   // only ever used live on the device: Apple's licence does not allow recording its voices and passing them on
   SAY = { el: null },
-  VOICE = { pref: "rec", uri: "" },
+  // the recorded voices, all made with Piper from free recordings: voice 1 in say/, the others in say/<id>/, each with
+  // every name. Voice 3 is the one used until the learner picks another
+  REC_VOICES = [
+    { id: "thorsten", dir: "say/", label: "Stimme 1 \xB7 Thorsten (m\xE4nnlich)" },
+    { id: "kerstin", dir: "say/kerstin/", label: "Stimme 2 \xB7 Kerstin (weiblich)" },
+    { id: "mls8769", dir: "say/mls8769/", label: "Stimme 3 \xB7 weiblich (Standard)" },
+    { id: "mls4576", dir: "say/mls4576/", label: "Stimme 4 \xB7 weiblich" },
+    { id: "mls3990", dir: "say/mls3990/", label: "Stimme 5 \xB7 weiblich" },
+    { id: "mls144", dir: "say/mls144/", label: "Stimme 6 \xB7 m\xE4nnlich" },
+  ],
+  REC_DEFAULT = "mls8769",
+  recVoiceOf = (id) => REC_VOICES.find((v) => v.id === id) || REC_VOICES.find((v) => v.id === REC_DEFAULT),
+  VOICE = { pref: "rec", uri: "", rec: REC_DEFAULT },
   appleTouch = () => {
     try {
       return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -16306,7 +16404,7 @@ const LA_ABBR = [
       const t = SAY.el || (SAY.el = new Audio());
       t.pause();
       t.onerror = null;
-      t.src = `say/${e}.m4a`;
+      t.src = `${recVoiceOf(VOICE.rec).dir}${e}.m4a`;
       t.preload = "auto";
       let a = !1;
       const n = () => {
@@ -18362,8 +18460,8 @@ function AnatomiaApp() {
     }, [s && s.theme, s && s.pathSkin, s && s.dark]));
   // the voice for the names, for speakTerm, which every screen calls
   useEffect(() => {
-    s && ((VOICE.pref = s.voice === "dev" ? "dev" : "rec"), (VOICE.uri = s.voiceUri || ""));
-  }, [s && s.voice, s && s.voiceUri]);
+    s && ((VOICE.pref = s.voice === "dev" ? "dev" : "rec"), (VOICE.uri = s.voiceUri || ""), (VOICE.rec = recVoiceOf(s.recVoice).id));
+  }, [s && s.voice, s && s.voiceUri, s && s.recVoice]);
   // save a finished round (u: the progress as the round leaves it, worked out from s), then count it for the daily
   // challenges (ev). Laid over the latest progress: an answer saved in the same moment (the last flashcard) stays, and
   // numbers the round changed (XP, Taler) are added as differences
