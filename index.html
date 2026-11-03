@@ -16464,15 +16464,16 @@ const LA_ABBR = [
   // progress): on the iPhone that is the iPhone's own voice, which is stored on the phone, so it works offline. It is
   // only ever used live on the device: Apple's licence does not allow recording its voices and passing them on
   SAY = { el: null },
-  // the recorded voices, all made with Piper from free recordings: voice 1 in say/, the others in say/<id>/, each with
-  // every name. Voice 3 is the one used until the learner picks another
+  // the recorded voices, all made with Piper from free recordings, in say2/<id>/, each with every name, read as Latin
+  // (stress and sounds of the Latin names, not by German spelling rules). Voice 3 is the one used until the learner
+  // picks another
   REC_VOICES = [
-    { id: "thorsten", dir: "say/", label: "Stimme 1 \xB7 Thorsten (m\xE4nnlich)" },
-    { id: "kerstin", dir: "say/kerstin/", label: "Stimme 2 \xB7 Kerstin (weiblich)" },
-    { id: "mls8769", dir: "say/mls8769/", label: "Stimme 3 \xB7 weiblich (Standard)" },
-    { id: "mls4576", dir: "say/mls4576/", label: "Stimme 4 \xB7 weiblich" },
-    { id: "mls3990", dir: "say/mls3990/", label: "Stimme 5 \xB7 weiblich" },
-    { id: "mls144", dir: "say/mls144/", label: "Stimme 6 \xB7 m\xE4nnlich" },
+    { id: "thorsten", dir: "say2/thorsten/", label: "Stimme 1 \xB7 Thorsten (m\xE4nnlich)" },
+    { id: "kerstin", dir: "say2/kerstin/", label: "Stimme 2 \xB7 Kerstin (weiblich)" },
+    { id: "mls8769", dir: "say2/mls8769/", label: "Stimme 3 \xB7 weiblich (Standard)" },
+    { id: "mls4576", dir: "say2/mls4576/", label: "Stimme 4 \xB7 weiblich" },
+    { id: "mls3990", dir: "say2/mls3990/", label: "Stimme 5 \xB7 weiblich" },
+    { id: "mls144", dir: "say2/mls144/", label: "Stimme 6 \xB7 m\xE4nnlich" },
   ],
   REC_DEFAULT = "mls8769",
   recVoiceOf = (id) => REC_VOICES.find((v) => v.id === id) || REC_VOICES.find((v) => v.id === REC_DEFAULT),
