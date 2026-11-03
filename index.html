@@ -17286,8 +17286,9 @@ function QuizScreen({
         "div",
         { style: { display: "flex", flexDirection: "column", gap: 9, marginTop: 12 } },
         M.options.map((E, N) => {
-          if (x.includes(N)) return null;
-          const Z = I ? (E.correct ? "right" : N === u ? "wrong" : "dim") : "idle",
+          // the two wrong answers the joker took away stay in place, faded and no longer tappable
+          const J = x.includes(N),
+            Z = I ? (E.correct ? "right" : N === u ? "wrong" : "dim") : "idle",
             T = {
               idle: { bg: C.card, bd: C.line, tx: C.ink },
               right: { bg: C.okBg, bd: C.good, tx: C.okText },
@@ -17298,9 +17299,12 @@ function QuizScreen({
             "button",
             {
               key: N,
-              onClick: () => D(N),
+              onClick: () => J || D(N),
+              disabled: J,
+              "aria-disabled": J || void 0,
               className: `ana-body ${Z === "wrong" ? "ana-shake" : ""}`,
               "data-ok": typeof window < "u" && window.__anaTest && E.correct ? "1" : void 0,
+              "data-joker": J ? "1" : void 0,
               style: {
                 textAlign: "left",
                 padding: "13px 15px",
@@ -17311,7 +17315,10 @@ function QuizScreen({
                 border: `2px solid ${T.bd}`,
                 borderBottom: `4px solid ${T.bd}`,
                 borderRadius: 14,
-                cursor: I ? "default" : "pointer",
+                cursor: I || J ? "default" : "pointer",
+                opacity: J ? 0.4 : 1,
+                pointerEvents: J ? "none" : void 0,
+                transition: "opacity 0.25s",
               },
             },
             E.label,
