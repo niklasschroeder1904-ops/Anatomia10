@@ -9225,7 +9225,17 @@ const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
     return QF_OK.get(s);
   },
   // German and Latin name alike ("Medianebene" - "Planum medianum"): a name question would give itself away
-  termTwin = (s) => !!s.fact && (namesTerm(s.de, s.la) || namesTerm(s.la, s.de)),
+  // German and Latin name alike, also when a German compound holds the first six letters of a longer Latin word
+  // ("Epiphysenlinie" - "Linea epiphysialis", "Trapezmuskel" - "M. trapezius")
+  twinNames = (de, la) => {
+    // the same word in both languages ("Axon", "Thymus", "Foramen ovale")
+    if (bareLabel(de || "").toLowerCase() === bareLabel(la || "").toLowerCase() || namesTerm(de, la) || namesTerm(la, de)) return !0;
+    const D = stemNorm(bareLabel(de || ""));
+    return (bareLabel(la || "").toLowerCase().match(/[a-z\xE4\xF6\xFC\xDF]+/g) || [])
+      .filter((t) => t.length >= 7 && !MASK_GENERIC.has(t))
+      .some((t) => D.includes(stemNorm(t).slice(0, 6)));
+  },
+  termTwin = (s) => !!s.fact && twinNames(s.de, s.la),
   whatQ = (s) => (s.term ? "Welcher Begriff ist gemeint?" : "Welche Struktur ist gemeint?"),
   hasSchema = (s) => !!(s.figure && FIGURES[s.figure]);
 // answer options must not give themselves away by their form: pair "A / B", brackets, comma,
@@ -9248,6 +9258,155 @@ const bareLabel = (s) => (s || "").replace(/\s*\([^()]*\)/g, "").trim(),
     (a.h !== b.h && (FORM_HEAD.test(a.h) || FORM_HEAD.test(b.h)) ? 1.2 : 0) +
     Math.min(2, 0.6 * Math.abs(a.n - b.n)) +
     Math.min(1.5, Math.abs(a.l - b.l) / 18);
+// harder wrong answers: of the same kind as the right one (a bone for a bone, a line for a line: from the first Latin
+// word, else from the end of the German name) and alike in their words (Epiphysis proximalis for Linea epiphysialis);
+// never the same name in another form (Condylus - Condyli, M. - Musculus) or with the same German name
+const KIND_LA = {
+    os: "bone", ossa: "bone", musculus: "muscle", musculi: "muscle", m: "muscle", mm: "muscle", arteria: "artery", arteriae: "artery",
+    a: "artery", aa: "artery", vena: "vein", venae: "vein", v: "vein", vv: "vein", nervus: "nerve", nervi: "nerve", n: "nerve", nn: "nerve",
+    ligamentum: "ligament", ligamenta: "ligament", lig: "ligament", ligg: "ligament", linea: "line", fossa: "fossa", foramen: "foramen",
+    canalis: "canal", sulcus: "sulcus", processus: "process", proc: "process", tuberculum: "tubercle", tuberositas: "tubercle",
+    tuber: "tubercle", condylus: "condyle", condyli: "condyle", epicondylus: "condyle", facies: "facies", margo: "margin",
+    incisura: "notch", spina: "spine", crista: "crest", glandula: "gland", gl: "gland", nucleus: "nucleus", gyrus: "gyrus",
+    lobus: "lobe", ductus: "duct", articulatio: "joint", cartilago: "cartilage", bursa: "bursa", plexus: "plexus",
+    ganglion: "ganglion", ramus: "branch", r: "branch", rr: "branch", truncus: "trunk", sinus: "sinus", valva: "valve",
+    valvula: "valve", planum: "plane",
+  },
+  KIND_DE = [
+    [/(knochen|bein)$/, "bone"], [/muskeln?$/, "muscle"], [/(arterie|arterien|schlagader)$/, "artery"], [/venen?$/, "vein"],
+    [/nerv$/, "nerve"], [/band$/, "ligament"], [/linie$/, "line"], [/grube$/, "fossa"], [/loch$/, "foramen"], [/kanal$/, "canal"],
+    [/(furche|rinne)$/, "sulcus"], [/fortsatz$/, "process"], [/(h\xF6cker|rauigkeit)$/, "tubercle"], [/knorren$/, "condyle"],
+    [/fl\xE4che$/, "facies"], [/rand$/, "margin"], [/einschnitt$/, "notch"], [/stachel$/, "spine"], [/(kamm|leiste)$/, "crest"],
+    [/dr\xFCse$/, "gland"], [/kern$/, "nucleus"], [/windung$/, "gyrus"], [/lappen$/, "lobe"], [/gang$/, "duct"], [/gelenk$/, "joint"],
+    [/knorpel$/, "cartilage"], [/schleimbeutel$/, "bursa"], [/geflecht$/, "plexus"], [/knoten$/, "ganglion"], [/ast$/, "branch"],
+    [/stamm$/, "trunk"], [/klappe$/, "valve"], [/ebene$/, "plane"],
+  ],
+  KIND_C = new WeakMap(),
+  kindOf = (i) => {
+    if (!i || typeof i != "object") return null;
+    if (KIND_C.has(i)) return KIND_C.get(i);
+    // the German head word: the last one, or the one before "des", "der", "am" ... ("Hautmuskel des Halses")
+    const h = (bareLabel(i.la || "").toLowerCase().match(/^[a-z]+/) || [""])[0],
+      dw = bareLabel(i.de || "").toLowerCase().match(/[a-z\xE4\xF6\xFC\xDF]+/g) || [],
+      pi = dw.findIndex((x, k) => k > 0 && /^(des|der|dem|den|vom|von|am|an|im|in|zum|zur|f\xFCr|mit)$/.test(x)),
+      w = (pi > 0 ? dw[pi - 1] : dw[dw.length - 1]) || "",
+      k = KIND_LA[h] || (KIND_DE.find(([re]) => re.test(w)) || [])[1] || null;
+    return (KIND_C.set(i, k), k);
+  },
+  // the specific words of a name, for likeness (not kinds, sides, sizes: Musculus, proximalis, Muskel, große)
+  SIM_SKIP = new Set([
+    ...Object.keys(KIND_LA),
+    ..."proximalis distalis proximale distale superior inferior anterior posterior medialis lateralis medius media interna externa internus externus internum externum major minor communis profundus profunda superficialis longus longa brevis magnus magna dexter dextra sinister sinistra caput corpus collum basis apex pars obere oberer untere unterer vordere vorderer hintere hinterer gro\xDFe gro\xDFer kleine kleiner innere innerer \xE4u\xDFere \xE4u\xDFerer mittlere mittlerer rechte linke".split(" "),
+    // German kinds and little words: "Nerv" does not make the Darmbein-Leisten-Nerv like the Nervenfaserb\xFCndel
+    ..."nerv nerven muskel muskeln arterie arterien vene venen knochen bein band b\xE4nder linie grube loch kanal furche rinne fortsatz h\xF6cker knorren fl\xE4che rand dr\xFCse kern lappen gang gelenk knorpel geflecht knoten stamm klappe ebene neben unter \xFCber ober hinter zwischen ohne oder beim durch gegen".split(" "),
+  ]),
+  // names are taken apart once (the same names come again in every quiz)
+  TOKS = { sim: new Map(), all: new Map() },
+  memo = (m, t, f) => {
+    const k = t || "";
+    let v = m.get(k);
+    return v || (m.size > 30000 && m.clear(), m.set(k, (v = f(k))), v);
+  },
+  simToks = (t) => memo(TOKS.sim, t, (k) => (bareLabel(k).toLowerCase().match(/[a-z\xE4\xF6\xFC\xDF]+/g) || []).filter((w) => w.length >= 4 && !SIM_SKIP.has(w)).map(stemNorm)),
+  cpLen = (a, b) => {
+    let k = 0;
+    for (; k < a.length && k < b.length && a[k] === b[k]; ) k++;
+    return k;
+  },
+  tokLike = (a, b) => {
+    const k = cpLen(a, b);
+    return k >= 5 || (k >= 4 && k >= Math.min(a.length, b.length));
+  },
+  simOf = (A, B) => A.filter((a) => B.some((b) => tokLike(a, b))).length,
+  // all words of a name with abbreviations written out, for "the same name in another form"
+  allToks = (t) =>
+    memo(TOKS.all, t, (k) => {
+      let r = bareLabel(k);
+      (typeof LA_ABBR < "u" ? LA_ABBR : []).forEach(([o, e]) => (r = r.replace(o, e)));
+      // numbers count as words: Areae 1, 2, 3 are not Areae 44, 45
+      return (r.toLowerCase().match(/[a-z\xE4\xF6\xFC\xDF]+|\d+/g) || []).map(stemNorm);
+    }),
+  // word by word alike apart from the ending: singular and plural (Vena - Venae, Lebervene - Lebervenen), M. - Musculus
+  tokSame = (a, b) => {
+    const k = cpLen(a, b),
+      n = Math.max(a.length, b.length);
+    return a === b || (k >= 4 && k >= n - 2) || (k >= 3 && k >= n - 1);
+  },
+  sameToks = (A, B) => A.length > 0 && A.length === B.length && A.every((a, i) => tokSame(a, B[i])),
+  // the answer with only a side or position added is the answer too: A. pulmonalis dextra is a Lungenarterie,
+  // V. cava superior a Hohlvene (a part or branch, R. dorsalis n. ulnaris, is something else and may be offered)
+  INST = new Set(
+    "dexter dextra dextrum dextri dextrae sinister sinistra sinistrum sinistri sinistrae superior inferior anterior posterior medialis lateralis medius media medium interna externa internus externus internum externum major minor communis profundus profunda profundum superficialis longus longa longum brevis magnus magna magnum proximalis distalis prima primus primum secunda secundus secundum tertia tertius tertium quarta quartus quinta quintus sexta septima octava nona decima undecima duodecima"
+      .split(" ")
+      .map(stemNorm),
+  ),
+  subOf = (x, y) => {
+    const A = allToks(x.la),
+      B = allToks(y.la);
+    if (!(B.length && A.length > B.length)) return !1;
+    const used = new Set();
+    for (const b of B) {
+      const i = A.findIndex((a, k) => !used.has(k) && tokSame(a, b));
+      if (i < 0) return !1;
+      used.add(i);
+    }
+    return A.every((a, k) => used.has(k) || INST.has(a) || /^\d+$/.test(a));
+  },
+  // the counterpart: the same name with another side or position (Epiphysis proximalis - distalis)
+  counterOf = (x, y) => {
+    const A = allToks(x.la),
+      B = allToks(y.la);
+    return A.length > 0 && A.length === B.length && A.some((a, i) => !tokSame(a, B[i])) && A.every((a, i) => tokSame(a, B[i]) || (INST.has(a) && INST.has(B[i])));
+  },
+  // a definition that says where (oben, rechts, k\xF6rpernah ...) can tell counterparts apart
+  SAYS_WHERE = /proximal|distal|k\xF6rpernah|k\xF6rperfern|rumpfnah|rumpffern|\b(oben|unten|vorn|vorne|hinten|rechts|links|innen|au\xDFen|oberhalb|unterhalb|seitlich|mittig)\b|\b(obere|oberer|oberen|untere|unterer|unteren|vordere|vorderer|vorderen|hintere|hinterer|hinteren|rechte|rechter|rechten|linke|linker|linken|innere|innerer|inneren|\xE4u\xDFere|\xE4u\xDFerer|\xE4u\xDFeren|mittlere|mittlerer|mittleren|gro\xDFe|gro\xDFer|kleine|kleiner|tiefe|tiefer|oberfl\xE4chliche|lange|langer|kurze|kurzer)\b|medial|lateral|superior|inferior|anterior|posterior|dext|sinist|kopfw\xE4rts|fu\xDFw\xE4rts|ventral|dorsal|kranial|kaudal/i,
+  deKey = (t) => bareLabel(t || "").toLowerCase(),
+  sameItem = (x, y) =>
+    !!x && !!y && x !== y && (sameToks(allToks(x.la), allToks(y.la)) || (!!x.de && (deKey(x.de) === deKey(y.de) || sameToks(allToks(x.de), allToks(y.de))))),
+  // wrong answers from other lessons too, for questions without a picture: of the same kind in the same body region,
+  // or alike in their words anywhere (Linea aspera, Epiphysis distalis for Linea epiphysialis); a little behind the
+  // lesson's own, those of other regions further behind. Not for the basics (their terms are of another sort)
+  KIN = { all: null },
+  kinAll = () =>
+    KIN.all ||
+    (KIN.all = (() => {
+      const seen = new Set(),
+        out = [];
+      for (const L of ALL_LESSONS)
+        if (!L.term)
+          for (const it of L.items) {
+            const k = allToks(it.la).join(" ");
+            if (!k || seen.has(k)) continue;
+            seen.add(k);
+            out.push({ it, key: k, ta: allToks(it.la), td: allToks(it.de), dn: deKey(it.de), g: regionOf(L), kd: kindOf(it), sl: simToks(it.la), sd: simToks(it.de) });
+          }
+      return out;
+    })()),
+  // lg: the language of the options ("la" or "de"), in which the words are compared
+  kinFor = (s, r, lg) => {
+    if (!s || !r || r.term) return [];
+    const g = regionOf(r),
+      kd = kindOf(s),
+      sl = simToks(s.la),
+      sd = simToks(s.de),
+      own = new Set(r.items.map((i) => allToks(i.la).join(" "))),
+      sA = allToks(s.la),
+      sT = allToks(s.de),
+      sD = deKey(s.de),
+      c = [];
+    for (const x of kinAll()) {
+      if (own.has(x.key) || (sD && x.dn === sD) || sameToks(sA, x.ta) || sameToks(sT, x.td) || subOf(x.it, s)) continue;
+      const sim = lg === "de" ? simOf(sd, x.sd) : simOf(sl, x.sl),
+        ks = !!kd && x.kd === kd,
+        rg = x.g === g;
+      if (!(sim || (ks && rg)) || (kd && x.kd && x.kd !== kd && !sim)) continue;
+      c.push({ x, v: 2 * Math.min(2, sim) + (ks ? 1.5 : 0) + (rg ? 1 : 0) + Math.random() });
+    }
+    return c
+      .sort((a, b) => b.v - a.v)
+      .slice(0, 8)
+      .map(({ x }) => ({ ...x.it, __pen: x.g === g ? 0.4 : 0.8 }));
+  };
 function pickD(s, r, o, e = 3, syn = null) {
   const F0 = formOf(o(r)),
     // a German name of word parts for one Latin term ("Binde- und Stützgewebe" for Textus connectivus) is one name, not a list
@@ -9261,9 +9420,22 @@ function pickD(s, r, o, e = 3, syn = null) {
     G0 = G(r),
     seen = new Set([K(o(r))]),
     c = [],
+    kR = kindOf(r),
+    tR = simToks(o(r)),
+    // same kind closer, another kind further away; shared word stems closer; the answer in another form last
+    kinD = (n, i) => {
+      const kn = kindOf(n.__parts ? n.__parts[0] : n);
+      return (
+        -0.9 * Math.min(2, simOf(tR, simToks(i))) +
+        (kR && kn ? (kn === kR ? -0.8 : 1.2) : 0) +
+        ((n.__parts || [n]).some((x) => sameItem(x, r) || subOf(x, r)) ? 20 : 0)
+      );
+    },
     add = (n, p) => {
       const i = o(n);
-      i && !seen.has(K(i)) && (seen.add(K(i)), c.push({ n, d: formDist(F, formOf(i)) + p + (G(n) !== G0 ? 2.5 : 0) + Math.random() * 0.9 }));
+      i &&
+        !seen.has(K(i)) &&
+        (seen.add(K(i)), c.push({ n, d: formDist(F, formOf(i)) + p + (G(n) !== G0 ? 2.5 : 0) + kinD(n, i) + Math.random() * 0.9 }));
     };
   s.forEach((n) => add(n, n.__pen || 0));
   // a pair answer ("Rotatio interna / externa") or a list ("Pons, Cerebellum", "Kyphose und Lordose") needs
@@ -9558,7 +9730,7 @@ function makeQuestion(s, r, o) {
     };
   }
   // the asked name already contains the answer ("Medianebene" - "Planum medianum"): ask for the definition instead
-  (o === "term-de" || o === "term-la") && s.fact && (namesTerm(s.de, s.la) || namesTerm(s.la, s.de)) && (o = "fact");
+  (o === "term-de" || o === "term-la") && termTwin(s) && (o = "fact");
   if (o === "fact") {
     // the definition without the parts that name the answer; German answers only when it does not say the German name
     // either (also not as parts of a compound, "Rumpf ... entfernt" for rumpffern)
@@ -9567,7 +9739,7 @@ function makeQuestion(s, r, o) {
       PD = PD0 && !namesDe(PD0, s.de) ? PD0 : null;
     if (!PL && !PD) {
       // nothing clear is left of the definition: ask the name, or show the picture when the names are alike
-      const cg = namesTerm(s.de, s.la) || namesTerm(s.la, s.de),
+      const cg = twinNames(s.de, s.la),
         pm = (quizMarksFor(r.id) || {})[s.id] && platesFor(r.id).length;
       if (!cg) return makeQuestion(s, r, Math.random() < 0.5 ? "term-de" : "term-la");
       if (pm || r.figure) return makeQuestion(s, r, "fig");
@@ -9587,7 +9759,8 @@ function makeQuestion(s, r, o) {
           return W.includes(v.slice(0, Math.max(5, v.length - 2)));
         });
       },
-      q = (d) => !namesTerm(P, d.la) && !nd(d.de);
+      w0 = SAYS_WHERE.test(P),
+      q = (d) => !namesTerm(P, d.la) && !nd(d.de) && (w0 || !counterOf(d, s));
     return {
       ...n,
       prompt: P,
@@ -9597,7 +9770,7 @@ function makeQuestion(s, r, o) {
         [
           { label: l(s), correct: !0 },
           ...pickD(
-            a.map((d) => (q(d) ? d : { ...d, __pen: (d.__pen || 0) + 10 })),
+            [...a, ...kinFor(s, r, i ? "de" : "la")].map((d) => (q(d) ? d : { ...d, __pen: (d.__pen || 0) + 10 })),
             s,
             l,
             3,
@@ -9613,13 +9786,13 @@ function makeQuestion(s, r, o) {
         ...n,
         prompt: `Wie lautet der ${r.term || "lateinische Name"} f\xFCr \u201E${s.de}\u201C?`,
         showFig: !1,
-        options: optionsOf([{ label: s.la, correct: !0 }, ...pickD(a, s, (i) => i.la, 3, r.items).map((i) => ({ label: i.la, correct: !1 }))], !0),
+        options: optionsOf([{ label: s.la, correct: !0 }, ...pickD([...a, ...kinFor(s, r, "la")], s, (i) => i.la, 3, r.items).map((i) => ({ label: i.la, correct: !1 }))], !0),
       }
     : {
         ...n,
         prompt: `Was bedeutet \u201E${s.la}\u201C?`,
         showFig: !1,
-        options: optionsOf([{ label: s.de, correct: !0 }, ...pickD(a, s, (i) => i.de, 3, r.items).map((i) => ({ label: i.de, correct: !1 }))], !0),
+        options: optionsOf([{ label: s.de, correct: !0 }, ...pickD([...a, ...kinFor(s, r, "de")], s, (i) => i.de, 3, r.items).map((i) => ({ label: i.de, correct: !1 }))], !0),
       };
 }
 const ABBR_FULL = [
