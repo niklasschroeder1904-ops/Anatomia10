@@ -10599,6 +10599,9 @@ const STORAGE_KEY = "anatomia-v1",
     recVoice: "thorsten",
     // 2: everyone was moved back to the device voice once (it had been the recordings for a while)
     voiceV: 2,
+    // streak gifts: the day of the streak paid up to, and the gift to show once on the next result screen
+    streakGift: 0,
+    streakNote: null,
   },
   THEMES = {
     papier: { label: "Papierwei\xDF", paper: "#F4F6FB", card: "#FFFFFF", line: "#E3E8F0" },
@@ -10886,6 +10889,21 @@ const STORAGE_KEY = "anatomia-v1",
     const o = achState(s, r);
     return o.done && !o.claimed;
   }).length;
+// ---------- streak gifts: unlock tokens when the streak reaches 5, 10, 20, 30 ... days in a row: 1 at 5 and at 10 days,
+// 2 at every further 10 days, 3 at every 50th day; each once per streak (after a break they come again). streakGift in
+// the progress: the last day of the streak already paid
+const streakGift = (d) => (d === 5 || d === 10 ? 1 : d >= 20 && d % 10 === 0 ? (d % 50 === 0 ? 3 : 2) : 0),
+  streakNext = (d) => {
+    for (let k = (d || 0) + 1; k <= (d || 0) + 60; k++) if (streakGift(k)) return k;
+    return null;
+  },
+  // the gifts from the day after "from" up to the streak "to": tokens and the highest day reached
+  streakGifts = (from, to) => {
+    let t = 0,
+      top = 0;
+    for (let k = (from || 0) + 1; k <= to; k++) streakGift(k) && ((t += streakGift(k)), (top = k));
+    return { tokens: t, day: top };
+  };
 // ---------- daily challenges: three a day (easy, medium, hard), picked from the date and kept all day; each one done pays
 // Taler, the harder the more, and all three a bonus on top. m = what is counted today (xp: the day's XP log, run: the longest row of right
 // answers, regions: the regions learned in), ok = only offered when the learner can do it
@@ -13850,6 +13868,37 @@ const DAILY_TIER = [
   ["schwer", "#C2255C"],
 ];
 // what a round just completed: shown once on the result screen
+// a streak gift just paid: shown once on the result screen, with the next one
+function StreakGiftBanner({ note: s }) {
+  if (!s || !s.tokens) return null;
+  const nx = streakNext(s.days);
+  return React.createElement(
+    "div",
+    {
+      className: "ana-pop",
+      "data-streak-gift": "1",
+      style: {
+        width: "100%",
+        maxWidth: 340,
+        boxSizing: "border-box",
+        textAlign: "left",
+        background: C.goldBg,
+        border: `1.5px solid ${C.gold}`,
+        borderRadius: 14,
+        padding: "10px 14px",
+        margin: "-8px 0 18px",
+      },
+    },
+    React.createElement("div", { className: "ana-display", style: { fontSize: 15, fontWeight: 700, color: "#D95A0B", marginBottom: 3 } }, "\u{1F525} ", s.days, " Tage in Folge gelernt!"),
+    React.createElement("div", { className: "ana-display", style: { fontSize: 14.5, fontWeight: 700, color: "#C29204" } }, "+", s.tokens, " \u{1F511} Freischalt-Token"),
+    nx &&
+      React.createElement(
+        "div",
+        { className: "ana-body", style: { fontSize: 13, color: C.inkSoft, marginTop: 3 } },
+        `Der n\xE4chste bei ${nx} Tagen Serie (+${streakGift(nx)}).`,
+      ),
+  );
+}
 function DailyBanner({ fresh: s }) {
   const r = s.ids.map((o) => DAILY_BY[o]).filter(Boolean);
   return r.length
@@ -17715,12 +17764,15 @@ function ResultScreen({
   onTest: goTest,
   daily: dly,
   onDailySeen: dSeen,
+  streak: sn,
+  onStreakSeen: sSeen,
 }) {
   const d = starsFor(r),
     c = s !== "test" || e,
-    [dl] = useState(dly);
+    [dl] = useState(dly),
+    [sg] = useState(sn);
   useEffect(() => {
-    dl && dSeen && dSeen();
+    (dl && dSeen && dSeen(), sg && sSeen && sSeen());
   }, []);
   return React.createElement(
     "div",
@@ -17793,6 +17845,7 @@ function ResultScreen({
       " XP",
       bst ? React.createElement("span", { style: { fontSize: 14, marginLeft: 6 } }, "\u{1F680} \xD72") : null,
     ),
+    sg && React.createElement(StreakGiftBanner, { note: sg }),
     dl && React.createElement(DailyBanner, { fresh: dl }),
     React.createElement(
       "div",
@@ -18155,10 +18208,11 @@ function BarRow({ label: s, right: r, value: o, color: e }) {
     React.createElement(ProgressBar, { value: o, color: e }),
   );
 }
-function ExamResultScreen({ result: s, cfg: r, xpGain: o, coins: e, onAgain: t, onHome: a, onErrors: n, daily: dly, onDailySeen: dSeen }) {
-  const [dl] = useState(dly);
+function ExamResultScreen({ result: s, cfg: r, xpGain: o, coins: e, onAgain: t, onHome: a, onErrors: n, daily: dly, onDailySeen: dSeen, streak: sn, onStreakSeen: sSeen }) {
+  const [dl] = useState(dly),
+    [sg] = useState(sn);
   useEffect(() => {
-    dl && dSeen && dSeen();
+    (dl && dSeen && dSeen(), sg && sSeen && sSeen());
   }, []);
   const i = s.total ? s.correct / s.total : 0,
     l = gradeFor(i),
@@ -18228,6 +18282,7 @@ function ExamResultScreen({ result: s, cfg: r, xpGain: o, coins: e, onAgain: t, 
         e,
       ),
       React.createElement("div", { className: "ana-body", style: { fontSize: 12, color: C.inkSoft, marginTop: 4 } }, "Bestanden ab 60 %"),
+      sg && React.createElement("div", { style: { display: "flex", justifyContent: "center", marginTop: 22 } }, React.createElement(StreakGiftBanner, { note: sg })),
       dl && React.createElement("div", { style: { display: "flex", justifyContent: "center", marginTop: 22 } }, React.createElement(DailyBanner, { fresh: dl })),
     ),
     React.createElement(SectionLabel, null, "NACH REGION"),
@@ -18439,6 +18494,16 @@ function StatsScreen({ progress: s, onExit: r, onReset: rs }) {
       React.createElement(StatTile, { icon: "\u{1F9E0}", value: a, label: "Karten sicher im Langzeitged\xE4chtnis" }),
       React.createElement(StatTile, { icon: "\u{1F3AF}", value: B[1] ? `${Math.round((B[0] / B[1]) * 100)} %` : "–", label: `Trefferquote (${B[1]} Antworten)` }),
     ),
+    (() => {
+      const nx = streakNext(s.streak || 0);
+      return nx
+        ? React.createElement(
+            "div",
+            { className: "ana-body", "data-streak-next": "1", style: { fontSize: 13, color: C.inkSoft, padding: "8px 2px 0", lineHeight: 1.4 } },
+            `\u{1F511} Serien-Belohnung: Freischalt-Token bei 5, 10, 20, 30 \u2026 Tagen in Folge. Der n\xE4chste bei ${nx} Tagen (+${streakGift(nx)}), noch ${nx - (s.streak || 0)} ${nx - (s.streak || 0) === 1 ? "Tag" : "Tage"}.`,
+          )
+        : null;
+    })(),
     React.createElement(SectionLabel, null, "XP DER LETZTEN 14 TAGE \xB7 ", y),
     React.createElement(
       "div",
@@ -18757,6 +18822,13 @@ function AnatomiaApp() {
     },
     // the challenges done since they were shown last are shown now (result screen, menu); on the menu today's three are
     // also kept, so that they stay the same all day
+    // a streak gift is shown once
+    streakShown = () =>
+      r((p) => {
+        if (!p.streakNote) return p;
+        const f = { ...p, streakNote: null };
+        return (saveProgress(f), f);
+      }),
     dailyShown = () =>
       r((p) => {
         const d = dailyOf(p);
@@ -18766,14 +18838,21 @@ function AnatomiaApp() {
       }),
     [, a] = useState(0),
     n = (u) => {
-      const p = todayStr();
-      return u.lastDay === p
-        ? { streak: u.streak || 1, lastDay: p }
-        : u.lastDay === yesterdayStr()
-          ? { streak: (u.streak || 0) + 1, lastDay: p }
-          : u.lastDay && (u.freezes || 0) > 0
-            ? { streak: (u.streak || 0) + 1, lastDay: p, freezes: u.freezes - 1, freezeUsed: !0 }
-            : { streak: 1, lastDay: p };
+      const p = todayStr(),
+        o =
+          u.lastDay === p
+            ? { streak: u.streak || 1, lastDay: p }
+            : u.lastDay === yesterdayStr()
+              ? { streak: (u.streak || 0) + 1, lastDay: p }
+              : u.lastDay && (u.freezes || 0) > 0
+                ? { streak: (u.streak || 0) + 1, lastDay: p, freezes: u.freezes - 1, freezeUsed: !0 }
+                : { streak: 1, lastDay: p },
+        // paid so far in this streak (a new streak starts at nothing); everything up to today's day is paid now
+        run = o.streak === 1 || o.streak < (u.streak || 0) ? 0 : u.streakGift || 0,
+        g = streakGifts(run, o.streak);
+      return g.tokens
+        ? { ...o, streakGift: o.streak, tokens: (u.tokens || 0) + g.tokens, streakNote: { days: o.streak, tokens: g.tokens } }
+        : { ...o, streakGift: o.streak };
     };
   if (!s)
     return React.createElement(
@@ -19072,6 +19151,8 @@ function AnatomiaApp() {
     A = React.createElement(ExamResultScreen, {
       daily: dailyFresh(s),
       onDailySeen: dailyShown,
+      streak: s.streakNote,
+      onStreakSeen: streakShown,
       result: o.result,
       cfg: o.cfg,
       xpGain: o.xpGain,
@@ -19285,6 +19366,8 @@ function AnatomiaApp() {
       ...o,
       daily: dailyFresh(s),
       onDailySeen: dailyShown,
+      streak: s.streakNote,
+      onStreakSeen: streakShown,
       fx: s.fx,
       boosted: xm > 1,
       onHome: () => e({ name: "home" }),
