@@ -9802,8 +9802,11 @@ const ABBR_FULL = [
   ],
   // f: the full name, with the word in front kept ("vena femoralis"), which tells one structure from another;
   // without f that word is left out, so "biceps brachii" counts for "M. biceps brachii"
+  // an abbreviation in front typed without its full stop ("Lig cruciatum anterius", "A femoralis")
+  ABBR_BARE = { mm: "musculi", m: "musculus", aa: "arteriae", a: "arteria", vv: "venae", v: "vena", nn: "nervi", n: "nervus", ligg: "ligamenta", lig: "ligamentum", procc: "processus", proc: "processus", gll: "glandulae", gl: "glandula", rr: "rami", r: "ramus", tr: "truncus" },
+  abbrBare = (r) => r.replace(/^\s*(mm|m|aa|a|vv|v|nn|n|ligg|lig|procc|proc|gll|gl|rr|r|tr)\s+/, (x, k) => ABBR_BARE[k] + " "),
   normAnswer = (s, f) => {
-    let r = ABBR_FULL.reduce((r, [o, e]) => r.replace(o, e), (s || "").toLowerCase());
+    let r = abbrBare(ABBR_FULL.reduce((r, [o, e]) => r.replace(o, e), (s || "").toLowerCase()));
     f ||
       (r = r.replace(
         /^\s*(musculi|musculus|muskel|arteriae|arteria|arterie|venae|vena|vene|nervi|nervus|nerv|ligamenta|ligamentum|band|processus|glandulae|glandula|rami|ramus|truncus|os|ossa)\s+/,
@@ -9881,6 +9884,65 @@ const ABBR_FULL = [
       if (d > 0 && Math.abs(v.s.length - o.length) <= d && levenshtein(o, v.s) <= d && levenshtein(of, v.f) <= df) return !1;
     }
     return !0;
+  };
+// a small typo that still counts: the name the learner meant, spelled right (the closest of the Latin, German and
+// other names, also without M./Musculus in front or as its last two words, in the form typed); null when only the
+// case, ue for \xFC, an abbreviation or a full stop differ
+const typoCanon = (x) =>
+    abbrBare(ABBR_FULL.reduce((r, [o, e]) => r.replace(o, e), (x || "").toLowerCase()))
+      .replace(/\xE4/g, "ae")
+      .replace(/\xF6/g, "oe")
+      .replace(/\xFC/g, "ue")
+      .replace(/\xDF/g, "ss")
+      .replace(/[^a-z0-9 ]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim(),
+  TYPO_HEAD = /^(musculi|musculus|muskel|arteriae|arteria|arterie|venae|vena|vene|nervi|nervus|nerv|ligamenta|ligamentum|band|processus|glandulae|glandula|rami|ramus|truncus|os|ossa)$/,
+  typoFix = (typed, it) => {
+    const T = typoCanon(typed),
+      raw = (typed || "").trim().replace(/\s+/g, " ").toLowerCase();
+    if (!T || !it) return null;
+    let best = null;
+    for (const n of [it.la, it.de, ...(it.alt || [])].filter(Boolean)) {
+      const full = bareLabel(n),
+        exp = (typeof LA_ABBR < "u" ? LA_ABBR : []).reduce((r, [o, e]) => r.replace(o, e), full),
+        wd = exp.split(/\s+/).filter(Boolean),
+        vs = [full, exp];
+      wd.length > 1 && TYPO_HEAD.test(typoCanon(wd[0])) && vs.push(wd.slice(1).join(" "));
+      wd.length > 2 && vs.push(wd.slice(-2).join(" "));
+      for (const v of vs) {
+        const d = levenshtein(T, typoCanon(v)),
+          e = levenshtein(raw, v.toLowerCase());
+        (!best || d < best.d || (d === best.d && e < best.e)) && (best = { d, e, v });
+      }
+    }
+    return best && best.d > 0 ? best.v : null;
+  },
+  // the typed letters against the right spelling, as runs: "=" the same, "-" typed but wrong or too much (struck
+  // out), "+" right but missing (shown); letters compared without case
+  typoDiff = (a, b) => {
+    const A = [...a],
+      B = [...b],
+      m = A.length,
+      n = B.length,
+      L = (x) => x.toLowerCase(),
+      D = Array.from({ length: m + 1 }, (_, i) => Array.from({ length: n + 1 }, (_, j) => (i ? (j ? 0 : i) : j)));
+    for (let i = 1; i <= m; i++)
+      for (let j = 1; j <= n; j++) D[i][j] = Math.min(D[i - 1][j] + 1, D[i][j - 1] + 1, D[i - 1][j - 1] + (L(A[i - 1]) === L(B[j - 1]) ? 0 : 1));
+    const out = [];
+    let i = m,
+      j = n;
+    while (i > 0 || j > 0) {
+      const same = i > 0 && j > 0 && L(A[i - 1]) === L(B[j - 1]);
+      if (i > 0 && j > 0 && D[i][j] === D[i - 1][j - 1] + (same ? 0 : 1)) {
+        same ? out.push(["=", B[j - 1]]) : out.push(["+", B[j - 1]], ["-", A[i - 1]]);
+        (i--, j--);
+      } else if (j > 0 && D[i][j] === D[i][j - 1] + 1) (out.push(["+", B[j - 1]]), j--);
+      else (out.push(["-", A[i - 1]]), i--);
+    }
+    const seg = [];
+    for (const [k, c] of out.reverse()) seg.length && seg[seg.length - 1][0] === k ? (seg[seg.length - 1][1] += c) : seg.push([k, c]);
+    return seg;
   };
 function makeTypeQuestion(s, r, o, e) {
   const t = o && o.li != null && e && e.length && (!r.figure || Math.random() < 0.7),
@@ -17544,6 +17606,36 @@ function QuizScreen({
               "Richtig w\xE4re: ",
               z ? (M.kind === "point" ? "die gr\xFCn markierte Stelle" : M.item.la) : M.options.find((E) => E.correct).label,
             ),
+          // a typed answer with a small typo counts, and shows how it is written
+          F &&
+            M.kind === "type" &&
+            g &&
+            (() => {
+              const tf = typoFix(g, M.item);
+              return tf
+                ? React.createElement(
+                    "div",
+                    { className: "ana-body", "data-typo": tf, style: { fontSize: 14, fontWeight: 700, color: C.okText, marginTop: 4, lineHeight: 1.45 } },
+                    "Kleiner Tippfehler \u2013 richtig geschrieben: ",
+                    ...typoDiff(g.trim().replace(/\s+/g, " "), tf).map(([k, t], i) =>
+                      k === "="
+                        ? t
+                        : React.createElement(
+                            "span",
+                            {
+                              key: i,
+                              className: k === "+" ? "typo-in" : "typo-out",
+                              style:
+                                k === "+"
+                                  ? { color: C.good, textDecoration: "underline", textDecorationThickness: 2, textUnderlineOffset: 3 }
+                                  : { color: C.bad, textDecoration: "line-through", textDecorationThickness: 2, opacity: 0.85 },
+                            },
+                            t,
+                          ),
+                    ),
+                  )
+                : null;
+            })(),
           NM && React.createElement("div", { className: "ana-body", style: { fontSize: 13.5, fontWeight: 700, color: C.badText, marginTop: 4, lineHeight: 1.35 } }, NM),
           React.createElement(
             "div",
