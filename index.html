@@ -10599,7 +10599,7 @@ const STORAGE_KEY = "anatomia-v1",
     recVoice: "thorsten",
     // 2: everyone was moved back to the device voice once (it had been the recordings for a while)
     voiceV: 2,
-    // streak gifts: the day of the streak paid up to, and the gift to show once on the next result screen
+    // streak Taler: the day of the streak paid up to, and what was paid, to show once on the next result screen
     streakGift: 0,
     streakNote: null,
   },
@@ -10889,20 +10889,22 @@ const STORAGE_KEY = "anatomia-v1",
     const o = achState(s, r);
     return o.done && !o.claimed;
   }).length;
-// ---------- streak gifts: unlock tokens when the streak reaches 5, 10, 20, 30 ... days in a row: 1 at 5 and at 10 days,
-// 2 at every further 10 days, 3 at every 50th day; each once per streak (after a break they come again). streakGift in
-// the progress: the last day of the streak already paid
-const streakGift = (d) => (d === 5 || d === 10 ? 1 : d >= 20 && d % 10 === 0 ? (d % 50 === 0 ? 3 : 2) : 0),
+// ---------- streak Taler: each day the streak goes on (with the day's first finished round) pays Taler, 10 on the first
+// day and 5 more on each further day up to 50; at 5, 10, 20, 30 ... days in a row an extra package of Taler on top (50 at
+// 5 days, 100 at 10, 150 at every further 10 days, 250 at every 50th day), each once per streak (after a break they come
+// again). streakGift in the progress: the day of the streak paid up to
+const streakDaily = (d) => Math.min(50, 10 + 5 * Math.max(0, (d || 1) - 1)),
+  streakGift = (d) => (d === 5 ? 50 : d === 10 ? 100 : d >= 20 && d % 10 === 0 ? (d % 50 === 0 ? 250 : 150) : 0),
   streakNext = (d) => {
     for (let k = (d || 0) + 1; k <= (d || 0) + 60; k++) if (streakGift(k)) return k;
     return null;
   },
-  // the gifts from the day after "from" up to the streak "to": tokens and the highest day reached
+  // the packages from the day after "from" up to the streak "to": Taler and the highest day reached
   streakGifts = (from, to) => {
     let t = 0,
       top = 0;
     for (let k = (from || 0) + 1; k <= to; k++) streakGift(k) && ((t += streakGift(k)), (top = k));
-    return { tokens: t, day: top };
+    return { taler: t, day: top };
   };
 // ---------- daily challenges: three a day (easy, medium, hard), picked from the date and kept all day; each one done pays
 // Taler, the harder the more, and all three a bonus on top. m = what is counted today (xp: the day's XP log, run: the longest row of right
@@ -13868,10 +13870,11 @@ const DAILY_TIER = [
   ["schwer", "#C2255C"],
 ];
 // what a round just completed: shown once on the result screen
-// a streak gift just paid: shown once on the result screen, with the next one
+// the streak's Taler just paid: shown once on the result screen, with what comes next
 function StreakGiftBanner({ note: s }) {
-  if (!s || !s.tokens) return null;
-  const nx = streakNext(s.days);
+  if (!s || !(s.daily || s.pack || s.tokens)) return null;
+  const nx = streakNext(s.days),
+    line = (t, c, z) => React.createElement("div", { className: z ? "ana-body" : "ana-display", style: z ? { fontSize: 13, color: C.inkSoft, marginTop: 3 } : { fontSize: 14.5, fontWeight: 700, color: c, marginTop: 2 } }, t);
   return React.createElement(
     "div",
     {
@@ -13889,14 +13892,21 @@ function StreakGiftBanner({ note: s }) {
         margin: "-8px 0 18px",
       },
     },
-    React.createElement("div", { className: "ana-display", style: { fontSize: 15, fontWeight: 700, color: "#D95A0B", marginBottom: 3 } }, "\u{1F525} ", s.days, " Tage in Folge gelernt!"),
-    React.createElement("div", { className: "ana-display", style: { fontSize: 14.5, fontWeight: 700, color: "#C29204" } }, "+", s.tokens, " \u{1F511} Freischalt-Token"),
-    nx &&
-      React.createElement(
-        "div",
-        { className: "ana-body", style: { fontSize: 13, color: C.inkSoft, marginTop: 3 } },
-        `Der n\xE4chste bei ${nx} Tagen Serie (+${streakGift(nx)}).`,
-      ),
+    React.createElement("div", { className: "ana-display", style: { fontSize: 15, fontWeight: 700, color: "#D95A0B", marginBottom: 2 } }, "\u{1F525} ", s.days, s.days === 1 ? " Tag gelernt" : " Tage in Folge gelernt!"),
+    s.daily ? line(`+${s.daily} \u{1FA99} Taler f\xFCr die Serie`, "#C29204") : null,
+    // a package of today's day, or ones of days passed before streak Taler came (paid once now)
+    s.pack
+      ? line(
+          s.packDay && s.packDay !== s.days ? `\u{1F381} Nachgereichte Extra-Pakete: +${s.pack} \u{1FA99} Taler` : `\u{1F381} Extra-Paket f\xFCr ${s.days} Tage: +${s.pack} \u{1FA99} Taler`,
+          "#C29204",
+        )
+      : null,
+    s.tokens ? line(`+${s.tokens} \u{1F511} Freischalt-Token`, "#C29204") : null,
+    line(
+      `Morgen +${streakDaily(s.days + 1)} Taler, wenn du weiterlernst` + (nx ? ` \xB7 n\xE4chstes Paket bei ${nx} Tagen (+${streakGift(nx)})` : "") + ".",
+      null,
+      !0,
+    ),
   );
 }
 function DailyBanner({ fresh: s }) {
@@ -18500,7 +18510,7 @@ function StatsScreen({ progress: s, onExit: r, onReset: rs }) {
         ? React.createElement(
             "div",
             { className: "ana-body", "data-streak-next": "1", style: { fontSize: 13, color: C.inkSoft, padding: "8px 2px 0", lineHeight: 1.4 } },
-            `\u{1F511} Serien-Belohnung: Freischalt-Token bei 5, 10, 20, 30 \u2026 Tagen in Folge. Der n\xE4chste bei ${nx} Tagen (+${streakGift(nx)}), noch ${nx - (s.streak || 0)} ${nx - (s.streak || 0) === 1 ? "Tag" : "Tage"}.`,
+            `\u{1FA99} Serien-Taler: jeden Tag 10 bis 50 Taler (je l\xE4nger die Serie, desto mehr), dazu ein Extra-Paket bei 5, 10, 20, 30 \u2026 Tagen in Folge. N\xE4chstes Paket bei ${nx} Tagen (+${streakGift(nx)} Taler), noch ${nx - (s.streak || 0)} ${nx - (s.streak || 0) === 1 ? "Tag" : "Tage"}.`,
           )
         : null;
     })(),
@@ -18816,6 +18826,9 @@ function AnatomiaApp() {
         Object.keys(u).forEach((k) => {
           u[k] !== s[k] && (m[k] = typeof u[k] == "number" && typeof s[k] == "number" && typeof p[k] == "number" ? p[k] + (u[k] - s[k]) : u[k]);
         });
+        // the streak's Taler of the day (from n), on top of what the round pays
+        m.streakCoins && (m.coins = (m.coins || 0) + m.streakCoins);
+        delete m.streakCoins;
         const f = dailyBump(withMeta(p, m), ev);
         return (saveProgress(f), f);
       });
@@ -18847,11 +18860,15 @@ function AnatomiaApp() {
               : u.lastDay && (u.freezes || 0) > 0
                 ? { streak: (u.streak || 0) + 1, lastDay: p, freezes: u.freezes - 1, freezeUsed: !0 }
                 : { streak: 1, lastDay: p },
-        // paid so far in this streak (a new streak starts at nothing); everything up to today's day is paid now
+        // packages paid so far in this streak (a new streak starts at nothing); everything up to today's day is paid now
         run = o.streak === 1 || o.streak < (u.streak || 0) ? 0 : u.streakGift || 0,
-        g = streakGifts(run, o.streak);
-      return g.tokens
-        ? { ...o, streakGift: o.streak, tokens: (u.tokens || 0) + g.tokens, streakNote: { days: o.streak, tokens: g.tokens } }
+        g = streakGifts(run, o.streak),
+        // the day's streak Taler, with the day's first finished round
+        day = u.lastDay !== p ? streakDaily(o.streak) : 0,
+        c = day + g.taler;
+      // streakCoins: added to the Taler in t(), whatever the round sets them to
+      return c
+        ? { ...o, streakGift: o.streak, streakCoins: c, streakNote: { days: o.streak, daily: day, pack: g.taler, packDay: g.day } }
         : { ...o, streakGift: o.streak };
     };
   if (!s)
