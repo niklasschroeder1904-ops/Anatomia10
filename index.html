@@ -10889,11 +10889,11 @@ const STORAGE_KEY = "anatomia-v1",
     const o = achState(s, r);
     return o.done && !o.claimed;
   }).length;
-// ---------- streak Taler: each day the streak goes on (with the day's first finished round) pays Taler, 10 on the first
-// day and 5 more on each further day up to 50; at 5, 10, 20, 30 ... days in a row an extra package of Taler on top (50 at
+// ---------- streak Taler: each day the streak goes on (with the day's first finished round) pays Taler: 10 a day for the
+// first 4 days, 20 from 5 days, 30 from 10, 40 from 15, 50 from 20; at 5, 10, 20, 30 ... days in a row an extra package of Taler on top (50 at
 // 5 days, 100 at 10, 150 at every further 10 days, 250 at every 50th day), each once per streak (after a break they come
 // again). streakGift in the progress: the day of the streak paid up to
-const streakDaily = (d) => Math.min(50, 10 + 5 * Math.max(0, (d || 1) - 1)),
+const streakDaily = (d) => Math.min(50, 10 + 10 * Math.floor((d || 1) / 5)),
   streakGift = (d) => (d === 5 ? 50 : d === 10 ? 100 : d >= 20 && d % 10 === 0 ? (d % 50 === 0 ? 250 : 150) : 0),
   streakNext = (d) => {
     for (let k = (d || 0) + 1; k <= (d || 0) + 60; k++) if (streakGift(k)) return k;
@@ -18510,7 +18510,7 @@ function StatsScreen({ progress: s, onExit: r, onReset: rs }) {
         ? React.createElement(
             "div",
             { className: "ana-body", "data-streak-next": "1", style: { fontSize: 13, color: C.inkSoft, padding: "8px 2px 0", lineHeight: 1.4 } },
-            `\u{1FA99} Serien-Taler: jeden Tag 10 bis 50 Taler (je l\xE4nger die Serie, desto mehr), dazu ein Extra-Paket bei 5, 10, 20, 30 \u2026 Tagen in Folge. N\xE4chstes Paket bei ${nx} Tagen (+${streakGift(nx)} Taler), noch ${nx - (s.streak || 0)} ${nx - (s.streak || 0) === 1 ? "Tag" : "Tage"}.`,
+            `\u{1FA99} Serien-Taler: zurzeit ${streakDaily(s.streak || 1)} Taler am Tag (1\u20134 Tage: 10, ab 5 Tagen: 20, ab 10: 30, ab 15: 40, ab 20: 50), dazu ein Extra-Paket bei 5, 10, 20, 30 \u2026 Tagen in Folge. N\xE4chstes Paket bei ${nx} Tagen (+${streakGift(nx)} Taler), noch ${nx - (s.streak || 0)} ${nx - (s.streak || 0) === 1 ? "Tag" : "Tage"}.`,
           )
         : null;
     })(),
