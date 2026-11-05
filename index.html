@@ -18311,7 +18311,9 @@ function ResultScreen({
     ),
   );
 }
-function FailScreen({ color: s, dark: r, onRetry: o, onHome: e }) {
+// hearts used up in a lesson: learn its cards again from the first (then on to the questions), or go straight back to
+// the questions
+function FailScreen({ color: s, dark: r, onLearn: lr, onRetry: o, onHome: e }) {
   return React.createElement(
     "div",
     {
@@ -18334,12 +18336,15 @@ function FailScreen({ color: s, dark: r, onRetry: o, onHome: e }) {
     React.createElement(
       "div",
       { className: "ana-body", style: { fontSize: 15, color: C.inkSoft, margin: "6px 0 22px", maxWidth: 300 } },
-      "Kein Problem \u2014 schau dir die Strukturen noch einmal an und starte das Quiz neu.",
+      lr
+        ? "Kein Problem \u2014 lern die Karten noch einmal und mach dann die Fragen, oder geh direkt wieder zu den Fragen."
+        : "Kein Problem \u2014 schau dir die Strukturen noch einmal an und starte das Quiz neu.",
     ),
     React.createElement(
       "div",
       { style: { width: "100%", maxWidth: 340, display: "flex", flexDirection: "column", gap: 10 } },
-      React.createElement(Btn, { color: s, dark: r, onClick: o }, "Nochmal versuchen"),
+      lr && React.createElement(Btn, { color: s, dark: r, onClick: lr }, "Karten nochmal lernen"),
+      React.createElement(Btn, lr ? { ghost: !0, color: s, onClick: o } : { color: s, dark: r, onClick: o }, lr ? "Direkt zu den Fragen" : "Nochmal versuchen"),
       React.createElement(Btn, { ghost: !0, color: C.inkSoft, onClick: e }, "Zur \xDCbersicht"),
     ),
   );
@@ -19772,7 +19777,7 @@ function AnatomiaApp() {
     });
   else if (o.name === "fail") {
     const u = findLesson(o.lessonId);
-    A = React.createElement(FailScreen, { color: u.color, dark: u.dark, onRetry: () => l(u.id), onHome: () => e({ name: "home" }) });
+    A = React.createElement(FailScreen, { color: u.color, dark: u.dark, onLearn: () => i(u.id), onRetry: () => l(u.id), onHome: () => e({ name: "home" }) });
   } else if (o.name === "result") {
     // after a lesson: straight on to the next lesson of the menu; after the last lesson of a topic to its test (unless
     // passed already); after a passed test on to the next topic
