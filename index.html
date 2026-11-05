@@ -17019,7 +17019,7 @@ function SpeakBtn({ text: s, color: r = C.inkSoft, size: o = 30, lang: e = "de-D
       )
     : null;
 }
-function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) {
+function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
   const [a, n] = useState(0),
     i = s.items[a],
     l = s.items.length;
@@ -17104,7 +17104,7 @@ function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) 
     ),
     React.createElement(
       "div",
-      { style: { display: "flex", gap: 10, padding: "14px 0 20px" } },
+      { style: { display: "flex", gap: 10, padding: "14px 0 calc(20px + env(safe-area-inset-bottom))" } },
       React.createElement(
         Btn,
         { ghost: !0, color: C.inkSoft, onClick: () => n(Math.max(0, a - 1)), disabled: a === 0, style: { width: 110 } },
@@ -17114,14 +17114,9 @@ function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) 
         ? React.createElement(Btn, { color: r.color, dark: r.dark, onClick: () => n(a + 1) }, "Weiter")
         : React.createElement(Btn, { color: C.good, dark: C.goodDark, onClick: e }, "Quiz starten"),
     ),
-    React.createElement(
-      "div",
-      { style: { padding: "0 0 22px" } },
-      React.createElement(Btn, { ghost: !0, color: r.color, onClick: t }, "Karteikarten dieser Lektion"),
-    ),
   );
 }
-function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) {
+function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
   const [a, n] = useState(0),
     i = s.items[a],
     l = !!s.model,
@@ -17230,7 +17225,7 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) {
         ),
         React.createElement(
           "div",
-          { style: { display: "flex", gap: 10, padding: "14px 0 20px" } },
+          { style: { display: "flex", gap: 10, padding: "14px 0 calc(20px + env(safe-area-inset-bottom))" } },
           React.createElement(
             Btn,
             { ghost: !0, color: C.inkSoft, onClick: () => n(Math.max(0, a - 1)), disabled: a === 0, style: { width: 110 } },
@@ -17240,13 +17235,8 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t }) {
             ? React.createElement(Btn, { color: r.color, dark: r.dark, onClick: () => n(a + 1) }, "Weiter")
             : React.createElement(Btn, { color: C.good, dark: C.goodDark, onClick: e }, "Quiz starten"),
         ),
-        React.createElement(
-          "div",
-          { style: { padding: "0 0 22px" } },
-          React.createElement(Btn, { ghost: !0, color: r.color, onClick: t }, "Karteikarten dieser Lektion"),
-        ),
       )
-    : React.createElement(ConceptLearn, { lesson: s, unit: r, onExit: o, onQuiz: e, onFlash: t });
+    : React.createElement(ConceptLearn, { lesson: s, unit: r, onExit: o, onQuiz: e });
 }
 // zoom for quiz pictures: two fingers (or + / -) zoom, one finger moves the zoomed picture;
 // with onTap a short tap is the answer, without it a double tap zooms
@@ -19494,15 +19484,6 @@ function AnatomiaApp() {
       unit: p,
       onExit: () => e({ name: "home" }),
       onQuiz: () => l(u.id),
-      onFlash: () =>
-        d({
-          cards: shuffle(u.items.map((f) => ({ item: f, lesson: u }))),
-          title: `Karteikarten \xB7 ${u.title}`,
-          color: p.color,
-          dark: p.dark,
-          back: "learn",
-          lessonId: u.id,
-        }),
     });
   } else if (o.name === "quiz") {
     const u = findLesson(o.lessonId),
@@ -19620,13 +19601,7 @@ function AnatomiaApp() {
       onRate: (u, p) => y(u.lesson.id, u.item.id, p, 1),
       onExit: () =>
         e(
-          o.back === "learn"
-            ? { name: "learn", lessonId: o.lessonId }
-            : o.back === "errors"
-              ? { name: "errors" }
-              : o.back === "deck"
-                ? { name: "deck" }
-                : { name: "home" },
+          o.back === "errors" ? { name: "errors" } : o.back === "deck" ? { name: "deck" } : { name: "home" },
         ),
       onFinish: (u) => {
         const p = n(s);
