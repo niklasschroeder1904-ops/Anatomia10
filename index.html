@@ -9481,7 +9481,44 @@ function pickD(s, r, o, e = 3, syn = null) {
 // an addition in brackets (eponym, numbers) gives the answer away if only the right option has one,
 // or if only the right option has none: then the brackets are dropped; so is a list in brackets
 // ("Paries thoracis (Rippen, Brustbein, ...)"), which makes an option stand out by its length
-const optionsOf = (s, r) => {
+// names with an addition in brackets ("Cavitas articularis (mit Synovia)" - "Gelenkh\xF6hle (mit Gelenkfl\xFCssigkeit)"): in a
+// question for a name the additions of question and answer match and give it away. They are left out where the name without
+// them still stands for one meaning in the whole app (kept for "Vorhofs\xE4ckchen (gro\xDF)" / "(klein)")
+const BR_ONE = {},
+  brKey = (x) => normAnswer(bareLabel(x || ""), 1),
+  // a meaning, with abbreviations written out and the endings of singular and plural alike ("Testes" - "Testis",
+  // "Gll. parathyroideae" - "Glandulae parathyroideae")
+  brMean = (x) =>
+    brKey(x)
+      .split(" ")
+      .map((w) => (w.length > 4 ? w.replace(/(ae|es|is|us|um|a|i|e)$/, "") : w))
+      .join(" "),
+  bareName = (x, side) => {
+    if (!x || !x.includes("(") || (side !== "la" && side !== "de")) return x;
+    if (!BR_ONE[side]) {
+      const m = new Map(),
+        other = side === "la" ? "de" : "la";
+      ALL_LESSONS.forEach((L) =>
+        L.items.forEach((i) => {
+          const a = brKey(i[side]);
+          a && (m.has(a) || m.set(a, new Set()), m.get(a).add(brMean(i[other])));
+        }),
+      );
+      BR_ONE[side] = m;
+    }
+    const b = bareLabel(x),
+      n = BR_ONE[side].get(brKey(x));
+    return b.length > 2 && n && n.size === 1 ? b : x;
+  };
+// the options of a choice question (r: shuffled). side ("la", "de"): the labels are names in that language, their additions
+// in brackets are left out where safe (bareName) and while every option stays different. orig: the label as it came, for
+// finding its structure
+const optionsOf = (s, r, side) => {
+  s.forEach((e) => e.orig == null && e.label != null && (e.orig = e.label));
+  if (side) {
+    const v = s.map((e) => bareName(e.label, side));
+    v.some((x, k) => x !== s[k].label) && new Set(v.map((x) => (x || "").toLowerCase())).size === s.length && s.forEach((e, k) => (e.label = v[k]));
+  }
   const o = s.find((e) => e.correct),
     w = s.filter((e) => e !== o);
   if (o && w.length)
@@ -9690,7 +9727,7 @@ function makeQuestion(s, r, o) {
         showFig: !1,
         mark: i,
         plates: l,
-        options: optionsOf([{ label: m(s), correct: !0 }, ...pickD(aF, s, m, 3, sK).map((h) => ({ label: m(h), correct: !1 }))], !0),
+        options: optionsOf([{ label: m(s), correct: !0 }, ...pickD(aF, s, m, 3, sK).map((h) => ({ label: m(h), correct: !1 }))], !0, c ? "de" : "la"),
       };
     }
     // only when the highlight shows this structure alone ("~" = location hint, shared mesh = parent structure)
@@ -9717,7 +9754,7 @@ function makeQuestion(s, r, o) {
           prompt: "Welche Struktur ist im 3D-Modell markiert?",
           sub: c ? "Gesucht ist der deutsche Begriff." : "Modell mit dem Finger drehen.",
           showFig: !1,
-          options: optionsOf([{ label: m(s), correct: !0 }, ...D3.map((h) => ({ label: m(h), correct: !1 }))], !0),
+          options: optionsOf([{ label: m(s), correct: !0 }, ...D3.map((h) => ({ label: m(h), correct: !1 }))], !0, c ? "de" : "la"),
         };
     }
     r.figure || (o = "term-de");
@@ -9730,7 +9767,7 @@ function makeQuestion(s, r, o) {
       prompt: K ? `Welches ${K} ist markiert?` : r.term ? "Was ist markiert?" : "Welche Struktur ist markiert?",
       sub: i ? "Gesucht ist der deutsche Begriff." : void 0,
       showFig: !0,
-      options: optionsOf([{ label: l(s), correct: !0 }, ...pickD(aF, s, l, 3, sK).map((d) => ({ label: l(d), correct: !1 }))], !0),
+      options: optionsOf([{ label: l(s), correct: !0 }, ...pickD(aF, s, l, 3, sK).map((d) => ({ label: l(d), correct: !1 }))], !0, i ? "de" : "la"),
     };
   }
   // the asked name already contains the answer ("Medianebene" - "Planum medianum"): ask for the definition instead
@@ -9782,21 +9819,22 @@ function makeQuestion(s, r, o) {
           ).map((d) => ({ label: l(d), correct: !1 })),
         ],
         !0,
+        i ? "de" : "la",
       ),
     };
   }
   return o === "term-de"
     ? {
         ...n,
-        prompt: `Wie lautet der ${r.term || "lateinische Name"} f\xFCr \u201E${s.de}\u201C?`,
+        prompt: `Wie lautet der ${r.term || "lateinische Name"} f\xFCr \u201E${bareName(s.de, "de")}\u201C?`,
         showFig: !1,
-        options: optionsOf([{ label: s.la, correct: !0 }, ...pickD([...a, ...kinFor(s, r, "la")], s, (i) => i.la, 3, r.items).map((i) => ({ label: i.la, correct: !1 }))], !0),
+        options: optionsOf([{ label: s.la, correct: !0 }, ...pickD([...a, ...kinFor(s, r, "la")], s, (i) => i.la, 3, r.items).map((i) => ({ label: i.la, correct: !1 }))], !0, "la"),
       }
     : {
         ...n,
-        prompt: `Was bedeutet \u201E${s.la}\u201C?`,
+        prompt: `Was bedeutet \u201E${bareName(s.la, "la")}\u201C?`,
         showFig: !1,
-        options: optionsOf([{ label: s.de, correct: !0 }, ...pickD([...a, ...kinFor(s, r, "de")], s, (i) => i.de, 3, r.items).map((i) => ({ label: i.de, correct: !1 }))], !0),
+        options: optionsOf([{ label: s.de, correct: !0 }, ...pickD([...a, ...kinFor(s, r, "de")], s, (i) => i.de, 3, r.items).map((i) => ({ label: i.de, correct: !1 }))], !0, "de"),
       };
 }
 const ABBR_FULL = [
@@ -17699,7 +17737,7 @@ function QuizScreen({
     F = z ? f === !0 : u != null && M.options[u].correct,
     // a wrong pick in a normal choice question: which structure it was, and a hint when it was nearly right
     CL = !z && M.item && M.options && u != null && !F ? M.options[u].label : null,
-    CH = CL ? itemByLabel(M.lesson, CL) : null,
+    CH = CL ? itemByLabel(M.lesson, M.options[u].orig || CL) : null,
     NM = CL ? nearMissHint(M.options.find((E) => E.correct).label, CL) : null,
     H = (E) => {
       // a question asked again costs no heart and counts for neither the score nor the error book: the first answer did
@@ -17715,7 +17753,7 @@ function QuizScreen({
       (p(E), H(M.options[E].correct));
       // a wrong pick: remember the pair of terms for the training of mix-ups (in the training itself onPair counts it)
       if (!M.options[E].correct && oc && !M.pair && M.item && M.lesson) {
-        const N = itemRefByLabel(M.lesson, M.options[E].label);
+        const N = itemRefByLabel(M.lesson, M.options[E].orig || M.options[E].label);
         N && oc({ lessonId: M.lesson.id, itemId: M.item.id }, N);
       }
     },
