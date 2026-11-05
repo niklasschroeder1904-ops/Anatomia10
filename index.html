@@ -9918,12 +9918,40 @@ const ABBR_FULL = [
     }
     return ansVocab.l;
   },
+  // a name as it sounds, read the German way (of a name as normAnswer gives it): "Christer" and "Crista" both "krista",
+  // "Zervix" and "Cervix" "zerviks"; ch, c, k / c before e and i, z / ph, f / th, t / y, i / ae, oe, e / qu, kv / x, ks /
+  // w, v / double letters; -er at the end of a word sounds as -a
+  soundKey = (x) =>
+    (x || "")
+      .split(" ")
+      .map((w) =>
+        w
+          .replace(/er$/, "a")
+          .replace(/sch/g, "S")
+          .replace(/ch/g, "k")
+          .replace(/ph/g, "f")
+          .replace(/([a-z])h/g, "$1")
+          .replace(/ae|oe/g, "e")
+          .replace(/y/g, "i")
+          .replace(/c(?=[ei])/g, "z")
+          .replace(/ck/g, "k")
+          .replace(/c/g, "k")
+          .replace(/qu/g, "kv")
+          .replace(/x/g, "ks")
+          .replace(/w/g, "v")
+          .replace(/ie/g, "i")
+          .replace(/tz/g, "z")
+          .replace(/ti(?=[aeiou])/g, "zi")
+          .replace(/(.)\1+/g, "$1"),
+      )
+      .join(" "),
   answerMatches = (s, r) => {
     const o = normAnswer(s),
       of = normAnswer(s, 1);
     if (!o) return !1;
     // alt: other names that count as right ("Kompakta" for "Kompakte Knochensubstanz (Kompakta)")
-    const N = [r.la, r.de, ...(r.alt || [])].filter(Boolean),
+    const N0 = [r.la, r.de, ...(r.alt || [])].filter(Boolean),
+      N = [...N0, ...[bareName(r.la, "la"), bareName(r.de, "de")].filter((x) => x && !N0.includes(x))],
       own = N.map((x) => normAnswer(x)).filter(Boolean),
       ownF = N.map((x) => normAnswer(x, 1)).filter(Boolean),
       two = (t) => t.split(" ").slice(-2).join(" ");
@@ -9938,7 +9966,26 @@ const ABBR_FULL = [
         k <= a && (d = Math.min(d, k));
       }
     }
-    if (d === 1 / 0) return !1;
+    // too far off letter by letter, but written as it sounds ("Christer" for "Crista"): right, unless another term of
+    // the app sounds just the same
+    // (typed with its word in front, "V. hepatiker", only the full names count: not "A. hepatica")
+    if (d === 1 / 0) {
+      const so = soundKey(o),
+        sf = soundKey(of),
+        hw = o !== of;
+      if (
+        so.replace(/ /g, "").length < 4 ||
+        !(own.some((t) => soundKey(t) === so || (t.includes(" ") && soundKey(two(t)) === so)) || ownF.some((t) => soundKey(t) === sf))
+      )
+        return !1;
+      const me0 = normAnswer(bareLabel(r.la), 1);
+      for (const v of ansVocab()) {
+        if (v.id === me0 || ownF.includes(v.f)) continue;
+        v.k == null && ((v.k = soundKey(v.s)), (v.kf = soundKey(v.f)));
+        if (v.kf === sf || (!hw && v.k === so)) return !1;
+      }
+      return !0;
+    }
     // not right after all: another term of the app as it stands ("Adductio" for "Abductio", "V. femoralis" for
     // "A. femoralis", "M. pectoralis minor" for "major"), or a typo that comes as near to another term as to this one
     // (word in front counted, so "V. portaa hepatis" is still the portal vein, not the porta hepatis)
@@ -9946,7 +9993,7 @@ const ABBR_FULL = [
       me = normAnswer(bareLabel(r.la), 1);
     for (const v of ansVocab()) {
       if (v.id === me || ownF.includes(v.f)) continue;
-      if (v.f === of) return !1;
+      if (v.f === of || (d > 0 && v.s === o)) return !1;
       if (d > 0 && Math.abs(v.s.length - o.length) <= d && levenshtein(o, v.s) <= d && levenshtein(of, v.f) <= df) return !1;
     }
     return !0;
