@@ -13907,10 +13907,33 @@ const DAILY_TIER = [
   ["mittel", "#E8590C"],
   ["schwer", "#C2255C"],
 ];
+// a light, short tick of the phone, called from a tap. Safari on the iPhone has no vibration for web pages, but a switch
+// (<input type="checkbox" switch>, iOS 18 and later) gives the light tick of the system when a tap flips it: a hidden one is
+// flipped through its label. Elsewhere (Android) a very short vibration; where neither works nothing happens
+function tick() {
+  try {
+    const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (!ios) return void (typeof navigator.vibrate == "function" && navigator.vibrate(15));
+    const lb = document.createElement("label"),
+      cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.setAttribute("switch", "");
+    cb.tabIndex = -1;
+    lb.setAttribute("aria-hidden", "true");
+    lb.setAttribute("data-tick", "1");
+    lb.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;";
+    lb.appendChild(cb);
+    document.body.appendChild(lb);
+    lb.click();
+    setTimeout(() => lb.remove(), 1000);
+  } catch (e) {}
+}
 // coins for collected Taler: they burst from el and fly to the Taler count at the top of the menu ([data-coin-target], when it
-// is in view; else they rise and fade), with the amount rising over el; the count follows when they land (COIN_LAND, CoinCount)
+// is in view; else they rise and fade), with the amount rising over el; the count follows when they land (COIN_LAND, CoinCount).
+// The phone ticks lightly (tick)
 const COIN_LAND = 720;
 function coinFx(el, taler, bonus) {
+  tick();
   try {
     if (!el || !el.getBoundingClientRect || typeof document.body.animate != "function") return;
     const b = el.getBoundingClientRect(),
