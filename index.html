@@ -17661,8 +17661,8 @@ function ZoomPane({ onTap: s, reset: r, tap: f = !0, focus: fz = !1, children: o
     ),
   );
 }
-function PointImage({ q: s, color: r, onResult: o, done: e }) {
-  const [t, a] = useState(null),
+function PointImage({ q: s, color: r, onResult: o, done: e, init: it = null }) {
+  const [t, a] = useState(it),
     n = s.plates[Math.min(s.mark.i, s.plates.length - 1)],
     i = s.mark.a || [s.mark.b[0] + s.mark.b[2] / 2, s.mark.b[1] + s.mark.b[3] / 2],
     l = s.mark.li != null ? s.mark.b : null,
@@ -17688,7 +17688,7 @@ function PointImage({ q: s, color: r, onResult: o, done: e }) {
         ok = !!(p || f || k);
       // where it was tapped, and whether that was right (a right tap shows only the lit-up area)
       a([B, A, ok]);
-      o(ok);
+      o(ok, [B, A, ok]);
     },
     // markers keep their size on screen while the picture is zoomed
     U = (b, D) =>
@@ -17790,8 +17790,8 @@ function PointImage({ q: s, color: r, onResult: o, done: e }) {
     ),
   );
 }
-function TypeAnswer({ q: s, color: r, onResult: o, done: e, right: t }) {
-  const [a, n] = useState(""),
+function TypeAnswer({ q: s, color: r, onResult: o, done: e, right: t, init: it = "", onDraft: od, exam: ex = !1 }) {
+  const [a, n] = useState(it || ""),
     i = () => {
       !e && a.trim() && o(answerMatches(a, s.item), a);
     };
@@ -17800,10 +17800,10 @@ function TypeAnswer({ q: s, color: r, onResult: o, done: e, right: t }) {
     { style: { marginTop: 12 } },
     React.createElement("input", {
       value: a,
-      onChange: (l) => n(l.target.value),
+      onChange: (l) => (n(l.target.value), od && od(l.target.value)),
       disabled: e,
       onKeyDown: (l) => {
-        l.key === "Enter" && i();
+        l.key === "Enter" && (ex ? l.target.blur() : i());
       },
       placeholder: "Name eintippen \u2026",
       autoComplete: "off",
@@ -17824,10 +17824,17 @@ function TypeAnswer({ q: s, color: r, onResult: o, done: e, right: t }) {
       },
     }),
     !e &&
+      !ex &&
       React.createElement(
         "div",
         { style: { marginTop: 10 } },
         React.createElement(Btn, { color: r, dark: C.goodDark, onClick: i }, "Antwort pr\xFCfen"),
+      ),
+    ex &&
+      React.createElement(
+        "div",
+        { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, marginTop: 7, padding: "0 2px" } },
+        "Wird erst beim Abgeben ausgewertet.",
       ),
   );
 }
@@ -18630,12 +18637,278 @@ function ExamSetupScreen({ progress: s, onExit: r, onStart: o }) {
     React.createElement(Btn, { color: EXAM_COLOR, dark: "#0F4C8A", disabled: !f, onClick: () => f && o(S, B) }, "Pr\xFCfung starten"),
   );
 }
+// an exam: all questions to click through, answers can be changed; nothing shows as right or wrong until it is handed in
+// ("Abgeben") or the time is up. Then every question is judged at once (unanswered ones count as wrong) and counted
+// like answers in a round (error book, repetition, mix-ups)
+function ExamQuiz({ questions: s, color: r, dark: dk, title: ti, timeUp: tu, onExit: ox, onAnswer: oa, onConfuse: oc, onSubmit: os }) {
+  const [m, h] = useState(0),
+    [ans, setAns] = useState(() => s.map(() => null)),
+    [ov, setOv] = useState(!1),
+    ar = useRef(ans),
+    sent = useRef(!1),
+    M = s[m],
+    v = ans[m],
+    put = (x) =>
+      setAns((A) => {
+        const N = A.slice();
+        return ((N[m] = x), N);
+      }),
+    has = (x, q) => x != null && (q.kind === "type" ? !!(x.text || "").trim() : q.kind === "point" ? !!x.tap : x.pick != null),
+    nAns = ans.filter((x, k) => has(x, s[k])).length,
+    submit = (timed) => {
+      if (sent.current) return;
+      sent.current = !0;
+      ar.current.forEach((x, k) => {
+        const q = s[k],
+          ok = !x
+            ? !1
+            : q.kind === "type"
+              ? !!(x.text || "").trim() && answerMatches(x.text, q.item)
+              : q.kind === "point"
+                ? !!x.ok
+                : x.pick != null && !!(q.options[x.pick] || {}).correct;
+        q.item && q.lesson && oa && oa(q.lesson.id, q.item.id, ok);
+        q.itemRef && oa && oa(q.itemRef.lessonId, q.itemRef.itemId, ok);
+        // a wrong pick: the pair of terms for the training of mix-ups
+        if (!ok && x && x.pick != null && oc && !q.pair && q.item && q.lesson) {
+          const o = q.options[x.pick],
+            N = o && itemRefByLabel(q.lesson, o.orig || o.label);
+          N && oc({ lessonId: q.lesson.id, itemId: q.item.id }, N);
+        }
+      });
+      os(!!timed);
+    };
+  ar.current = ans;
+  useEffect(() => {
+    tu && submit(!0);
+  }, [tu]);
+  useScrollTop(m);
+  const sel = { bg: C.blueBg, bd: r, tx: C.ink },
+    idle = { bg: C.card, bd: C.line, tx: C.ink },
+    chip = (q, k) => {
+      const a = has(ans[k], q),
+        c = k === m;
+      return React.createElement(
+        "button",
+        {
+          key: k,
+          onClick: () => (h(k), setOv(!1)),
+          "aria-label": `Frage ${k + 1}${a ? ", beantwortet" : ", offen"}`,
+          className: "ana-display",
+          style: {
+            width: 40,
+            height: 40,
+            borderRadius: 11,
+            border: `2px solid ${c ? C.ink : a ? r : C.line}`,
+            background: a ? r : C.mute,
+            color: a ? "#fff" : C.inkSoft,
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: "pointer",
+          },
+        },
+        k + 1,
+      );
+    };
+  return React.createElement(
+    "div",
+    { style: { display: "flex", flexDirection: "column", minHeight: "100vh" } },
+    React.createElement(
+      TopBar,
+      {
+        onBack: () => (nAns === 0 || window.confirm("Pr\xFCfung abbrechen? Deine Antworten gehen verloren.")) && ox(),
+        swipe: !1,
+        right: React.createElement("span", { className: "ana-display", style: { fontSize: 13, fontWeight: 600, color: C.inkSoft } }, ti),
+      },
+      React.createElement(ProgressBar, { value: nAns / s.length, color: r }),
+    ),
+    React.createElement(
+      "div",
+      { key: m, className: "ana-pop", style: { flex: 1, paddingBottom: 170 } },
+      React.createElement(
+        "div",
+        { className: "ana-display", "data-exam-pos": `${m + 1}/${s.length}`, style: { fontSize: 12, fontWeight: 700, color: C.inkSoft, letterSpacing: 0.7, padding: "2px 2px 4px" } },
+        `FRAGE ${m + 1} VON ${s.length}`,
+      ),
+      React.createElement(
+        "div",
+        { className: "ana-display", style: { fontSize: 18.5, fontWeight: 700, color: C.ink, lineHeight: 1.3, padding: "4px 2px" } },
+        M.prompt,
+      ),
+      M.sub && React.createElement("div", { className: "ana-body", style: { fontSize: 14, color: C.inkSoft, padding: "2px 2px 4px" } }, M.sub),
+      M.showFig &&
+        M.figure &&
+        React.createElement(
+          "div",
+          { style: { background: C.card, borderRadius: 18, border: `1.5px solid ${C.line}`, padding: 8, margin: "10px 0" } },
+          React.createElement(FigureView, { figure: M.figure, hl: M.hl, accent: r, height: 215 }),
+        ),
+      (M.kind === "ringpick" || M.kind === "type") &&
+        M.mark &&
+        React.createElement(
+          "div",
+          { style: { background: "#fff", borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
+          React.createElement(ZoomPane, { focus: !0 }, (E) =>
+            React.createElement(QuizPlate, {
+              plate: M.plates[Math.min(M.mark.i, M.plates.length - 1)],
+              mark: M.mark,
+              color: r,
+              reveal: !1,
+              height: 270,
+              lang: M.lang,
+              zs: E,
+            }),
+          ),
+        ),
+      M.kind === "real3d" &&
+        React.createElement(
+          "div",
+          { key: "q3d-" + M.item.id, style: { background: C.card, borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
+          React.createElement(RealModel3D, { file: M.model, highlight: M.highlight, accent: r, height: 260, label: "" }),
+        ),
+      M.kind === "point" &&
+        React.createElement(PointImage, { q: M, color: r, done: !1, init: v && v.tap, onResult: (ok, tp) => put({ tap: tp, ok }) }),
+      M.kind === "type" &&
+        React.createElement(TypeAnswer, {
+          q: M,
+          color: r,
+          done: !1,
+          exam: !0,
+          init: v ? v.text : "",
+          onDraft: (tx) => put({ text: tx }),
+          onResult: (ok, tx) => put({ text: tx }),
+        }),
+      React.createElement(
+        "div",
+        { style: { display: "flex", flexDirection: "column", gap: 9, marginTop: 12 } },
+        M.options.map((E, N) => {
+          const T = v && v.pick === N ? sel : idle;
+          return React.createElement(
+            "button",
+            {
+              key: N,
+              onClick: () => put({ pick: N }),
+              className: "ana-body",
+              "aria-pressed": v && v.pick === N ? "true" : "false",
+              "data-ok": typeof window < "u" && window.__anaTest && E.correct ? "1" : void 0,
+              style: {
+                textAlign: "left",
+                padding: "13px 15px",
+                fontSize: 15.5,
+                fontWeight: 700,
+                background: T.bg,
+                color: T.tx,
+                border: `2px solid ${T.bd}`,
+                borderBottom: `4px solid ${T.bd}`,
+                borderRadius: 14,
+                cursor: "pointer",
+              },
+            },
+            E.label,
+          );
+        }),
+      ),
+    ),
+    // below: back, on (the last question: hand in), and how many are answered, with the overview
+    React.createElement(
+      "div",
+      {
+        style: {
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 30,
+          background: C.paper,
+          borderTop: `1.5px solid ${C.line}`,
+          padding: "10px 16px calc(10px + env(safe-area-inset-bottom))",
+        },
+      },
+      React.createElement(
+        "div",
+        { style: { maxWidth: 480, margin: "0 auto" } },
+        React.createElement(
+          "div",
+          { style: { display: "flex", gap: 10 } },
+          React.createElement(Btn, { ghost: !0, color: C.inkSoft, onClick: () => h(Math.max(0, m - 1)), disabled: m === 0, style: { width: 110 } }, "Zur\xFCck"),
+          m < s.length - 1
+            ? React.createElement(Btn, { color: r, dark: dk, onClick: () => h(m + 1) }, "Weiter")
+            : React.createElement(Btn, { color: C.good, dark: C.goodDark, onClick: () => setOv(!0) }, "Abgeben"),
+        ),
+        React.createElement(
+          "button",
+          {
+            onClick: () => setOv(!0),
+            className: "ana-body",
+            "data-exam-overview": "1",
+            style: {
+              display: "block",
+              width: "100%",
+              marginTop: 8,
+              padding: 0,
+              border: "none",
+              background: "none",
+              color: C.inkSoft,
+              fontSize: 13,
+              cursor: "pointer",
+            },
+          },
+          `${nAns} von ${s.length} beantwortet \xB7 `,
+          React.createElement("span", { style: { color: r, fontWeight: 700 } }, "\xDCbersicht & Abgeben"),
+        ),
+      ),
+    ),
+    // the overview: every question (answered ones filled), a tap goes there; hand in from here
+    ov &&
+      React.createElement(
+        "div",
+        {
+          onClick: () => setOv(!1),
+          style: { position: "fixed", inset: 0, zIndex: 60, background: "rgba(16,24,40,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center" },
+        },
+        React.createElement(
+          "div",
+          {
+            className: "ana-slide-up",
+            "data-exam-sheet": "1",
+            onClick: (E) => E.stopPropagation(),
+            style: {
+              width: "100%",
+              maxWidth: 520,
+              maxHeight: "82vh",
+              overflowY: "auto",
+              boxSizing: "border-box",
+              background: C.card,
+              borderRadius: "20px 20px 0 0",
+              padding: "16px 16px calc(18px + env(safe-area-inset-bottom))",
+            },
+          },
+          React.createElement("div", { className: "ana-display", style: { fontSize: 18, fontWeight: 700, color: C.ink } }, "\xDCbersicht"),
+          React.createElement(
+            "div",
+            { className: "ana-body", style: { fontSize: 13.5, color: nAns < s.length ? C.badText : C.inkSoft, margin: "4px 0 12px", lineHeight: 1.4 } },
+            nAns < s.length
+              ? `Noch ${s.length - nAns} ${s.length - nAns === 1 ? "Frage" : "Fragen"} offen \u2013 offene Fragen z\xE4hlen als falsch. Tippe eine Nummer an, um hinzugehen.`
+              : "Alle Fragen beantwortet. Du kannst noch jede Frage antippen und \xE4ndern.",
+          ),
+          React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 16 } }, s.map(chip)),
+          React.createElement(
+            "div",
+            { style: { display: "flex", flexDirection: "column", gap: 9 } },
+            React.createElement(Btn, { color: C.good, dark: C.goodDark, onClick: () => submit(!1) }, nAns < s.length ? "Trotzdem abgeben" : "Abgeben"),
+            React.createElement(Btn, { ghost: !0, color: C.inkSoft, onClick: () => setOv(!1) }, "Weiter bearbeiten"),
+          ),
+        ),
+      ),
+  );
+}
 function ExamScreen({ questions: s, cfg: r, onExit: o, onAnswer: e, onDone: t, onConfuse: oc }) {
   const a = useRef([]),
     n = useRef(Date.now()),
     i = useRef(!1),
     dn = useRef(t),
     [, l] = useState(0),
+    [up, setUp] = useState(!1),
     d = r.minutes ? n.current + r.minutes * 6e4 : null,
     c = (h) => {
       if (i.current) return;
@@ -18646,7 +18919,7 @@ function ExamScreen({ questions: s, cfg: r, onExit: o, onAnswer: e, onDone: t, o
   useEffect(() => {
     if (!d) return;
     const h = setInterval(() => {
-      (l((y) => y + 1), Date.now() >= d && (clearInterval(h), c(!0)));
+      (l((y) => y + 1), Date.now() >= d && (clearInterval(h), setUp(!0)));
     }, 1e3);
     return () => clearInterval(h);
   }, []);
@@ -18655,20 +18928,19 @@ function ExamScreen({ questions: s, cfg: r, onExit: o, onAnswer: e, onDone: t, o
   return React.createElement(
     "div",
     null,
-    React.createElement(QuizScreen, {
+    React.createElement(ExamQuiz, {
       questions: s,
-      unit: { color: EXAM_COLOR, dark: "#0F4C8A" },
-      heartsEnabled: !1,
+      color: EXAM_COLOR,
+      dark: "#0F4C8A",
       title: m != null ? `⏱ ${fmtTime(m)}` : `Pr\xFCfung \xB7 ${s.length} Fragen`,
+      timeUp: up,
       onAnswer: (h, y, b) => {
         const x = findItem(cardKey(h, y));
         (a.current.push({ lessonId: h, itemId: y, ok: b, item: x && x.item, lesson: x && x.lesson }), e && e(h, y, b));
       },
-      jokers: 0,
       onConfuse: oc,
       onExit: o,
-      onFinish: () => c(!1),
-      onFail: () => c(!1),
+      onSubmit: (h) => c(h),
     }),
     m != null &&
       m < 60 &&
