@@ -15482,6 +15482,8 @@ function HomeScreen({
                 },
                 style: {
                   marginBottom: 9,
+                  // under an open section the topics start a little further right than its header
+                  marginLeft: !S && v.section ? 12 : 0,
                   background: C.card,
                   border: `1.5px solid ${C.line}`,
                   borderRadius: 16,
