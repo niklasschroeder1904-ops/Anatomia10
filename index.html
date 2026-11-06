@@ -10819,6 +10819,7 @@ const STORAGE_KEY = "anatomia-v1",
     level: "alle",
     claimed: [],
     xpBoost: null,
+    xpBoostUntil: 0,
     bestStreak: 0,
     // the names are spoken by the device's own voice (on the iPhone the Apple voice); the recordings are a choice
     voice: "dev",
@@ -11051,7 +11052,11 @@ const STORAGE_KEY = "anatomia-v1",
     },
     { id: "joker15", cat: "Hilfen", icon: "\u{1F4A1}", name: "Joker-Gro\xDFpaket", desc: "15 Hinweise zum Sparpreis", price: 200, grant: { jokers: 15 } },
     { id: "freeze3", cat: "Hilfen", icon: "\u{1F9CA}", name: "Serien-Schutz \xD73", desc: "Rettet deine Tagesserie dreimal", price: 400, grant: { freezes: 3 } },
-    { id: "xp2", cat: "Hilfen", icon: "\u{1F680}", name: "Doppel-XP f\xFCr heute", desc: "Bis Mitternacht z\xE4hlt jede Aufgabe doppelt", price: 200, boost: !0 },
+    // double XP for a span of time: the longer, the less each quarter hour costs (150 / 125 / 100 / 75 Taler)
+    { id: "xp2-15", cat: "Hilfen", icon: "\u{1F680}", name: "Doppel-XP \xB7 15 Min.", desc: "15 Minuten lang z\xE4hlt jede Aufgabe doppelt", price: 150, boost: 15 },
+    { id: "xp2-30", cat: "Hilfen", icon: "\u{1F680}", name: "Doppel-XP \xB7 30 Min.", desc: "Doppelte XP f\xFCr 30 Minuten \xB7 50 Taler gespart", price: 250, boost: 30 },
+    { id: "xp2-60", cat: "Hilfen", icon: "\u{1F680}", name: "Doppel-XP \xB7 1 Stunde", desc: "Doppelte XP f\xFCr eine Stunde \xB7 200 Taler gespart", price: 400, boost: 60 },
+    { id: "xp2-180", cat: "Hilfen", icon: "\u{1F680}", name: "Doppel-XP \xB7 3 Stunden", desc: "Doppelte XP f\xFCr drei Stunden \xB7 900 Taler gespart", price: 900, boost: 180 },
     { id: "title-erstsemester", cat: "Titel", icon: "\u{1F392}", name: "Titel „Erstsemester“", desc: "Jeder f\xE4ngt mal an", price: 60, apply: { title: "Erstsemester" } },
     { id: "title-famulant", cat: "Titel", icon: "\u{1FA7A}", name: "Titel „Famulant“", desc: "Schon mal im Krankenhaus gewesen", price: 350, apply: { title: "Famulant" } },
     { id: "title-physikum", cat: "Titel", icon: "\u{1F4D6}", name: "Titel „Physikums-Held“", desc: "Die gro\xDFe Pr\xFCfung im Blick", price: 700, apply: { title: "Physikums-Held" } },
@@ -11352,7 +11357,33 @@ function Btn({ children: s, color: r = C.good, dark: o = C.goodDark, onClick: e,
     s,
   );
 }
-function StatPill({ icon: s, value: r, color: o }) {
+// double XP runs until xpBoostUntil; a "for today" bought before the timed ones still runs until midnight
+function boostEnd(s) {
+  let e = (s && s.xpBoostUntil) || 0;
+  if (s && s.xpBoost && s.xpBoost === todayStr()) {
+    const d = new Date();
+    d.setHours(24, 0, 0, 0);
+    e = Math.max(e, d.getTime());
+  }
+  return e;
+}
+const boostLeft = (s) => Math.max(0, boostEnd(s) - Date.now()),
+  fmtLeft = (ms) => {
+    const m = Math.max(1, Math.ceil(ms / 6e4));
+    return m < 60 ? m + " Min." : Math.floor(m / 60) + " Std." + (m % 60 ? " " + (m % 60) + " Min." : "");
+  };
+// while double XP runs the screen shows the time left: draw again now and then, and right when it ends
+function useBoostLeft(s) {
+  const [, f] = useState(0),
+    l = boostLeft(s);
+  useEffect(() => {
+    if (!l) return;
+    const t = setTimeout(() => f((x) => x + 1), Math.min(l + 250, 15e3));
+    return () => clearTimeout(t);
+  });
+  return l;
+}
+function StatPill({ icon: s, value: r, color: o, badge: bg }) {
   return React.createElement(
     "div",
     {
@@ -11364,10 +11395,35 @@ function StatPill({ icon: s, value: r, color: o }) {
         border: `1.5px solid ${C.line}`,
         borderRadius: 999,
         padding: "5px 11px",
+        position: "relative",
       },
     },
     s,
     React.createElement("span", { className: "ana-display", style: { fontWeight: 600, fontSize: 14.5, color: o } }, r),
+    bg
+      ? React.createElement(
+          "span",
+          {
+            className: "ana-display",
+            "data-boost-badge": "1",
+            style: {
+              position: "absolute",
+              top: -8,
+              right: -7,
+              padding: "1px 5px",
+              borderRadius: 999,
+              background: "#F26D1B",
+              color: "#fff",
+              fontSize: 10.5,
+              fontWeight: 700,
+              lineHeight: 1.35,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
+              whiteSpace: "nowrap",
+            },
+          },
+          bg,
+        )
+      : null,
   );
 }
 function ProgressBar({ value: s, color: r }) {
@@ -14794,6 +14850,7 @@ function HomeScreen({
     VU = levelUnits(UNITS, lv),
     VL = ALL_LESSONS.filter((v) => inLevel(v, lv)),
     cc = claimableCount(s),
+    xpLeft = useBoostLeft(s),
     c = dueCards(s, 999).length,
     m = Object.keys(s.errors || {}).length,
     cf = confPairs(s).length,
@@ -14957,6 +15014,7 @@ function HomeScreen({
           icon: React.createElement(Zap, { size: 16, color: C.gold, fill: C.gold }),
           value: s.xp,
           color: "#C29204",
+          badge: xpLeft ? "\xD72" : null,
         }),
         React.createElement(
           "button",
@@ -15698,7 +15756,7 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
     d = ACHIEVEMENTS.map((x) => ({ a: x, st: achState(s, x) })),
     c = d.filter((x) => x.st.done && !x.st.claimed),
     m = i ? d : [...c, ...d.filter((x) => !x.st.done).slice(0, Math.max(0, 4 - c.length))],
-    h = s.xpBoost === todayStr(),
+    h = useBoostLeft(s),
     y = (x) =>
       x.apply && x.apply.theme
         ? (THEMES[x.apply.theme] || {}).paper
@@ -15765,7 +15823,7 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
           " Serien-Schutz \xB7 \u{1F511} ",
           s.tokens || 0,
           " Token",
-          h ? " \xB7 \u{1F680} Doppel-XP aktiv" : "",
+          h ? " \xB7 \u{1F680} Doppel-XP noch " + fmtLeft(h) : "",
         )
       : null,
     React.createElement(
@@ -15844,9 +15902,9 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
             k = b.apply && Object.entries(b.apply).every(([N, Z]) => s[N] === Z),
             g = (s.coins || 0) >= b.price,
             w = y(b),
-            M = b.boost && h,
+            M = b.boost && h && b === SHOP.find((v) => v.boost),
             fo = fc && b.grant && b.grant[fc];
-          return React.createElement(
+          const row = React.createElement(
             "div",
             {
               key: b.id,
@@ -15902,19 +15960,44 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
                 : React.createElement("button", { onClick: () => e(b), className: "ana-display", style: pill(C.good, "#fff", C.good) }, "einschalten")
               : f && b.once
                 ? React.createElement("span", { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: C.good } }, "gekauft")
-                : M
-                  ? React.createElement("span", { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: C.good } }, "l\xE4uft heute")
-                  : React.createElement(
-                      "button",
-                      {
-                        onClick: () => g && o(b),
-                        className: "ana-display",
-                        style: { ...pill(g ? C.gold : C.line, g ? C.gold : "#F2F4F9", g ? "#fff" : "#9AA3B2"), cursor: g ? "pointer" : "default" },
-                      },
-                      "\u{1FA99} ",
-                      b.price,
-                    ),
+                : React.createElement(
+                    "button",
+                    {
+                      onClick: () => g && o(b),
+                      className: "ana-display",
+                      style: { ...pill(g ? C.gold : C.line, g ? C.gold : "#F2F4F9", g ? "#fff" : "#9AA3B2"), cursor: g ? "pointer" : "default" },
+                    },
+                    "\u{1FA99} ",
+                    b.price,
+                  ),
           );
+          return M
+            ? React.createElement(
+                React.Fragment,
+                { key: b.id },
+                React.createElement(
+                  "div",
+                  {
+                    className: "ana-body",
+                    "data-boost-left": "1",
+                    style: {
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      color: C.good,
+                      background: C.card,
+                      border: `1.5px solid ${C.good}`,
+                      borderRadius: 12,
+                      padding: "8px 12px",
+                      marginBottom: 8,
+                    },
+                  },
+                  "\u{1F680} Doppel-XP l\xE4uft noch ",
+                  fmtLeft(h),
+                  React.createElement("span", { style: { fontWeight: 400, color: C.inkSoft } }, " \xB7 ein weiterer Kauf verl\xE4ngert die Zeit"),
+                ),
+                row,
+              )
+            : row;
         }),
       ),
     ),
@@ -18980,7 +19063,7 @@ function BarRow({ label: s, right: r, value: o, color: e }) {
     React.createElement(ProgressBar, { value: o, color: e }),
   );
 }
-function ExamResultScreen({ result: s, cfg: r, xpGain: o, coins: e, onAgain: t, onHome: a, onErrors: n, daily: dly, onDailySeen: dSeen, onDailyClaim: dClaim, streak: sn, onStreakSeen: sSeen }) {
+function ExamResultScreen({ result: s, cfg: r, xpGain: o, coins: e, boosted: bst, onAgain: t, onHome: a, onErrors: n, daily: dly, onDailySeen: dSeen, onDailyClaim: dClaim, streak: sn, onStreakSeen: sSeen }) {
   const [dl] = useState(dly),
     [sg] = useState(sn);
   useEffect(() => {
@@ -19050,7 +19133,9 @@ function ExamResultScreen({ result: s, cfg: r, xpGain: o, coins: e, onAgain: t, 
         { className: "ana-display", style: { fontSize: 18, fontWeight: 700, color: "#C29204", marginTop: 8 } },
         "+",
         o,
-        " XP \xB7 \u{1FA99} +",
+        " XP",
+        bst ? React.createElement("span", { style: { fontSize: 13, marginLeft: 5 } }, "\u{1F680} \xD72") : null,
+        " \xB7 \u{1FA99} +",
         e,
       ),
       React.createElement("div", { className: "ana-body", style: { fontSize: 12, color: C.inkSoft, marginTop: 4 } }, "Bestanden ab 60 %"),
@@ -19656,7 +19741,7 @@ function AnatomiaApp() {
       React.createElement("style", null, FONT_CSS),
       "Lade deinen Fortschritt \u2026",
     );
-  const xm = s.xpBoost === todayStr() ? 2 : 1,
+  const xm = () => (boostLeft(s) > 0 ? 2 : 1),
     unequipItem = (u) => {
       r((p) => {
         const f = { ...p };
@@ -19702,7 +19787,8 @@ function AnatomiaApp() {
     examDone = (u, p) => {
       const f = u.total ? u.correct / u.total : 0,
         k = gradeFor(f),
-        g = u.correct * 8 * xm,
+        bx = xm(),
+        g = u.correct * 8 * bx,
         w = u.correct * 2 + (k <= 4 ? 50 : 0);
       t(
         {
@@ -19715,7 +19801,7 @@ function AnatomiaApp() {
         },
         { exam: k <= 4 ? 1 : 0 },
       );
-      e({ name: "examresult", result: u, cfg: p, xpGain: g, coins: w });
+      e({ name: "examresult", result: u, cfg: p, xpGain: g, coins: w, boosted: bx > 1 });
     };
   const i = (u) => e({ name: "learn", lessonId: u }),
     l = (u) => {
@@ -19733,8 +19819,8 @@ function AnatomiaApp() {
     m = (u) => {
       r((p) => {
         if (u.boost) {
-          if ((p.coins || 0) < u.price || p.xpBoost === todayStr()) return p;
-          const f = { ...p, coins: p.coins - u.price, xpBoost: todayStr() };
+          if ((p.coins || 0) < u.price) return p;
+          const f = { ...p, coins: p.coins - u.price, xpBoostUntil: Math.max(Date.now(), boostEnd(p)) + u.boost * 6e4, xpBoost: null };
           return (saveProgress(f), f);
         }
         if ((p.coins || 0) < u.price || (p.owned || []).includes(u.id)) return p;
@@ -19831,24 +19917,26 @@ function AnatomiaApp() {
     S = (u, p, f) => {
       const k = findLesson(u),
         g = p / f,
-        w = (p * 10 + (g === 1 ? 20 : 0)) * xm,
+        bx = xm(),
+        w = (p * 10 + (g === 1 ? 20 : 0)) * bx,
         M = n(s);
       t(
         { ...s, xp: s.xp + w, ...M, coins: (s.coins || 0) + x("lesson", g), best: { ...s.best, [u]: Math.max(s.best[u] || 0, g) } },
         { lessons: 1, perfect: g >= 0.999 ? 1 : 0, region: regionOf(k) },
       );
-      e({ name: "result", kind: "quiz", lessonId: u, pct: g, xpGain: w, color: k.color, dark: k.dark });
+      e({ name: "result", kind: "quiz", lessonId: u, pct: g, xpGain: w, boosted: bx > 1, color: k.color, dark: k.dark });
     },
     B = (u, p, f) => {
       const k = UNITS.find((F) => F.id === u),
         g = p / f,
         w = g >= 0.8,
-        M = (p * 10 + (w ? 40 : 0)) * xm,
+        bx = xm(),
+        M = (p * 10 + (w ? 40 : 0)) * bx,
         z = n(s),
         I = { ...s.tests };
       w && (I[u] = Math.max(I[u] || 0, g));
       t({ ...s, xp: s.xp + M, ...z, tests: I, coins: (s.coins || 0) + x("test", g) }, { test: w ? 1 : 0 });
-      e({ name: "result", kind: "test", pct: g, xpGain: M, passed: w, unitId: u, color: k.color, dark: k.dark });
+      e({ name: "result", kind: "test", pct: g, xpGain: M, boosted: bx > 1, passed: w, unitId: u, color: k.color, dark: k.dark });
     };
   let A = null;
   if (o.name === "home")
@@ -19944,6 +20032,7 @@ function AnatomiaApp() {
       cfg: o.cfg,
       xpGain: o.xpGain,
       coins: o.coins,
+      boosted: !!o.boosted,
       onAgain: () => e({ name: "examsetup" }),
       onHome: () => e({ name: "home" }),
       onErrors: () => e({ name: "errors" }),
@@ -19969,13 +20058,15 @@ function AnatomiaApp() {
       src: o.src,
       onExit: () => e({ name: "figure", src: o.src, from: o.from }),
       onFinish: (u, p) => {
-        const f = n(s);
-        t({ ...s, xp: s.xp + u * 6 * xm, coins: (s.coins || 0) + u * 2, ...f });
+        const f = n(s),
+          bx = xm();
+        t({ ...s, xp: s.xp + u * 6 * bx, coins: (s.coins || 0) + u * 2, ...f });
         e({
             name: "result",
             kind: "figure",
             pct: u / p,
-            xpGain: u * 6 * xm,
+            xpGain: u * 6 * bx,
+            boosted: bx > 1,
             color: ATLAS_COLOR,
             dark: "#1F4F82",
             back: { name: "figure", src: o.src, from: o.from },
@@ -20044,13 +20135,15 @@ function AnatomiaApp() {
       jokers: 0,
       onExit: () => e({ name: "errors" }),
       onFinish: (u, p) => {
-        const f = u * 6 * xm;
+        const bx = xm(),
+          f = u * 6 * bx;
         t({ ...s, xp: s.xp + f, ...n(s) }, { conf: p });
         e({
             name: "result",
             kind: "mix",
             pct: u / Math.max(1, p),
             xpGain: f,
+            boosted: bx > 1,
             color: "#C2255C",
             dark: "#9C1D4A",
             back: { name: "errors" },
@@ -20093,9 +20186,10 @@ function AnatomiaApp() {
       onExit: () => e({ name: "home" }),
       onAnswer: y,
       onFinish: (u, p) => {
-        const f = n(s);
-        t({ ...s, xp: s.xp + u * 12 * xm, coins: (s.coins || 0) + u * 5, ...f }, { cases: u });
-        e({ name: "result", kind: "cases", pct: u / p, xpGain: u * 12 * xm, color: "#0B7285", dark: "#075661" });
+        const f = n(s),
+          bx = xm();
+        t({ ...s, xp: s.xp + u * 12 * bx, coins: (s.coins || 0) + u * 5, ...f }, { cases: u });
+        e({ name: "result", kind: "cases", pct: u / p, xpGain: u * 12 * bx, boosted: bx > 1, color: "#0B7285", dark: "#075661" });
       },
     });
   else if (o.name === "flash")
@@ -20110,13 +20204,15 @@ function AnatomiaApp() {
           o.back === "errors" ? { name: "errors" } : o.back === "deck" ? { name: "deck" } : { name: "home" },
         ),
       onFinish: (u) => {
-        const p = n(s);
-        t({ ...s, xp: s.xp + u * 5 * xm, coins: (s.coins || 0) + u, ...p });
+        const p = n(s),
+          bx = xm();
+        t({ ...s, xp: s.xp + u * 5 * bx, coins: (s.coins || 0) + u, ...p });
         e({
             name: "result",
             kind: "flash",
             pct: u / Math.max(1, o.cards.length),
-            xpGain: u * 5 * xm,
+            xpGain: u * 5 * bx,
+            boosted: bx > 1,
             color: o.color,
             dark: o.dark,
             ...(o.back === "errors" ? { back: { name: "errors" }, backLabel: "Zur\xFCck zum Fehlerbuch" } : {}),
@@ -20142,7 +20238,7 @@ function AnatomiaApp() {
       streak: s.streakNote,
       onStreakSeen: streakShown,
       fx: s.fx,
-      boosted: xm > 1,
+      boosted: !!o.boosted,
       onHome: () => e({ name: "home" }),
       onBack: o.back && o.back.name ? () => e(o.back) : void 0,
       onRetry: () => b(o.unitId),
