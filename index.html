@@ -17493,6 +17493,9 @@ function ZoomPane({ onTap: s, reset: r, tap: f = !0, focus: fz = !1, children: o
       try {
         a.current.setPointerCapture(k.pointerId);
       } catch {}
+      // a first finger: no other one is down, even if the end of one never came (after zooming with two fingers on the
+      // iPhone), else every tap would count as two fingers
+      k.isPrimary && i.current.clear();
       i.current.set(k.pointerId, m(k));
       const g = [...i.current.values()];
       l.current =
@@ -17516,7 +17519,7 @@ function ZoomPane({ onTap: s, reset: r, tap: f = !0, focus: fz = !1, children: o
       if (w.kind === "pan" && g.length === 1) {
         const M = g[0].x - w.p0.x,
           z = g[0].y - w.p0.y;
-        Math.hypot(M, z) > 8 && (w.moved = !0);
+        Math.hypot(M, z) > 11 && (w.moved = !0);
         w.moved && w.t0.s > 1 && t(c(w.t0.s, w.t0.x + M, w.t0.y + z));
       } else if (w.kind === "pinch" && g.length > 1) {
         const M = Math.max(1, Math.min(4, (w.t0.s * Math.hypot(g[0].x - g[1].x, g[0].y - g[1].y)) / Math.max(1, w.d0))),
@@ -17678,12 +17681,14 @@ function PointImage({ q: s, color: r, onResult: o, done: e }) {
         [Z, Y, Q, J] = c || [0, 0, 1, 1];
       // a tap beside the picture is no answer
       if (B < Z || B > Z + Q || A < Y || A > Y + J) return;
-      a([B, A]);
       const u = x.width / Math.max(1, x.height),
         p = P.some((g) => Math.hypot((B - g[0]) * u, A - g[1]) < 0.085 * h),
         f = l && B > l[0] - 0.02 * m && B < l[0] + l[2] + 0.02 * m && A > l[1] - 0.025 * h && A < l[1] + l[3] + 0.025 * h,
-        k = T.areas.some((g) => g.filter((w) => inPoly(w, B, A)).length % 2 === 1);
-      o(!!(p || f || k));
+        k = T.areas.some((g) => g.filter((w) => inPoly(w, B, A)).length % 2 === 1),
+        ok = !!(p || f || k);
+      // where it was tapped, and whether that was right (a right tap shows only the lit-up area)
+      a([B, A, ok]);
+      o(ok);
     },
     // markers keep their size on screen while the picture is zoomed
     U = (b, D) =>
@@ -17744,7 +17749,7 @@ function PointImage({ q: s, color: r, onResult: o, done: e }) {
               }),
             ),
           ),
-        P.map((g, w) => V(g, b, w)),
+        T.areas.length ? null : P.map((g, w) => V(g, b, w)),
       );
   return React.createElement(
     "div",
@@ -17763,7 +17768,7 @@ function PointImage({ q: s, color: r, onResult: o, done: e }) {
               quiz: e ? { idx: s.mark.li, reveal: !0, revealText: s.item && s.item.la } : null,
               zs: b,
             },
-            t && U(t, b),
+            t && !(e && t[2]) && U(t, b),
             R(b),
           )
         : React.createElement(
@@ -17778,7 +17783,7 @@ function PointImage({ q: s, color: r, onResult: o, done: e }) {
                 draggable: !1,
                 style: { display: "block", maxWidth: "100%", maxHeight: 300, width: "auto", cursor: e ? "default" : "crosshair", userSelect: "none" },
               }),
-              t && U(t, b),
+              t && !(e && t[2]) && U(t, b),
               e && V(i, b, "sol"),
             ),
           ),
