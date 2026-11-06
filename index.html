@@ -7696,6 +7696,52 @@ const AREA_CACHE = {},
     }
     return A;
   };
+// up close at a card's structure: its label (as drawn lit up, in the names shown: md), its line tips and its outline when
+// there is one, with a margin, in a view of the frame's shape (fw x fh px) and at most 3x the picture as shown; inside cr
+// (the panel shown) when given, keeping what that leaves out; null when that would hardly be closer
+const zoomRect = (s, r, cr, fw, fh, md = "la") => {
+  const e = s && s.labels && s.labels[r];
+  if (!e || !s.w || !s.h || !fw || !fh) return null;
+  const W = s.w,
+    H = s.h,
+    [t, a, n, i] = e.b,
+    // the lit-up label: bold, 1.3 times the label size (LabelLayer); kh its height as a part of the picture's height
+    kh = (e.f || e.lh || i) * 0.86 * 1.3,
+    I = e.rot ? n : Math.max(n, (labelTextW((md === "de" && e.de) || e.la || "", 100) / 100 + 0.5) * kh * (H / W)),
+    F = e.rot ? t : e.al === "r" ? t + n - I : e.al === "l" ? t : t + n / 2 - I / 2,
+    hh = Math.max(i, kh * 1.2) / 2,
+    ar = areasFor(s.__src || ""),
+    pts = [[F, a + i / 2 - hh], [F + I, a + i / 2 + hh], ...(e.a || []), ...((ar && ar.a[r]) || []).flat()];
+  let X0 = Infinity,
+    Y0 = Infinity,
+    X1 = -Infinity,
+    Y1 = -Infinity;
+  pts.forEach(([x, y]) => ((X0 = Math.min(X0, x * W)), (X1 = Math.max(X1, x * W)), (Y0 = Math.min(Y0, y * H)), (Y1 = Math.max(Y1, y * H))));
+  const [bx, by, bw, bh] = cr || [0, 0, 1, 1],
+    BX = bx * W,
+    BY = by * H,
+    BW = bw * W,
+    BH = bh * H,
+    g = fw / fh,
+    s0 = Math.min(fw / BW, fh / BH),
+    pd = Math.max(0.03 * Math.max(BW, BH), 0.15 * Math.max(X1 - X0, Y1 - Y0)),
+    cx = (X0 + X1) / 2,
+    cy = (Y0 + Y1) / 2;
+  let cw = X1 - X0 + 2 * pd,
+    ch = Y1 - Y0 + 2 * pd;
+  cw / ch < g ? (cw = ch * g) : (ch = cw / g);
+  const mw = fw / (3 * s0);
+  cw < mw && ((cw = mw), (ch = mw / g));
+  cw = Math.min(cw, BW);
+  ch = Math.min(ch, BH);
+  if (Math.min(fw / cw, fh / ch) / s0 < 1.3) return null;
+  const x0 = Math.min(Math.max(cx - cw / 2, BX), BX + BW - cw),
+    y0 = Math.min(Math.max(cy - ch / 2, BY), BY + BH - ch),
+    v = [x0 / W, y0 / H, cw / W, ch / H];
+  cr && cr.only && (v.only = cr.only);
+  cr && cr.members && (v.members = cr.members);
+  return v;
+};
 function useBoxSize(s, r = "") {
   const [o, e] = useState({ w: 0, h: 0 });
   return (
@@ -8262,6 +8308,15 @@ const atlasNorm = (s) =>
       list = V.length ? V : L.map((q) => ({ ...q, hl: null, mk: !1 }));
     return { list, start: Math.max(0, list.findIndex((q) => q.mk)) };
   };
+// a magnifier with + (or - to go back to the whole picture)
+const ZoomGlass = ({ out: s = !1, size: r = 16 }) =>
+  React.createElement(
+    "svg",
+    { width: r, height: r, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.4, strokeLinecap: "round", "aria-hidden": "true" },
+    React.createElement("circle", { cx: 10.5, cy: 10.5, r: 6.5 }),
+    React.createElement("path", { d: "M15.4 15.4 L20.6 20.6" }),
+    React.createElement("path", { d: s ? "M7.6 10.5 H13.4" : "M7.6 10.5 H13.4 M10.5 7.6 V13.4" }),
+  );
 function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270 }) {
   const n = (marksFor(r.id) || {})[o],
     // only the plates on which this structure is to be seen, lit up on each
@@ -8270,7 +8325,11 @@ function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270
     [i, l] = useState(P.start),
     [d, c] = useState("la"),
     [m, h] = useState(!1),
-    [y, b] = useState(!1);
+    [y, b] = useState(!1),
+    // up close at the card's structure (zoomRect), in the card; stays on from card to card
+    [zm, setZm] = useState(!1),
+    fr = useRef(null),
+    fb = useBoxSize(fr, s.length ? "1" : "0");
   useEffect(() => {
     l(P.start);
   }, [o]);
@@ -8283,14 +8342,17 @@ function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270
   const G = q.hl,
     B = G == null ? null : Array.isArray(G) ? G[0] : G,
     F = q.mk && B != null ? focusRect(S, B, n.a) : null,
-    A = F && (!n.al || n.al.every((D) => F.members.has(D))) ? F : null;
+    A = F && (!n.al || n.al.every((D) => F.members.has(D))) ? F : null,
+    Z = B != null ? zoomRect(S, B, A && !y ? A : null, Math.max(160, (fb.w || 328) - 8), t, d) : null,
+    zon = zm && !!Z,
+    im = React.createElement(LabeledImage, { src: x.src, mode: d, hl: G, color: e, maxHeight: t, onClick: () => h(!0), crop: zon ? Z : y ? null : A });
   return React.createElement(
     "div",
     null,
     React.createElement(
       "div",
-      { style: { borderRadius: 14, overflow: "hidden", background: "#fff", border: `1.5px solid ${C.line}`, padding: 4 } },
-      React.createElement(LabeledImage, { src: x.src, mode: d, hl: G, color: e, maxHeight: t, onClick: () => h(!0), crop: y ? null : A }),
+      { ref: fr, style: { borderRadius: 14, overflow: "hidden", background: "#fff", border: `1.5px solid ${C.line}`, padding: 4 } },
+      zon ? React.createElement("div", { key: "z" + ix + "-" + B, className: "ana-zoomin", "data-zoomed": "1" }, im) : im,
     ),
     React.createElement(
       "div",
@@ -8345,26 +8407,54 @@ function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270
           ),
         ),
       React.createElement(ModeSwitch, { mode: d, setMode: c, color: e }),
+      // zoom and full screen stay together at the right (on a line of their own when the row is full)
       React.createElement(
-        "button",
-        {
-          onClick: (D) => (D.stopPropagation(), h(!0)),
-          className: "ana-body",
-          "aria-label": "Abbildung gro\xDF anzeigen",
-          title: "Gro\xDF",
-          style: {
-            marginLeft: "auto",
-            padding: "4px 10px",
-            borderRadius: 999,
-            border: `1.5px solid ${C.line}`,
-            background: C.card,
-            color: C.inkSoft,
-            fontSize: 15,
-            fontWeight: 700,
-            cursor: "pointer",
+        "div",
+        { style: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 } },
+        Z &&
+          React.createElement(
+            "button",
+            {
+              onClick: (D) => (D.stopPropagation(), setZm(!zon)),
+              className: "ana-body",
+              "data-zoom-btn": "1",
+              "aria-pressed": zon,
+              "aria-label": zon ? "Ganzes Bild zeigen" : "An die Struktur heranzoomen",
+              title: zon ? "Ganzes Bild" : "Heranzoomen",
+              style: {
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "5px 10px",
+                borderRadius: 999,
+                border: `1.5px solid ${zon ? e : C.line}`,
+                background: zon ? e : C.card,
+                color: zon ? "#fff" : C.inkSoft,
+                cursor: "pointer",
+              },
+            },
+            React.createElement(ZoomGlass, { out: zon }),
+          ),
+        React.createElement(
+          "button",
+          {
+            onClick: (D) => (D.stopPropagation(), h(!0)),
+            className: "ana-body",
+            "aria-label": "Abbildung gro\xDF anzeigen",
+            title: "Gro\xDF",
+            style: {
+              padding: "4px 10px",
+              borderRadius: 999,
+              border: `1.5px solid ${C.line}`,
+              background: C.card,
+              color: C.inkSoft,
+              fontSize: 15,
+              fontWeight: 700,
+              cursor: "pointer",
+            },
           },
-        },
-        "\u2922",
+          "\u2922",
+        ),
       ),
     ),
     m &&
