@@ -14,7 +14,8 @@
 <link rel="icon" href="./icon-180.png">
 <style>
 html, body { margin: 0; background: #F4F6FB; -webkit-text-size-adjust: 100%; }
-#root { min-height: 100vh; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+#root { box-sizing: border-box; min-height: 100vh; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+@supports (min-height: 100dvh) { #root { min-height: 100dvh; } }
 * { -webkit-tap-highlight-color: transparent; }
 img { -webkit-user-select: none; user-select: none; }
 </style>
@@ -8075,7 +8076,7 @@ function ModeSwitch({ mode: s, setMode: r, color: o, dark: e = !1 }) {
           },
           className: "ana-body",
           style: {
-            padding: "5px 11px",
+            padding: "5px 9px",
             borderRadius: 999,
             border: "none",
             fontSize: 12.5,
@@ -8403,7 +8404,7 @@ function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270
       // zoom and full screen stay together at the right (on a line of their own when the row is full)
       React.createElement(
         "div",
-        { style: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 } },
+        { style: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 } },
         Z &&
           React.createElement(
             "button",
@@ -8418,7 +8419,7 @@ function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                padding: "5px 10px",
+                padding: "5px 9px",
                 borderRadius: 999,
                 border: `1.5px solid ${zon ? e : C.line}`,
                 background: zon ? e : C.card,
@@ -11556,6 +11557,9 @@ function useSwipeBack(s, v) {
     );
   }, []);
 }
+// a screen as high as the visible screen, inside #root's safe-area padding: no scrolling just to reach the bottom of
+// a short screen (iPhone: status bar and home bar; Safari: its toolbar, with dvh)
+const PAGE_H = `calc(${typeof CSS < "u" && CSS.supports && CSS.supports("min-height", "100dvh") ? "100dvh" : "100vh"} - env(safe-area-inset-top) - env(safe-area-inset-bottom))`;
 function TopBar({ onBack: s, children: r, right: o, swipe: sw = !0 }) {
   useSwipeBack(sw ? s : null);
   return React.createElement(
@@ -14186,7 +14190,7 @@ function FigureQuizScreen({ src: s, onExit: r, onFinish: o }) {
     };
   return React.createElement(
     "div",
-    { style: { display: "flex", flexDirection: "column", minHeight: "100vh" } },
+    { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
     React.createElement(
       TopBar,
       { onBack: r },
@@ -15877,7 +15881,7 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
   }, []);
   return React.createElement(
     "div",
-    { style: { minHeight: "100vh" } },
+    { style: { minHeight: PAGE_H } },
     React.createElement(
       TopBar,
       {
@@ -16598,7 +16602,7 @@ function ErrorBookScreen({ progress: s, onExit: r, onTrain: o, onOpenLesson: e, 
     de = (i) => i.item.de || i.item.la;
   return React.createElement(
     "div",
-    { style: { minHeight: "100vh", paddingBottom: 16 } },
+    { style: { minHeight: PAGE_H, paddingBottom: 16 } },
     React.createElement(
       TopBar,
       { onBack: r },
@@ -16755,7 +16759,7 @@ function VignetteScreen({ cases: s, onExit: r, onFinish: o, onAnswer: e }) {
   useScrollTop(t);
   return React.createElement(
     "div",
-    { style: { display: "flex", flexDirection: "column", minHeight: "100vh" } },
+    { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
     React.createElement(
       TopBar,
       {
@@ -16911,7 +16915,7 @@ function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
     b = (REGIONS.find((x) => x.id === e) || {}).label;
   return React.createElement(
     "div",
-    { style: { minHeight: "100vh" } },
+    { style: { minHeight: PAGE_H } },
     React.createElement(
       TopBar,
       { onBack: r },
@@ -17420,6 +17424,19 @@ function SpeakBtn({ text: s, color: r = C.inkSoft, size: o = 30, lang: e = "de-D
       )
     : null;
 }
+// the Zurück / Weiter row of the cards: in view at the bottom of the screen (as on the flash cards), above the home bar
+const lessonNav = () => ({
+  display: "flex",
+  gap: 10,
+  padding: "12px 0 calc(12px + env(safe-area-inset-bottom))",
+  marginBottom: "calc(-1 * env(safe-area-inset-bottom))",
+  position: "sticky",
+  bottom: 0,
+  zIndex: 5,
+  background: C.paper,
+  // text that runs on behind the row fades out above it
+  boxShadow: `0 -14px 14px -4px ${C.paper}`,
+});
 function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
   const [a, n] = useState(0),
     i = s.items[a],
@@ -17427,7 +17444,7 @@ function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
   useScrollTop(a);
   return React.createElement(
     "div",
-    { style: { display: "flex", flexDirection: "column", minHeight: "100vh" } },
+    { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
     React.createElement(
       TopBar,
       { onBack: o },
@@ -17505,7 +17522,7 @@ function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
     ),
     React.createElement(
       "div",
-      { style: { display: "flex", gap: 10, padding: "14px 0 calc(20px + env(safe-area-inset-bottom))" } },
+      { style: lessonNav() },
       React.createElement(
         Btn,
         { ghost: !0, color: C.inkSoft, onClick: () => n(Math.max(0, a - 1)), disabled: a === 0, style: { width: 110 } },
@@ -17533,7 +17550,7 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
   return m.length
     ? React.createElement(
         "div",
-        { style: { display: "flex", flexDirection: "column", minHeight: "100vh" } },
+        { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
         React.createElement(
           TopBar,
           { onBack: o },
@@ -17625,7 +17642,7 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
         ),
         React.createElement(
           "div",
-          { style: { display: "flex", gap: 10, padding: "14px 0 calc(20px + env(safe-area-inset-bottom))" } },
+          { style: lessonNav() },
           React.createElement(
             Btn,
             { ghost: !0, color: C.inkSoft, onClick: () => n(Math.max(0, a - 1)), disabled: a === 0, style: { width: 110 } },
@@ -18144,7 +18161,7 @@ function QuizScreen({
   useScrollTop(m);
   return React.createElement(
     "div",
-    { style: { display: "flex", flexDirection: "column", minHeight: "100vh" } },
+    { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
     React.createElement(
       TopBar,
       {
@@ -18456,7 +18473,7 @@ function ResultScreen({
     "div",
     {
       style: {
-        minHeight: "100vh",
+        minHeight: PAGE_H,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -18577,7 +18594,7 @@ function FailScreen({ color: s, dark: r, onLearn: lr, onRetry: o, onHome: e }) {
     "div",
     {
       style: {
-        minHeight: "100vh",
+        minHeight: PAGE_H,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -18743,7 +18760,7 @@ function ExamSetupScreen({ progress: s, onExit: r, onStart: o }) {
     f = A >= 4;
   return React.createElement(
     "div",
-    { style: { minHeight: "100vh", paddingBottom: 30 } },
+    { style: { minHeight: PAGE_H, paddingBottom: 30 } },
     React.createElement(
       TopBar,
       { onBack: r },
@@ -18888,7 +18905,7 @@ function ExamQuiz({ questions: s, color: r, dark: dk, title: ti, timeUp: tu, onE
     };
   return React.createElement(
     "div",
-    { style: { display: "flex", flexDirection: "column", minHeight: "100vh" } },
+    { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
     React.createElement(
       TopBar,
       {
@@ -19181,7 +19198,7 @@ function ExamResultScreen({ result: s, cfg: r, xpGain: o, coins: e, boosted: bst
     y = s.answers.filter((b) => !b.ok && b.item);
   return React.createElement(
     "div",
-    { style: { minHeight: "100vh", paddingBottom: 30 } },
+    { style: { minHeight: PAGE_H, paddingBottom: 30 } },
     d && s.correct > 0 && React.createElement(FxRain, { kind: "konfetti" }),
     React.createElement(
       "div",
@@ -19357,7 +19374,7 @@ function MnemonicScreen({ onExit: s }) {
     i = EXAM_REGIONS.filter((l) => l.id !== "alle" && MNEMONICS.some((d) => d.region === l.id));
   return React.createElement(
     "div",
-    { style: { minHeight: "100vh", paddingBottom: 30 } },
+    { style: { minHeight: PAGE_H, paddingBottom: 30 } },
     React.createElement(
       TopBar,
       { onBack: s },
@@ -19455,7 +19472,7 @@ function StreakScreen({ progress: s, onExit: r }) {
       );
   return React.createElement(
     "div",
-    { style: { minHeight: "100vh", paddingBottom: 30 } },
+    { style: { minHeight: PAGE_H, paddingBottom: 30 } },
     React.createElement(TopBar, { onBack: r }, React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, "Deine Lerntage")),
     // the streak in one figure, with record and Serien-Schutz
     React.createElement(
@@ -19615,7 +19632,7 @@ function XpScreen({ progress: s, onExit: r }) {
   let lastMonth = "";
   return React.createElement(
     "div",
-    { style: { minHeight: "100vh", paddingBottom: 30 } },
+    { style: { minHeight: PAGE_H, paddingBottom: 30 } },
     React.createElement(TopBar, { onBack: r }, React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, "Deine XP")),
     React.createElement(
       "div",
@@ -19778,7 +19795,7 @@ function StatsScreen({ progress: s, onExit: r, onReset: rs }) {
     B = Object.values(n).reduce((v, W) => [v[0] + W[0], v[1] + W[1]], [0, 0]);
   return React.createElement(
     "div",
-    { style: { minHeight: "100vh", paddingBottom: 30 } },
+    { style: { minHeight: PAGE_H, paddingBottom: 30 } },
     React.createElement(
       TopBar,
       { onBack: r },
@@ -19927,7 +19944,7 @@ function ResetScreen({ progress: s, onExit: r, onReset: o }) {
     a = ALL_LESSONS.filter((n) => s.best[n.id] != null).length;
   return React.createElement(
     "div",
-    { style: { minHeight: "100vh", paddingBottom: 30 } },
+    { style: { minHeight: PAGE_H, paddingBottom: 30 } },
     React.createElement(
       TopBar,
       { onBack: r },
@@ -20184,7 +20201,7 @@ function AnatomiaApp() {
       {
         className: "ana-body",
         style: {
-          minHeight: "100vh",
+          minHeight: PAGE_H,
           background: C.paper,
           display: "flex",
           alignItems: "center",
@@ -20708,7 +20725,7 @@ function AnatomiaApp() {
   }
   return React.createElement(
     "div",
-    { className: "ana-body", style: { minHeight: "100vh", background: C.paper, color: C.ink } },
+    { className: "ana-body", style: { minHeight: PAGE_H, background: C.paper, color: C.ink } },
     React.createElement("style", null, FONT_CSS),
     React.createElement(SvgDefs, null),
     React.createElement("div", { id: "ana-screen", style: { maxWidth: 480, margin: "0 auto", padding: "0 14px" } }, A),
