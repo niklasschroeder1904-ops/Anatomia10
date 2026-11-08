@@ -10917,6 +10917,8 @@ const STORAGE_KEY = "anatomia-v1",
     // streak Taler: the day of the streak paid up to, and what was paid, to show once on the next result screen
     streakGift: 0,
     streakNote: null,
+    // the lesson last finished or failed: the home menu goes on with the next lesson of its chapter
+    lastLesson: null,
   },
   THEMES = {
     papier: { label: "Papierwei\xDF", paper: "#F4F6FB", card: "#FFFFFF", line: "#E3E8F0" },
@@ -15008,14 +15010,36 @@ function HomeScreen({
     },
     w = VL.length,
     M = VL.filter((v) => s.best[v.id] != null).length;
+  // on top ("Weiterlernen"): the next open lesson of the chapter last worked on - from the lesson last finished or failed
+  // on, else an earlier open one of that chapter; a finished chapter goes on with the next chapter of the menu that has
+  // an open lesson. The last lesson before that was remembered: the one last done for the first time (the order of the
+  // done lessons). Without one (or outside the level): the first open lesson of the menu
   let z = null;
-  for (const v of VU) {
-    const W = v.lessons.find((E) => s.best[E.id] == null && g(E.id));
-    if (W) {
-      z = { unit: v, lesson: W };
-      break;
-    }
+  const open = (v) => s.best[v.id] == null && g(v.id),
+    lastId = s.lastLesson || Object.keys(s.best || {}).filter((v) => findLesson(v)).pop(),
+    lu = lastId ? VU.findIndex((v) => v.lessons.some((E) => E.id === lastId)) : -1;
+  if (lu >= 0) {
+    const U = VU[lu],
+      E = U.lessons.findIndex((v) => v.id === lastId),
+      W = [...U.lessons.slice(E), ...U.lessons.slice(0, E)].find(open);
+    if (W) z = { unit: U, lesson: W };
+    else
+      for (const v of [...VU.slice(lu + 1), ...VU.slice(0, lu)]) {
+        const N = v.lessons.find(open);
+        if (N) {
+          z = { unit: v, lesson: N };
+          break;
+        }
+      }
   }
+  if (!z)
+    for (const v of VU) {
+      const W = v.lessons.find(open);
+      if (W) {
+        z = { unit: v, lesson: W };
+        break;
+      }
+    }
   useEffect(() => {
     dSync && dSync();
   }, []);
@@ -20417,7 +20441,7 @@ function AnatomiaApp() {
         w = (p * 10 + (g === 1 ? 20 : 0)) * bx,
         M = n(s);
       t(
-        { ...s, xp: s.xp + w, ...M, coins: (s.coins || 0) + x("lesson", g), best: { ...s.best, [u]: Math.max(s.best[u] || 0, g) } },
+        { ...s, xp: s.xp + w, ...M, coins: (s.coins || 0) + x("lesson", g), best: { ...s.best, [u]: Math.max(s.best[u] || 0, g) }, lastLesson: u },
         { lessons: 1, perfect: g >= 0.999 ? 1 : 0, region: regionOf(k) },
       );
       e({ name: "result", kind: "quiz", lessonId: u, pct: g, xpGain: w, boosted: bx > 1, color: k.color, dark: k.dark });
@@ -20602,7 +20626,13 @@ function AnatomiaApp() {
       onConfuse: confuse,
       onExit: () => e({ name: "learn", lessonId: u.id }),
       onFinish: (f, k) => S(u.id, f, k),
-      onFail: () => e({ name: "fail", lessonId: u.id }),
+      onFail: () => (
+        r((f) => {
+          const k = { ...f, lastLesson: u.id };
+          return (saveProgress(k), k);
+        }),
+        e({ name: "fail", lessonId: u.id })
+      ),
     });
   } else if (o.name === "test") {
     const u = UNITS.find((p) => p.id === o.unitId);
