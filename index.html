@@ -14278,26 +14278,43 @@ const DAILY_TIER = [
   ["mittel", "#E8590C"],
   ["schwer", "#C2255C"],
 ];
-// a light, short tick of the phone, called from a tap. Safari on the iPhone has no vibration for web pages, but a switch
-// (<input type="checkbox" switch>, iOS 18 and later) gives the light tick of the system when a tap flips it: a hidden one is
-// flipped through its label. Elsewhere (Android) a very short vibration; where neither works nothing happens
+// a light, short tick of the phone when Taler are collected. Android: a very short vibration (tick, from the tap).
+// iPhone: Safari has no vibration for web pages; the light tick of the system comes when a switch
+// (<input type="checkbox" switch>) is flipped, and since iOS 26.5 only when the finger itself flips it (a switch flipped
+// from code no longer ticks). So a collect button carries TickLayer: a transparent label over the button holding a hidden
+// switch; the finger's tap on the label flips the switch (the tick), and the tap's click still reaches the button once
 function tick() {
   try {
-    const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    if (!ios) return void (typeof navigator.vibrate == "function" && navigator.vibrate(15));
-    const lb = document.createElement("label"),
-      cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.setAttribute("switch", "");
-    cb.tabIndex = -1;
-    lb.setAttribute("aria-hidden", "true");
-    lb.setAttribute("data-tick", "1");
-    lb.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;";
-    lb.appendChild(cb);
-    document.body.appendChild(lb);
-    lb.click();
-    setTimeout(() => lb.remove(), 1000);
+    TICK_IOS || (typeof navigator.vibrate == "function" && navigator.vibrate(15));
   } catch (e) {}
+}
+const TICK_IOS = (() => {
+  try {
+    return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) && typeof navigator.vibrate != "function";
+  } catch (e) {
+    return !1;
+  }
+})();
+function TickLayer() {
+  return TICK_IOS
+    ? React.createElement(
+        "label",
+        {
+          "aria-hidden": "true",
+          "data-tick-layer": "1",
+          style: { position: "absolute", inset: 0, zIndex: 1, borderRadius: "inherit", touchAction: "manipulation", WebkitTapHighlightColor: "transparent", cursor: "pointer" },
+        },
+        // never under the finger (a touch on the switch itself would stop the page from scrolling); its own click, sent
+        // on by the label, stays here so the button gets the tap only once
+        React.createElement("input", {
+          type: "checkbox",
+          switch: "",
+          tabIndex: -1,
+          onClick: (e) => e.stopPropagation(),
+          style: { position: "absolute", left: 0, top: 0, width: 1, height: 1, margin: 0, visibility: "hidden" },
+        }),
+      )
+    : null;
 }
 // coins for collected Taler: they burst from el and fly to the Taler count at the top of the menu ([data-coin-target], when it
 // is in view; else they rise and fade), with the amount rising over el; the count follows when they land (COIN_LAND, CoinCount).
@@ -14442,8 +14459,9 @@ function DailyBanner({ fresh: s, onClaim: oc }) {
     tap = (ev) => {
       if (got || !oc || !s.taler) return;
       coinFx(ev.currentTarget, s.taler, s.bonus);
-      setGot(!0);
-      oc("all");
+      // the button changes after this tap's click is through: its TickLayer (iPhone) must still be there when the click
+      // flips the switch, else no tick
+      setTimeout(() => (setGot(!0), oc("all")), 0);
     };
   return r.length
     ? React.createElement(
@@ -14482,6 +14500,7 @@ function DailyBanner({ fresh: s, onClaim: oc }) {
                 className: "ana-display " + (got ? "ana-pop" : "ana-claim-glow"),
                 style: {
                   display: "block",
+                  position: "relative",
                   width: "100%",
                   marginTop: 9,
                   padding: "8px 12px 9px",
@@ -14497,6 +14516,7 @@ function DailyBanner({ fresh: s, onClaim: oc }) {
                 },
               },
               got ? `\u2713 +${s.taler} Taler eingesammelt` : `\u{1FA99} +${s.taler} Taler abholen`,
+              !got && React.createElement(TickLayer),
               (s.bonus || s.extra) && !got
                 ? React.createElement(
                     "span",
@@ -14534,7 +14554,8 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
         pl = el && el.querySelector ? el.querySelector("[data-coin-pill]") : null;
       coinFx(pl || el, q.taler, q.bonus);
       setJg((g) => [...g, ...ids]);
-      oc(ids);
+      // the row turns "collected" after this tap's click is through (its TickLayer flips the switch first: the tick)
+      setTimeout(() => oc(ids), 0);
     },
     // the reward on the right: still to earn, to collect (pulsing) or collected
     pill = (st, pay, id) =>
@@ -14573,6 +14594,7 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
           "aria-label": al,
           style: {
             display: "flex",
+            position: "relative",
             alignItems: "center",
             gap: 10,
             width: "100%",
@@ -14614,6 +14636,7 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
           React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 4 } }, sb),
         ),
         pill(st, pay, k),
+        st === "open" && React.createElement(TickLayer),
       );
   return React.createElement(
     "div",
