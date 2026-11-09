@@ -18398,7 +18398,8 @@ function QuizScreen({
               "Richtig w\xE4re: ",
               z ? (M.kind === "point" ? "die gr\xFCn markierte Stelle" : M.item.la) : M.options.find((E) => E.correct).label,
             ),
-          // a typed answer with a small typo counts, and shows how it is written
+          // a typed answer with a small typo counts, and shows how it is written: what was missing underlined in green, what
+          // was wrong in red
           F &&
             M.kind === "type" &&
             g &&
@@ -18420,7 +18421,7 @@ function QuizScreen({
                               style:
                                 k === "+"
                                   ? { color: C.good, textDecoration: "underline", textDecorationThickness: 2, textUnderlineOffset: 3 }
-                                  : { color: C.bad, textDecoration: "line-through", textDecorationThickness: 2, opacity: 0.85 },
+                                  : { color: C.bad },
                             },
                             t,
                           ),
