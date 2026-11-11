@@ -10840,17 +10840,41 @@ function buildLessonQuiz(s, r = 8) {
       const l = Math.min(...n.map((d) => uses(d).length));
       return (take(k, n.find((d) => uses(d).length === l)), !0);
     };
+  // one odd-one-out question and, where the cards teach a number, one number question
+  const x = [makeIntruder(s), makeNumQuestion(s)].filter(Boolean),
+    // r questions with those; a lesson with more structures than that has as many questions as it takes to ask every
+    // structure at least once
+    T = Math.max(r - x.length, e.length);
   // kinds with pictures first (they need structures with a mark), each on a structure of its own where possible
   for (const k of ["type", "point", "fig", "fig"]) e.some(can[k]) && pick(k, 1);
   for (const k of ["term-de", "term-la", "fact"]) pick(k, 1) || pick(k);
-  for (let k = 0; Q.length < r - 1 && k < 3 * (r - 1); k++) pick(["fact", "term-la", "term-de", "fig"][k % 4]);
+  for (let k = 0; Q.length < T && k < 3 * T; k++) pick(["fact", "term-la", "term-de", "fig"][k % 4]);
+  // a structure none of that took (no clear definition, both names alike, no picture): asked all the same
+  e.forEach((i) => uses(i).length || take(["term-la", "term-de", "fact", "fig", "type", "point"].find((k) => can[k](i)) || "term-la", i));
+  // too many: questions on structures asked more than once go, the last ones first
+  for (let k = Q.length - 1; k >= 0 && Q.length > T; k--) {
+    const u = uses(Q[k].i);
+    u.length > 1 && (used.set(Q[k].i.id, u.filter((v, j) => j !== u.indexOf(Q[k].k))), Q.splice(k, 1));
+  }
   const n = mixOrder(Q, (i, l) => (i.k === l.k ? 1 : 0) + (i.i.id === l.i.id ? 2 : 0)).map(({ k, i }) =>
     k === "type" ? makeTypeQuestion(i, s, t[i.id], a) : k === "point" ? makePointQuestion(i, s, t[i.id], a) : askItem(i, s, k),
   );
-  // one odd-one-out question and, where the cards teach a number, one number question
-  const x = [makeIntruder(s), makeNumQuestion(s)].filter(Boolean),
-    m = n.slice(0, r - x.length);
-  return (x.forEach((i) => m.splice(1 + Math.floor(Math.random() * m.length), 0, i)), m);
+  return (x.forEach((i) => n.splice(1 + Math.floor(Math.random() * n.length), 0, i)), n);
+}
+// practice of one region (from the statistics): questions on structures of its learned lessons - without any, of its
+// first lessons - those in the error book and low in the review boxes first
+function buildRegionPractice(s, id, r = 10) {
+  const L = ALL_LESSONS.filter((l) => regionOf(l) === id && inLevel(l, s.level)),
+    D = L.filter((l) => s.best[l.id] != null),
+    c = (D.length ? D : L.slice(0, 3)).flatMap((l) => l.items.map((i) => ({ l, i, k: cardKey(l.id, i.id) }))),
+    w = (v) => ((s.errors || {})[v.k] ? 0 : 10) + (((s.srs || {})[v.k] || {}).box || 0),
+    K = ["fig", "fact", "term-de", "term-la"];
+  return shuffle(
+    shuffle(c)
+      .sort((v, W) => w(v) - w(W))
+      .slice(0, r)
+      .map((v, j) => askItem(v.i, v.l, K[j % 4])),
+  );
 }
 // mixed-up pairs that still lead to their cards, the most frequent first
 function confPairs(s) {
@@ -11430,10 +11454,11 @@ async function saveProgress(s) {
     await window.storage.set(STORAGE_KEY, JSON.stringify(s));
   } catch {}
 }
-function Btn({ children: s, color: r = C.good, dark: o = C.goodDark, onClick: e, disabled: t, ghost: a, style: n }) {
+function Btn({ children: s, color: r = C.good, dark: o = C.goodDark, onClick: e, disabled: t, ghost: a, style: n, ...rest }) {
   return React.createElement(
     "button",
     {
+      ...rest,
       onClick: e,
       disabled: t,
       className: "ana-display",
@@ -15438,6 +15463,56 @@ function HomeScreen({
               ),
               React.createElement("span", { className: "ana-display", style: { fontSize: 22, color: "#fff" } }, "\u203A"),
             ),
+          // cards due for review: right under the next lesson, so that they are not overlooked
+          c > 0 &&
+            React.createElement(
+              "button",
+              {
+                onClick: t,
+                "data-duecard": c,
+                "aria-label": `Wiederholen, ${c} Karten f\xE4llig`,
+                style: {
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "11px 15px",
+                  marginBottom: 12,
+                  borderRadius: 18,
+                  border: `2px solid ${C.gold}`,
+                  borderBottom: "5px solid #C99A04",
+                  background: C.card,
+                  cursor: "pointer",
+                },
+              },
+              React.createElement(
+                "span",
+                { style: { width: 40, height: 40, borderRadius: "50%", background: C.gold, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } },
+                React.createElement(RotateCcw, { size: 21, color: "#fff", strokeWidth: 2.6 }),
+              ),
+              React.createElement(
+                "span",
+                { style: { flex: 1, minWidth: 0 } },
+                React.createElement(
+                  "span",
+                  { className: "ana-display", style: { display: "block", fontSize: 11.5, fontWeight: 700, color: "#B8860B", letterSpacing: 1 } },
+                  "WIEDERHOLEN",
+                ),
+                React.createElement(
+                  "span",
+                  { className: "ana-display", style: { display: "block", fontSize: 17, fontWeight: 700, color: C.ink } },
+                  c,
+                  c === 1 ? " Karte f\xE4llig" : " Karten f\xE4llig",
+                ),
+                React.createElement(
+                  "span",
+                  { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft } },
+                  c > 30 ? "30 davon jetzt auffrischen, bevor du sie vergisst" : "Jetzt auffrischen, bevor du sie vergisst",
+                ),
+              ),
+              React.createElement("span", { className: "ana-display", style: { fontSize: 22, color: "#B8860B" } }, "\u203A"),
+            ),
           React.createElement(DailyCard, { progress: s, fresh: dfr, onGo: dgo, onClaim: dClaim }),
           React.createElement(
             "div",
@@ -17506,7 +17581,7 @@ const lessonNav = () => ({
   // text that runs on behind the row fades out above it
   boxShadow: `0 -14px 14px -4px ${C.paper}`,
 });
-function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
+function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e, done: dn = !1 }) {
   const [a, n] = useState(0),
     i = s.items[a],
     l = s.items.length;
@@ -17516,7 +17591,7 @@ function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
     { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
     React.createElement(
       TopBar,
-      { onBack: o },
+      { onBack: o, right: dn ? quizChip(r, e) : null },
       React.createElement(ProgressBar, { value: (a + 1) / l, color: r.color }),
       React.createElement(
         "span",
@@ -17603,7 +17678,19 @@ function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
     ),
   );
 }
-function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
+// "Zum Quiz" in the top bar of a lesson done before: its cards need not be gone through again
+const quizChip = (r, e) =>
+  React.createElement(
+    "button",
+    {
+      onClick: e,
+      "data-skipquiz": "1",
+      className: "ana-display",
+      style: { padding: "6px 11px", borderRadius: 999, border: `2px solid ${r.color}`, background: C.card, color: r.color, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" },
+    },
+    "Zum Quiz \u203A",
+  );
+function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, done: dn = !1 }) {
   const [a, n] = useState(0),
     i = s.items[a],
     l = !!s.model,
@@ -17622,7 +17709,7 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
         { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
         React.createElement(
           TopBar,
-          { onBack: o },
+          { onBack: o, right: dn ? quizChip(r, e) : null },
           React.createElement(ProgressBar, { value: (a + 1) / s.items.length, color: r.color }),
           React.createElement(
             "span",
@@ -17722,7 +17809,7 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e }) {
             : React.createElement(Btn, { color: C.good, dark: C.goodDark, onClick: e }, "Quiz starten"),
         ),
       )
-    : React.createElement(ConceptLearn, { lesson: s, unit: r, onExit: o, onQuiz: e });
+    : React.createElement(ConceptLearn, { lesson: s, unit: r, onExit: o, onQuiz: e, done: dn });
 }
 // zoom for quiz pictures: two fingers (or + / -) zoom, one finger moves the zoomed picture;
 // with onTap a short tap is the answer, without it a double tap zooms
@@ -18192,6 +18279,8 @@ function QuizScreen({
     // the questions still to come: in a lesson a wrongly answered one is asked again at the end, until it is answered right
     [qs, setQs] = useState(s),
     [cl, setCl] = useState(0),
+    // the structures answered wrong (the first answer counts), for the result page
+    wr = useRef([]),
     M = qs[m],
     z = M.kind === "type" || M.kind === "point",
     I = z ? f != null : u != null,
@@ -18207,6 +18296,7 @@ function QuizScreen({
         !R && i && M.item && M.lesson && i(M.lesson.id, M.item.id, E),
         !R && i && M.itemRef && i(M.itemRef.lessonId, M.itemRef.itemId, E),
         op && M.pair && op(M.pair, E));
+      E || R || !M.item || !M.lesson || wr.current.some((N) => N.lessonId === M.lesson.id && N.itemId === M.item.id) || wr.current.push({ lessonId: M.lesson.id, itemId: M.item.id });
       rw && !E && setQs((N) => [...N, { ...M, retry: !0, options: M.options && M.options.length ? shuffle(M.options) : M.options }]);
     },
     D = (E) => {
@@ -18226,7 +18316,7 @@ function QuizScreen({
         n();
         return;
       }
-      m + 1 < qs.length ? (h(m + 1), p(null), k(null), w(""), S([])) : a(B, s.length);
+      m + 1 < qs.length ? (h(m + 1), p(null), k(null), w(""), S([])) : a(B, s.length, wr.current);
     };
   useScrollTop(m);
   return React.createElement(
@@ -18510,6 +18600,58 @@ function FxRain({ kind: s }) {
       )
     : null;
 }
+// what was answered wrong in a round: each structure by name, with its picture and card text on a tap
+function WrongList({ items: s, color: r }) {
+  const [o, e] = useState(null),
+    t = (s || []).map((a) => findItem(cardKey(a.lessonId, a.itemId))).filter(Boolean);
+  if (!t.length) return null;
+  return React.createElement(
+    "div",
+    { "data-wrong": t.length, style: { width: "100%", maxWidth: 340, textAlign: "left", marginBottom: 16 } },
+    React.createElement(
+      "div",
+      { className: "ana-display", style: { fontSize: 12.5, fontWeight: 700, color: C.inkSoft, letterSpacing: 0.8, padding: "0 2px 7px" } },
+      "DAS WAR NOCH UNSICHER",
+    ),
+    t.map(({ lesson: a, item: n }, i) => {
+      const l = o === i,
+        d = platesFor(a.id),
+        c = d.length && (marksFor(a.id) || {})[n.id] ? "atlas" : a.figure ? "fig" : null;
+      return React.createElement(
+        "div",
+        { key: i, style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 12, marginBottom: 6, overflow: "hidden" } },
+        React.createElement(
+          "button",
+          {
+            onClick: () => e(l ? null : i),
+            "aria-expanded": l,
+            style: { display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "9px 12px", border: "none", background: "none", cursor: "pointer" },
+          },
+          React.createElement(X, { size: 16, color: C.bad, strokeWidth: 3 }),
+          React.createElement(
+            "span",
+            { style: { flex: 1, minWidth: 0 } },
+            React.createElement("span", { className: "ana-display", style: { display: "block", fontSize: 14.5, fontWeight: 700, color: C.ink, lineHeight: 1.25 } }, n.la),
+            React.createElement("span", { className: "ana-body", style: { display: "block", fontSize: 12.5, color: C.inkSoft } }, n.de),
+          ),
+          React.createElement("span", { className: "ana-display", style: { fontSize: 17, color: "#B6BECC", transform: l ? "rotate(90deg)" : "none", transition: "transform .15s" } }, "\u203A"),
+        ),
+        l &&
+          React.createElement(
+            "div",
+            { style: { padding: "0 10px 10px" } },
+            c === "atlas"
+              ? React.createElement(AtlasView, { plates: d, lesson: a, itemId: n.id, color: r, height: 210 })
+              : c === "fig"
+                ? React.createElement(FigureView, { figure: a.figure, hl: n.hl, accent: r, height: 200 })
+                : null,
+            React.createElement("div", { className: "ana-body", style: { fontSize: 13.5, color: C.ink, lineHeight: 1.45, marginTop: 8 } }, n.fact),
+            React.createElement("div", { className: "ana-body", style: { fontSize: 12, color: C.inkSoft, marginTop: 4 } }, "Aus: ", a.title),
+          ),
+      );
+    }),
+  );
+}
 function ResultScreen({
   kind: s,
   pct: r,
@@ -18532,6 +18674,9 @@ function ResultScreen({
   onDailyClaim: dClaim,
   streak: sn,
   onStreakSeen: sSeen,
+  wrong: wg,
+  due: du = 0,
+  onDue: goDue,
 }) {
   const d = starsFor(r),
     c = s !== "test" || e,
@@ -18591,6 +18736,8 @@ function ResultScreen({
             ? "F\xE4lle bearbeitet!"
             : s === "mix"
               ? "Verwechslungen ge\xFCbt!"
+            : s === "practice"
+              ? "\xDCbung geschafft!"
             : s === "figure"
               ? "Selbsttest geschafft!"
               : "Lektion abgeschlossen!",
@@ -18613,6 +18760,7 @@ function ResultScreen({
     ),
     sg && React.createElement(StreakGiftBanner, { note: sg }),
     dl && React.createElement(DailyBanner, { fresh: dl, onClaim: dClaim }),
+    React.createElement(WrongList, { items: wg, color: t }),
     React.createElement(
       "div",
       { style: { width: "100%", maxWidth: 340, display: "flex", flexDirection: "column", gap: 10 } },
@@ -18644,6 +18792,16 @@ function ResultScreen({
             ts.title,
             " \xB7 12 Fragen",
           ),
+        ),
+      // cards due for review: a short round on offer right after the lesson
+      du > 0 &&
+        goDue &&
+        React.createElement(
+          Btn,
+          { ghost: !0, color: "#B8860B", onClick: goDue, "data-due": du },
+          "\u21BB ",
+          Math.min(du, 10),
+          Math.min(du, 10) === 1 ? " f\xE4llige Karte wiederholen" : " f\xE4llige Karten wiederholen",
         ),
       React.createElement(
         Btn,
@@ -19834,7 +19992,7 @@ function StatTile({ icon: s, value: r, label: o }) {
     React.createElement("div", { className: "ana-body", style: { fontSize: 11.5, color: C.inkSoft, lineHeight: 1.25 } }, o),
   );
 }
-function StatsScreen({ progress: s, onExit: r, onReset: rs }) {
+function StatsScreen({ progress: s, onExit: r, onReset: rs, onPractice: op }) {
   const o = ALL_LESSONS.filter((v) => s.best[v.id] != null),
     e = Object.values(s.best || {}).filter((v) => v >= 0.999).length,
     t = Object.values(s.srs || {}),
@@ -19847,8 +20005,12 @@ function StatsScreen({ progress: s, onExit: r, onReset: rs }) {
       return { ...v, total: W.length, done: E, right: N[0], answered: N[1], rate: N[1] ? N[0] / N[1] : null };
     }).filter((v) => v.total),
     l = i.filter((v) => v.answered >= 8).sort((v, W) => W.rate - v.rate),
-    d = l.slice(0, 3),
-    c = l.length > 3 ? l.slice(-3).reverse() : [],
+    // to practise: the regions under 80 %, at most three, the weakest first; strengths: the best of the others
+    c = l
+      .filter((v) => v.rate < 0.8)
+      .slice(-3)
+      .reverse(),
+    d = l.filter((v) => !c.includes(v)).slice(0, 3),
     m = (() => {
       const v = [];
       for (let W = 13; W >= 0; W--) {
@@ -19938,13 +20100,30 @@ function StatsScreen({ progress: s, onExit: r, onReset: rs }) {
             "div",
             { style: { background: C.card, border: `1.5px solid ${C.line}`, borderTop: `4px solid ${C.good}`, borderRadius: 12, padding: "8px 10px" } },
             React.createElement("div", { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: C.good, marginBottom: 4 } }, "\u{1F4AA} St\xE4rken"),
-            d.map((v) => React.createElement("div", { key: v.id, className: "ana-body", style: { fontSize: 13, color: C.ink } }, v.label, " ", Math.round(v.rate * 100), " %")),
+            d.length
+              ? d.map((v) => React.createElement("div", { key: v.id, className: "ana-body", style: { fontSize: 13, color: C.ink } }, v.label, " ", Math.round(v.rate * 100), " %"))
+              : React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.35 } }, "Noch keine Region \xFCber 80 %."),
           ),
           React.createElement(
             "div",
             { style: { background: C.card, border: `1.5px solid ${C.line}`, borderTop: `4px solid ${C.bad}`, borderRadius: 12, padding: "8px 10px" } },
             React.createElement("div", { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: C.bad, marginBottom: 4 } }, "\u{1F3AF} \xDCben"),
-            (c.length ? c : l.slice(-1)).map((v) => React.createElement("div", { key: v.id, className: "ana-body", style: { fontSize: 13, color: C.ink } }, v.label, " ", Math.round(v.rate * 100), " %")),
+            c.length
+              ? c.map((v) =>
+                  React.createElement(
+                    "button",
+                    {
+                      key: v.id,
+                      onClick: () => op && op(v.id),
+                      "data-practice": v.id,
+                      className: "ana-body",
+                      style: { display: "flex", alignItems: "center", width: "100%", textAlign: "left", padding: "5px 8px", margin: "0 0 4px", borderRadius: 9, border: `1.5px solid ${C.line}`, background: C.paper, color: C.ink, fontSize: 13, cursor: "pointer" },
+                    },
+                    React.createElement("span", { style: { flex: 1, minWidth: 0 } }, v.label),
+                    React.createElement("span", { className: "ana-display", style: { fontSize: 12.5, fontWeight: 700, color: C.bad, whiteSpace: "nowrap", marginLeft: 6 } }, Math.round(v.rate * 100), " % \u203A"),
+                  ),
+                )
+              : React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.35 } }, "Alles \xFCber 80 % \u2013 stark!"),
           ),
         ),
     React.createElement(SectionLabel, null, "WIEDERHOLUNGSSTUFEN (LEITNER)"),
@@ -20456,7 +20635,7 @@ function AnatomiaApp() {
       e({ name: "test", unitId: u, questions: buildUnitTest(q.lessons.length ? q : p, 12) });
     },
     x = (u, p, f) => (u === "lesson" ? 20 + (p >= 0.999 ? 40 : 0) : u === "test" ? (p >= 0.8 ? 100 : 20) : f || 0),
-    S = (u, p, f) => {
+    S = (u, p, f, wr) => {
       const k = findLesson(u),
         g = p / f,
         bx = xm(),
@@ -20466,9 +20645,9 @@ function AnatomiaApp() {
         { ...s, xp: s.xp + w, ...M, coins: (s.coins || 0) + x("lesson", g), best: { ...s.best, [u]: Math.max(s.best[u] || 0, g) }, lastLesson: u },
         { lessons: 1, perfect: g >= 0.999 ? 1 : 0, region: regionOf(k) },
       );
-      e({ name: "result", kind: "quiz", lessonId: u, pct: g, xpGain: w, boosted: bx > 1, color: k.color, dark: k.dark });
+      e({ name: "result", kind: "quiz", lessonId: u, pct: g, xpGain: w, boosted: bx > 1, color: k.color, dark: k.dark, wrong: wr || [] });
     },
-    B = (u, p, f) => {
+    B = (u, p, f, wr) => {
       const k = UNITS.find((F) => F.id === u),
         g = p / f,
         w = g >= 0.8,
@@ -20478,7 +20657,7 @@ function AnatomiaApp() {
         I = { ...s.tests };
       w && (I[u] = Math.max(I[u] || 0, g));
       t({ ...s, xp: s.xp + M, ...z, tests: I, coins: (s.coins || 0) + x("test", g) }, { test: w ? 1 : 0 });
-      e({ name: "result", kind: "test", pct: g, xpGain: M, boosted: bx > 1, passed: w, unitId: u, color: k.color, dark: k.dark });
+      e({ name: "result", kind: "test", pct: g, xpGain: M, boosted: bx > 1, passed: w, unitId: u, color: k.color, dark: k.dark, wrong: wr || [] });
     };
   let A = null;
   if (o.name === "home")
@@ -20582,7 +20761,48 @@ function AnatomiaApp() {
       onErrors: () => e({ name: "errors" }),
     });
   else if (o.name === "mnemo") A = React.createElement(MnemonicScreen, { onExit: () => e({ name: "home" }) });
-  else if (o.name === "stats") A = React.createElement(StatsScreen, { progress: s, onExit: () => e({ name: "home" }), onReset: () => e({ name: "reset" }) });
+  else if (o.name === "stats")
+    A = React.createElement(StatsScreen, {
+      progress: s,
+      onExit: () => e({ name: "home" }),
+      onReset: () => e({ name: "reset" }),
+      // a region to practise: ten questions on it
+      onPractice: (u) => {
+        const p = buildRegionPractice(s, u, 10),
+          f = EXAM_REGIONS.find((k) => k.id === u);
+        p.length && e({ name: "practice", questions: p, title: f ? f.label : "\xDCbung" });
+      },
+    });
+  else if (o.name === "practice")
+    // practice of one region, from the statistics: no hearts
+    A = React.createElement(QuizScreen, {
+      questions: o.questions,
+      unit: { color: "#1C7ED6", dark: "#1864AB" },
+      heartsEnabled: !1,
+      title: o.title,
+      onAnswer: y,
+      onConfuse: confuse,
+      jokers: 0,
+      onExit: () => e({ name: "stats" }),
+      onFinish: (u, p, wr) => {
+        const bx = xm(),
+          f = u * 6 * bx;
+        t({ ...s, xp: s.xp + f, ...n(s) });
+        e({
+          name: "result",
+          kind: "practice",
+          pct: u / Math.max(1, p),
+          xpGain: f,
+          boosted: bx > 1,
+          color: "#1C7ED6",
+          dark: "#1864AB",
+          back: { name: "stats" },
+          backLabel: "Zur\xFCck zur Statistik",
+          wrong: wr || [],
+        });
+      },
+      onFail: () => e({ name: "stats" }),
+    });
   else if (o.name === "streak") A = React.createElement(StreakScreen, { progress: s, onExit: () => e({ name: "home" }) });
   else if (o.name === "xplog") A = React.createElement(XpScreen, { progress: s, onExit: () => e({ name: "home" }) });
   else if (o.name === "figatlas")
@@ -20627,6 +20847,7 @@ function AnatomiaApp() {
       unit: p,
       onExit: () => e({ name: "home" }),
       onQuiz: () => l(u.id),
+      done: s.best[u.id] != null,
     });
   } else if (o.name === "quiz") {
     const u = findLesson(o.lessonId),
@@ -20638,7 +20859,8 @@ function AnatomiaApp() {
       title: u.title,
       onAnswer: y,
       retryWrong: !0,
-      maxHearts: (s.owned || []).includes("heart4") ? 4 : 3,
+      // a long quiz (a lesson with many structures) has one heart more
+      maxHearts: ((s.owned || []).includes("heart4") ? 4 : 3) + (o.questions.length >= 12 ? 1 : 0),
       jokers: s.jokers || 0,
       onUseJoker: () =>
         r((f) => {
@@ -20647,7 +20869,7 @@ function AnatomiaApp() {
         }),
       onConfuse: confuse,
       onExit: () => e({ name: "learn", lessonId: u.id }),
-      onFinish: (f, k) => S(u.id, f, k),
+      onFinish: (f, k, wr) => S(u.id, f, k, wr),
       onFail: () => (
         r((f) => {
           const k = { ...f, lastLesson: u.id };
@@ -20672,7 +20894,7 @@ function AnatomiaApp() {
         }),
       onConfuse: confuse,
       onExit: () => e({ name: "home" }),
-      onFinish: (p, f) => B(u.id, p, f),
+      onFinish: (p, f, wr) => B(u.id, p, f, wr),
       onFail: () => e({ name: "home" }),
     });
   } else if (o.name === "mix") {
@@ -20798,6 +21020,9 @@ function AnatomiaApp() {
       onNext: p && !T ? () => i(p.id) : void 0,
       test: T ? { title: T.title } : null,
       onTest: T ? () => b(T.id) : void 0,
+      // after a lesson the cards due for review are on offer, ten at a time
+      due: o.kind === "quiz" ? dueCards(s, 999).length : 0,
+      onDue: () => d({ cards: dueCards(s, 10), title: "F\xE4llige Wiederholungen", color: C.gold, dark: "#C99A04", back: "home" }),
     });
   }
   return React.createElement(
