@@ -5113,6 +5113,16 @@ const { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } = R
     ),
   ),
   ChevronLeft = mkIcon(React.createElement("path", { d: "m15 18-6-6 6-6" })),
+  Gear = mkIcon(
+    React.createElement(
+      React.Fragment,
+      null,
+      React.createElement("path", {
+        d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z",
+      }),
+      React.createElement("circle", { cx: 12, cy: 12, r: 3 }),
+    ),
+  ),
   Check = mkIcon(React.createElement("path", { d: "M20 6 9 17l-5-5" })),
   X = mkIcon(
     React.createElement(
@@ -10963,6 +10973,10 @@ const STORAGE_KEY = "anatomia-v1",
     streakNote: null,
     // the lesson last finished or failed: the home menu goes on with the next lesson of its chapter
     lastLesson: null,
+    // sounds for answers and finished rounds (settings)
+    sound: !0,
+    // a new XP level, to show once on the next result page
+    levelNote: null,
   },
   THEMES = {
     papier: { label: "Papierwei\xDF", paper: "#F4F6FB", card: "#FFFFFF", line: "#E3E8F0" },
@@ -11189,32 +11203,71 @@ const STORAGE_KEY = "anatomia-v1",
     { id: "xp2-30", cat: "Hilfen", icon: "\u{1F680}", name: "Doppel-XP \xB7 30 Min.", desc: "Doppelte XP f\xFCr 30 Minuten \xB7 50 Taler gespart", price: 250, boost: 30 },
     { id: "xp2-60", cat: "Hilfen", icon: "\u{1F680}", name: "Doppel-XP \xB7 1 Stunde", desc: "Doppelte XP f\xFCr eine Stunde \xB7 200 Taler gespart", price: 400, boost: 60 },
     { id: "xp2-180", cat: "Hilfen", icon: "\u{1F680}", name: "Doppel-XP \xB7 3 Stunden", desc: "Doppelte XP f\xFCr drei Stunden \xB7 900 Taler gespart", price: 900, boost: 180 },
-    { id: "title-erstsemester", cat: "Titel", icon: "\u{1F392}", name: "Titel „Erstsemester“", desc: "Jeder f\xE4ngt mal an", price: 60, apply: { title: "Erstsemester" } },
-    { id: "title-famulant", cat: "Titel", icon: "\u{1FA7A}", name: "Titel „Famulant“", desc: "Schon mal im Krankenhaus gewesen", price: 350, apply: { title: "Famulant" } },
-    { id: "title-physikum", cat: "Titel", icon: "\u{1F4D6}", name: "Titel „Physikums-Held“", desc: "Die gro\xDFe Pr\xFCfung im Blick", price: 700, apply: { title: "Physikums-Held" } },
-    { id: "title-assistenz", cat: "Titel", icon: "\u{1F97C}", name: "Titel „Assistenzarzt“", desc: "Endlich im Kittel", price: 1200, apply: { title: "Assistenzarzt" } },
-    { id: "title-chefarzt", cat: "Titel", icon: "\u{1F3E5}", name: "Titel „Chefarzt“", desc: "Visite mit Gefolge", price: 2000, apply: { title: "Chefarzt" } },
-    { id: "title-professor", cat: "Titel", icon: "\u{1F9D1}‍\u{1F3EB}", name: "Titel „Professor der Anatomie“", desc: "Die h\xF6chste Stufe", price: 3500, apply: { title: "Professor der Anatomie" } },
-    {
-      id: "title-anatom",
-      cat: "Titel",
-      icon: "\u{1F393}",
-      name: "Titel \u201EAnatom\u201C",
-      desc: "Erscheint oben im Startbildschirm",
-      price: 200,
-      apply: { title: "Anatom" },
-    },
-    {
-      id: "title-praep",
-      cat: "Titel",
-      icon: "\u{1F52C}",
-      name: "Titel \u201EPr\xE4parator\u201C",
-      desc: "F\xFCr Fortgeschrittene",
-      price: 500,
-      apply: { title: "Pr\xE4parator" },
-    },
   ],
-  SHOP_CATS = ["Hintergrund", "Lernpfad", "Avatar", "Effekte", "Hilfen", "Titel"],
+  SHOP_CATS = ["Hintergrund", "Lernpfad", "Avatar", "Effekte", "Hilfen"],
+  // XP levels: every level has a title, shown on the menu. The titles are earned with XP only (they used to be bought)
+  XP_LEVELS = [
+    { xp: 0, title: "Neuling", icon: "\u{1F331}" },
+    { xp: 200, title: "Erstsemester", icon: "\u{1F392}" },
+    { xp: 600, title: "Pr\xE4parator", icon: "\u{1F52C}" },
+    { xp: 1500, title: "Physikums-Held", icon: "\u{1F4D6}" },
+    { xp: 3000, title: "Famulant", icon: "\u{1FA7A}" },
+    { xp: 5000, title: "PJler", icon: "\u{1F9D1}\u200D\u2695\uFE0F" },
+    { xp: 8000, title: "Assistenzarzt", icon: "\u{1F97C}" },
+    { xp: 12000, title: "Facharzt", icon: "\u{1F3C5}" },
+    { xp: 18000, title: "Oberarzt", icon: "\u{1FA7B}" },
+    { xp: 26000, title: "Chefarzt", icon: "\u{1F3E5}" },
+    { xp: 36000, title: "Anatom", icon: "\u{1F393}" },
+    { xp: 50000, title: "Professor der Anatomie", icon: "\u{1F9D1}\u200D\u{1F3EB}" },
+  ],
+  // the level of x XP: its number (from 1), title and icon, the next level, and how far the way to it is gone
+  xpLevel = (x) => {
+    const v = Math.max(0, x || 0);
+    let i = 0;
+    for (; i + 1 < XP_LEVELS.length && v >= XP_LEVELS[i + 1].xp; ) i++;
+    const c = XP_LEVELS[i],
+      n = XP_LEVELS[i + 1] || null;
+    return { n: i + 1, ...c, next: n, left: n ? n.xp - v : 0, frac: n ? (v - c.xp) / (n.xp - c.xp) : 1 };
+  },
+  // what the titles cost while they were bought in the shop: paid back once (loadProgress)
+  OLD_TITLES = { "title-erstsemester": 60, "title-famulant": 350, "title-physikum": 700, "title-assistenz": 1200, "title-chefarzt": 2000, "title-professor": 3500, "title-anatom": 200, "title-praep": 500 },
+  // short sounds for a right and a wrong answer, a run of right answers, a finished round and a new level: made with the
+  // Web Audio API (nothing to load), off with the switch in the settings; on the iPhone they follow the mute switch
+  SND = { on: !0, ctx: null },
+  SND_SETS = {
+    ok: [[659.25, 0, 0.11], [987.77, 0.09, 0.17]],
+    bad: [[196, 0, 0.2, "triangle"], [155.56, 0.13, 0.27, "triangle"]],
+    combo: [[783.99, 0, 0.09], [1046.5, 0.08, 0.09], [1318.51, 0.16, 0.2]],
+    win: [[523.25, 0, 0.12], [659.25, 0.11, 0.12], [783.99, 0.22, 0.12], [1046.5, 0.33, 0.32]],
+    level: [[523.25, 0, 0.1], [659.25, 0.09, 0.1], [783.99, 0.18, 0.1], [1046.5, 0.27, 0.1], [1318.51, 0.36, 0.36]],
+  },
+  sfx = (k) => {
+    if (!k || !SND.on || !SND_SETS[k]) return;
+    // tests read what was played
+    typeof window < "u" && window.__anaTest && (window.__sfx = [...(window.__sfx || []), k]);
+    // the ambient audio session: the sounds follow the iPhone's mute switch and do not stop music that is playing
+    // (speaking a name asks for the playback session again, preferPlayback)
+    try {
+      const a = navigator.audioSession;
+      a && a.type === "playback" && (a.type = "ambient");
+    } catch {}
+    try {
+      const A = window.AudioContext || window.webkitAudioContext;
+      if (!A) return;
+      const c = SND.ctx || (SND.ctx = new A());
+      c.state === "suspended" && c.resume();
+      const t0 = c.currentTime + 0.02;
+      SND_SETS[k].forEach(([f, at, len, type]) => {
+        const o = c.createOscillator(),
+          g = c.createGain();
+        ((o.type = type || "sine"), o.frequency.setValueAtTime(f, t0 + at));
+        (g.gain.setValueAtTime(1e-4, t0 + at), g.gain.exponentialRampToValueAtTime(type ? 0.11 : 0.09, t0 + at + 0.015), g.gain.exponentialRampToValueAtTime(1e-4, t0 + at + len));
+        (o.connect(g), g.connect(c.destination), o.start(t0 + at), o.stop(t0 + at + len + 0.03));
+      });
+    } catch {}
+  },
+  // bonus XP for a run of right answers in a round of questions: at 5, 10 and 15 in a row
+  COMBO_BONUS = { 5: 10, 10: 20, 15: 30 },
   FX_SETS = {
     konfetti: ["\u{1F389}", "\u{1F38A}", "\u2728", "\u{1F7E1}", "\u{1F535}", "\u{1F534}", "\u{1F7E2}"],
     sterne: ["\u2B50", "\u{1F31F}", "\u2728"],
@@ -11444,6 +11497,13 @@ async function loadProgress() {
       // recorded voices only Thorsten and Kerstin are left
       (o.voiceV || 0) < 2 && ((m.voice = "dev"), (m.voiceV = 2));
       REC_VOICES.some((v) => v.id === m.recVoice) || (m.recVoice = REC_DEFAULT);
+      // titles come with the XP levels now: the ones bought in the shop are paid back once (the menu says so)
+      const tr = (m.owned || []).filter((v) => OLD_TITLES[v] != null);
+      if (tr.length) {
+        const c = tr.reduce((a, v) => a + OLD_TITLES[v], 0);
+        ((m.coins = (m.coins || 0) + c), (m.owned = m.owned.filter((v) => OLD_TITLES[v] == null)), (m.titleRefund = (m.titleRefund || 0) + c));
+      }
+      m.title = null;
       return migrateCurriculum(m);
     }
   } catch {}
@@ -14232,7 +14292,7 @@ function FigureQuizScreen({ src: s, onExit: r, onFinish: o }) {
   const h = i != null,
     y = h && m.options[i].correct,
     b = (S) => {
-      h || (l(S), m.options[S].correct && c((B) => B + 1));
+      h || (l(S), sfx(m.options[S].correct ? "ok" : "bad"), m.options[S].correct && c((B) => B + 1));
     },
     x = () => {
       a + 1 < t.length ? (n(a + 1), l(null)) : o(d, t.length);
@@ -14984,6 +15044,196 @@ function VoiceCard({ progress: s, onVoice: sv }) {
     ),
   );
 }
+const fmtNum = (v) => (v || 0).toLocaleString("de-DE");
+// the XP level with its title and the way to the next one, on the menu; a tap opens the XP page
+function LevelStrip({ xp: s, onClick: r }) {
+  const o = xpLevel(s);
+  return React.createElement(
+    "button",
+    {
+      onClick: r,
+      "data-level": o.n,
+      "aria-label": `Stufe ${o.n}, ${o.title}` + (o.next ? `, noch ${fmtNum(o.left)} XP bis ${o.next.title}` : ""),
+      style: { display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "7px 11px", margin: "0 0 10px", borderRadius: 12, border: `1.5px solid ${C.line}`, background: C.card, cursor: "pointer", textAlign: "left" },
+    },
+    React.createElement("span", { style: { fontSize: 20, lineHeight: 1 } }, o.icon),
+    React.createElement(
+      "span",
+      { style: { flex: 1, minWidth: 0 } },
+      React.createElement(
+        "span",
+        { style: { display: "flex", alignItems: "baseline", gap: 8 } },
+        React.createElement(
+          "span",
+          { className: "ana-display", style: { fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } },
+          "Stufe ",
+          o.n,
+          " \xB7 ",
+          o.title,
+        ),
+        React.createElement(
+          "span",
+          { className: "ana-body", style: { marginLeft: "auto", fontSize: 11.5, color: C.inkSoft, whiteSpace: "nowrap" } },
+          o.next ? `noch ${fmtNum(o.left)} XP` : "h\xF6chste Stufe",
+        ),
+      ),
+      React.createElement(
+        "span",
+        { style: { display: "block", height: 6, borderRadius: 3, background: C.mute, marginTop: 4, overflow: "hidden" } },
+        React.createElement("span", { style: { display: "block", height: "100%", width: `${Math.max(3, Math.round(o.frac * 100))}%`, background: C.gold, borderRadius: 3 } }),
+      ),
+    ),
+  );
+}
+// the level on the XP page: big, with the XP still missing for the next one
+function LevelCard({ xp: s }) {
+  const o = xpLevel(s);
+  return React.createElement(
+    "div",
+    { "data-level-card": o.n, style: { display: "flex", alignItems: "center", gap: 12, background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 16, padding: "12px 14px", marginBottom: 10 } },
+    React.createElement("div", { style: { fontSize: 38, lineHeight: 1 } }, o.icon),
+    React.createElement(
+      "div",
+      { style: { flex: 1, minWidth: 0 } },
+      React.createElement("div", { className: "ana-display", style: { fontSize: 11.5, fontWeight: 700, color: "#B8860B", letterSpacing: 1 } }, "STUFE ", o.n),
+      React.createElement("div", { className: "ana-display", style: { fontSize: 19, fontWeight: 700, color: C.ink, lineHeight: 1.2 } }, o.title),
+      React.createElement(
+        "div",
+        { style: { height: 8, borderRadius: 4, background: C.mute, margin: "6px 0 4px", overflow: "hidden" } },
+        React.createElement("div", { style: { height: "100%", width: `${Math.max(3, Math.round(o.frac * 100))}%`, background: C.gold, borderRadius: 4 } }),
+      ),
+      React.createElement(
+        "div",
+        { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft } },
+        o.next ? `Noch ${fmtNum(o.left)} XP bis Stufe ${o.n + 1} \xB7 ${o.next.title}` : "Du hast die h\xF6chste Stufe erreicht.",
+      ),
+    ),
+  );
+}
+// all levels with the XP they start at: reached ones ticked, the current one framed
+function LevelList({ xp: s }) {
+  const o = xpLevel(s);
+  return React.createElement(
+    "div",
+    { "data-level-list": "1" },
+    XP_LEVELS.map((e, t) => {
+      const a = t + 1 <= o.n,
+        n = t + 1 === o.n;
+      return React.createElement(
+        "div",
+        {
+          key: t,
+          className: "ana-body",
+          style: { display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", marginBottom: 5, background: C.card, border: `1.5px solid ${n ? C.gold : C.line}`, borderRadius: 11, opacity: a ? 1 : 0.62 },
+        },
+        React.createElement("span", { style: { fontSize: 19, width: 26, textAlign: "center" } }, e.icon),
+        React.createElement(
+          "span",
+          { style: { flex: 1, minWidth: 0 } },
+          React.createElement("span", { className: "ana-display", style: { display: "block", fontSize: 14, fontWeight: 700, color: C.ink } }, e.title),
+          React.createElement("span", { style: { fontSize: 12, color: C.inkSoft } }, "Stufe ", t + 1, " \xB7 ab ", fmtNum(e.xp), " XP"),
+        ),
+        a ? React.createElement(Check, { size: 17, color: C.good, strokeWidth: 3 }) : React.createElement(Lock, { size: 14, color: "#9AA3B2" }),
+      );
+    }),
+  );
+}
+// a new level reached in the round just finished (result page)
+function LevelBanner({ n: s }) {
+  const o = XP_LEVELS[s - 1],
+    e = XP_LEVELS[s];
+  return o
+    ? React.createElement(
+        "div",
+        {
+          className: "ana-pop",
+          "data-levelup": s,
+          style: { width: "100%", maxWidth: 340, boxSizing: "border-box", background: C.goldBg, border: `2px solid ${C.gold}`, borderRadius: 16, padding: "12px 14px", marginBottom: 12, textAlign: "center" },
+        },
+        React.createElement("div", { style: { fontSize: 36, lineHeight: 1.15 } }, o.icon),
+        React.createElement("div", { className: "ana-display", style: { fontSize: 12, fontWeight: 700, color: "#B8860B", letterSpacing: 1 } }, "NEUE STUFE ERREICHT"),
+        React.createElement("div", { className: "ana-display", style: { fontSize: 19, fontWeight: 700, color: C.ink } }, "Stufe ", s, " \xB7 ", o.title),
+        e && React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, marginTop: 2 } }, "N\xE4chste Stufe: ", e.title, " ab ", fmtNum(e.xp), " XP"),
+      )
+    : null;
+}
+// simple paper confetti after a round that went well - for everyone; an effect from the shop replaces it
+function FxBurst() {
+  const o = useMemo(
+    () =>
+      Array.from({ length: 24 }, (e, t) => ({
+        left: 3 + Math.random() * 94,
+        delay: Math.random() * 0.55,
+        dur: 1.5 + Math.random() * 1.1,
+        w: 6 + Math.random() * 5,
+        col: ["#F2B705", "#2F9E44", "#1C7ED6", "#E8590C", "#C2255C", "#7048E8"][t % 6],
+      })),
+    [],
+  );
+  return React.createElement(
+    "div",
+    { "aria-hidden": "true", "data-fx": "burst", style: { position: "fixed", inset: 0, pointerEvents: "none", overflow: "hidden", zIndex: 50 } },
+    o.map((e, t) =>
+      React.createElement("span", {
+        key: t,
+        className: "ana-fall",
+        style: { position: "absolute", top: -22, left: `${e.left}%`, width: e.w, height: e.w * 1.6, background: e.col, borderRadius: 2, animationDelay: `${e.delay}s`, animationDuration: `${e.dur}s` },
+      }),
+    ),
+  );
+}
+// an on/off switch (settings)
+function Switch({ on: s, onChange: r, label: o }) {
+  return React.createElement(
+    "button",
+    {
+      role: "switch",
+      "aria-checked": s ? "true" : "false",
+      "aria-label": o,
+      onClick: () => r(!s),
+      style: { width: 50, height: 30, borderRadius: 15, border: "none", padding: 3, background: s ? C.good : "#C6CEDB", cursor: "pointer", flexShrink: 0, transition: "background .15s" },
+    },
+    React.createElement("span", {
+      style: { display: "block", width: 24, height: 24, borderRadius: 12, background: "#fff", transform: s ? "translateX(20px)" : "none", transition: "transform .15s", boxShadow: "0 1px 3px rgba(0,0,0,0.25)" },
+    }),
+  );
+}
+// settings: look, sounds, the voice for the names, reset and the credits (all of it used to stand at the bottom of the menu)
+function SettingsScreen({ progress: s, onExit: r, onSet: o, onDark: e, onReset: t }) {
+  const a = (n, i, l) =>
+    React.createElement(
+      "div",
+      { style: { display: "flex", alignItems: "center", gap: 12, background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 14, padding: "11px 12px", marginBottom: 6 } },
+      React.createElement(
+        "div",
+        { style: { flex: 1, minWidth: 0 } },
+        React.createElement("div", { className: "ana-display", style: { fontSize: 15, fontWeight: 700, color: C.ink } }, n),
+        i && React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.35, marginTop: 1 } }, i),
+      ),
+      l,
+    );
+  return React.createElement(
+    "div",
+    { style: { minHeight: PAGE_H, paddingBottom: 30 } },
+    React.createElement(TopBar, { onBack: r }, React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, "Einstellungen")),
+    React.createElement(SectionLabel, null, "DARSTELLUNG"),
+    a("Dunkelmodus", "Dunkler Hintergrund, angenehm am Abend.", React.createElement(Switch, { on: !!s.dark, onChange: e, label: "Dunkelmodus" })),
+    React.createElement(SectionLabel, null, "T\xD6NE"),
+    a(
+      "T\xF6ne beim Lernen",
+      "Kurze T\xF6ne f\xFCr richtig und falsch, f\xFCr eine Serie und eine geschaffte Runde. Ist das iPhone stummgeschaltet, bleiben sie aus.",
+      React.createElement(Switch, { on: s.sound !== !1, onChange: (n) => (o({ sound: n }), n && ((SND.on = !0), sfx("ok"))), label: "T\xF6ne beim Lernen" }),
+    ),
+    React.createElement(VoiceCard, { progress: s, onVoice: o }),
+    React.createElement(SectionLabel, null, "FORTSCHRITT"),
+    React.createElement(Btn, { ghost: !0, color: C.bad, onClick: t, "data-reset": "1" }, "\u21BA App zur\xFCcksetzen"),
+    React.createElement(
+      "div",
+      { className: "ana-body", style: { color: "#9AA3B2", fontSize: 12, textAlign: "center", padding: "18px 4px 10px", lineHeight: 1.45 } },
+      "Abbildungen: OpenStax (CC BY 4.0) \xB7 3D-Modelle: BodyParts3D / Z-Anatomy (CC BY-SA) \xB7 Aussprache-Aufnahmen: Piper-Stimmen Thorsten und Kerstin (CC0) \xB7 Fortschritt bleibt auf diesem Ger\xE4t gespeichert",
+    ),
+  );
+}
 function HomeScreen({
   progress: s,
   onOpenLesson: r,
@@ -15010,6 +15260,7 @@ function HomeScreen({
   onDailySync: dSync,
   onDailyClaim: dClaim,
   onReview: review,
+  onSettings: goSet,
 }) {
   const lv = s.level || "alle",
     VU = levelUnits(UNITS, lv),
@@ -15178,6 +15429,31 @@ function HomeScreen({
             },
             s.dark ? "\u2600\uFE0F" : "\u{1F319}",
           ),
+          React.createElement(
+            "button",
+            {
+              onClick: goSet,
+              "aria-label": "Einstellungen",
+              title: "Einstellungen",
+              "data-settings": "1",
+              style: {
+                marginLeft: 6,
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                border: `1.5px solid ${C.line}`,
+                background: C.card,
+                color: C.inkSoft,
+                cursor: "pointer",
+                verticalAlign: "middle",
+                padding: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              },
+            },
+            React.createElement(Gear, { size: 17 }),
+          ),
         ),
         React.createElement(
           "div",
@@ -15186,7 +15462,6 @@ function HomeScreen({
           " von ",
           w,
           " Lektionen",
-          s.title ? ` \xB7 ${s.title}` : "",
         ),
       ),
       React.createElement(
@@ -15258,6 +15533,23 @@ function HomeScreen({
         ),
       ),
     ),
+    React.createElement(LevelStrip, { xp: s.xp, onClick: goXpLog }),
+    // titles bought in the shop were paid back when they moved to the XP levels: said once
+    s.titleRefund > 0 &&
+      React.createElement(
+        "div",
+        {
+          "data-refund": s.titleRefund,
+          className: "ana-body",
+          style: { display: "flex", alignItems: "center", gap: 10, background: C.goldBg, border: `1.5px solid ${C.gold}`, borderRadius: 12, padding: "9px 12px", marginBottom: 10, fontSize: 13, color: C.ink, lineHeight: 1.4 },
+        },
+        React.createElement("span", { style: { flex: 1 } }, "Titel gibt es jetzt mit den XP-Stufen statt im Shop. Deine gekauften Titel wurden erstattet: +", fmtNum(s.titleRefund), " Taler."),
+        React.createElement(
+          "button",
+          { onClick: () => sv && sv({ titleRefund: 0 }), className: "ana-display", style: { padding: "5px 12px", borderRadius: 999, border: "none", background: C.gold, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" } },
+          "OK",
+        ),
+      ),
     React.createElement(
       "div",
       { style: { display: "flex", gap: 6, marginBottom: 6 } },
@@ -15856,25 +16148,8 @@ function HomeScreen({
             return hdr ? React.createElement(React.Fragment, { key: "f-" + v.id }, hdr, card) : card;
           }),
         ),
-    React.createElement(VoiceCard, { progress: s, onVoice: sv }),
-    React.createElement(
-      "div",
-      { style: { textAlign: "center", paddingTop: 10 } },
-      React.createElement(
-        "button",
-        {
-          onClick: onReset,
-          className: "ana-body",
-          style: { background: "none", border: `1.5px solid ${C.line}`, borderRadius: 999, padding: "7px 14px", color: C.inkSoft, fontSize: 13, cursor: "pointer" },
-        },
-        "\u21BA App zur\xFCcksetzen",
-      ),
-    ),
-    React.createElement(
-      "div",
-      { className: "ana-body", style: { color: "#9AA3B2", fontSize: 12, textAlign: "center", padding: "14px 0 26px" } },
-      "Abbildungen: OpenStax (CC BY 4.0) \xB7 3D-Modelle: BodyParts3D / Z-Anatomy (CC BY-SA) \xB7 Aussprache-Aufnahmen: Piper-Stimmen Thorsten und Kerstin (CC0) \xB7 Fortschritt bleibt auf diesem Ger\xE4t gespeichert",
-    ),
+    // voice, reset and the credits are in the settings (the gear at the top)
+    React.createElement("div", { style: { height: 30 } }),
     // only while the lesson is still locked
     uk &&
       !g(uk) &&
@@ -16895,7 +17170,7 @@ function VignetteScreen({ cases: s, onExit: r, onFinish: o, onAnswer: e }) {
     m = n != null,
     h = m && c.options[n].correct,
     y = (x) => {
-      m || (i(x), c.options[x].correct && d((S) => S + 1), e && c.ref && e(c.ref.lessonId, c.ref.itemId, c.options[x].correct));
+      m || (i(x), sfx(c.options[x].correct ? "ok" : "bad"), c.options[x].correct && d((S) => S + 1), e && c.ref && e(c.ref.lessonId, c.ref.itemId, c.options[x].correct));
     },
     b = () => {
       t + 1 < s.length ? (a(t + 1), i(null)) : o(l, s.length);
@@ -18281,6 +18556,10 @@ function QuizScreen({
     [cl, setCl] = useState(0),
     // the structures answered wrong (the first answer counts), for the result page
     wr = useRef([]),
+    // right first answers in a row, the bonus XP they brought, and the mark reached with the answer just given
+    [run, setRun] = useState(0),
+    bn = useRef(0),
+    [cb, setCb] = useState(null),
     M = qs[m],
     z = M.kind === "type" || M.kind === "point",
     I = z ? f != null : u != null,
@@ -18292,6 +18571,12 @@ function QuizScreen({
     H = (E) => {
       // a question asked again costs no heart and counts for neither the score nor the error book: the first answer did
       const R = M.retry;
+      if (R) sfx(E ? "ok" : "bad");
+      else if (E) {
+        const N = run + 1,
+          K = COMBO_BONUS[N];
+        (setRun(N), K ? ((bn.current += K), setCb({ n: N, xp: K }), sfx("combo")) : sfx("ok"));
+      } else (setRun(0), sfx("bad"));
       (E ? (R || A((N) => N + 1), setCl((N) => N + 1)) : o && !R && b((N) => N - 1),
         !R && i && M.item && M.lesson && i(M.lesson.id, M.item.id, E),
         !R && i && M.itemRef && i(M.itemRef.lessonId, M.itemRef.itemId, E),
@@ -18316,7 +18601,7 @@ function QuizScreen({
         n();
         return;
       }
-      m + 1 < qs.length ? (h(m + 1), p(null), k(null), w(""), S([])) : a(B, s.length, wr.current);
+      m + 1 < qs.length ? (h(m + 1), p(null), k(null), w(""), S([]), setCb(null)) : a(B, s.length, wr.current, bn.current);
     };
   useScrollTop(m);
   return React.createElement(
@@ -18333,6 +18618,14 @@ function QuizScreen({
           : React.createElement("span", { className: "ana-display", style: { fontSize: 13, fontWeight: 600, color: C.inkSoft } }, e),
       },
       React.createElement(ProgressBar, { value: (rw ? cl : m) / s.length, color: r.color }),
+      // three or more right answers in a row
+      run >= 3 &&
+        React.createElement(
+          "span",
+          { key: "run" + run, className: "ana-display ana-pop", "data-run": run, "aria-label": `${run} in Folge richtig`, style: { fontSize: 13.5, fontWeight: 700, color: "#D95A0B", whiteSpace: "nowrap" } },
+          "\u{1F525} ",
+          run,
+        ),
     ),
     React.createElement(
       "div",
@@ -18502,6 +18795,18 @@ function QuizScreen({
               F ? "Richtig!" : "Nicht ganz.",
             ),
           ),
+          // a run of right answers reached 5, 10 or 15: its bonus
+          F &&
+            cb &&
+            React.createElement(
+              "div",
+              { className: "ana-display", "data-combo": cb.n, style: { fontSize: 14, fontWeight: 700, color: "#D95A0B", marginTop: 4 } },
+              "\u{1F525} ",
+              cb.n,
+              " in Folge \xB7 +",
+              cb.xp,
+              " XP Bonus",
+            ),
           !F &&
             React.createElement(
               "div",
@@ -18677,13 +18982,21 @@ function ResultScreen({
   wrong: wg,
   due: du = 0,
   onDue: goDue,
+  level: lvl,
+  onLevelSeen: lSeen,
+  bonus: bo = 0,
 }) {
   const d = starsFor(r),
     c = s !== "test" || e,
     [dl] = useState(dly),
-    [sg] = useState(sn);
+    [sg] = useState(sn),
+    // a new XP level reached with this round
+    [lvn] = useState(lvl),
+    // something to celebrate
+    ok = !!lvn || (c && r >= 0.5);
   useEffect(() => {
-    (dl && dSeen && dSeen(), sg && sSeen && sSeen());
+    (dl && dSeen && dSeen(), sg && sSeen && sSeen(), lvn && lSeen && lSeen());
+    sfx(lvn ? "level" : ok ? "win" : "");
   }, []);
   return React.createElement(
     "div",
@@ -18698,7 +19011,8 @@ function ResultScreen({
         padding: 20,
       },
     },
-    c && fxKind && r >= 0.5 && React.createElement(FxRain, { kind: fxKind }),
+    // the effect bought in the shop, else simple confetti
+    ok && (fxKind ? React.createElement(FxRain, { kind: fxKind }) : React.createElement(FxBurst)),
     React.createElement(
       "div",
       {
@@ -18752,12 +19066,22 @@ function ResultScreen({
     ),
     React.createElement(
       "div",
-      { className: "ana-display ana-pop", style: { fontSize: 21, fontWeight: 700, color: "#C29204", margin: "8px 0 22px" } },
+      { className: "ana-display ana-pop", style: { fontSize: 21, fontWeight: 700, color: "#C29204", margin: bo > 0 ? "8px 0 2px" : "8px 0 22px" } },
       "+",
       o,
       " XP",
       bst ? React.createElement("span", { style: { fontSize: 14, marginLeft: 6 } }, "\u{1F680} \xD72") : null,
     ),
+    // the bonus for runs of right answers is in the XP above
+    bo > 0 &&
+      React.createElement(
+        "div",
+        { className: "ana-display", "data-bonus": bo, style: { fontSize: 13, fontWeight: 700, color: "#D95A0B", margin: "0 0 18px" } },
+        "\u{1F525} davon ",
+        bo,
+        " XP Serien-Bonus",
+      ),
+    lvn && React.createElement(LevelBanner, { n: lvn }),
     sg && React.createElement(StreakGiftBanner, { note: sg }),
     dl && React.createElement(DailyBanner, { fresh: dl, onClaim: dClaim }),
     React.createElement(WrongList, { items: wg, color: t }),
@@ -19402,11 +19726,13 @@ function BarRow({ label: s, right: r, value: o, color: e }) {
     React.createElement(ProgressBar, { value: o, color: e }),
   );
 }
-function ExamResultScreen({ result: s, cfg: r, xpGain: o, coins: e, boosted: bst, onAgain: t, onHome: a, onErrors: n, daily: dly, onDailySeen: dSeen, onDailyClaim: dClaim, streak: sn, onStreakSeen: sSeen }) {
+function ExamResultScreen({ result: s, cfg: r, xpGain: o, coins: e, boosted: bst, onAgain: t, onHome: a, onErrors: n, daily: dly, onDailySeen: dSeen, onDailyClaim: dClaim, streak: sn, onStreakSeen: sSeen, level: lvl, onLevelSeen: lSeen }) {
   const [dl] = useState(dly),
-    [sg] = useState(sn);
+    [sg] = useState(sn),
+    [lvn] = useState(lvl);
   useEffect(() => {
-    (dl && dSeen && dSeen(), sg && sSeen && sSeen());
+    (dl && dSeen && dSeen(), sg && sSeen && sSeen(), lvn && lSeen && lSeen());
+    sfx(lvn ? "level" : gradeFor(s.total ? s.correct / s.total : 0) <= 4 && s.correct > 0 ? "win" : "");
   }, []);
   const i = s.total ? s.correct / s.total : 0,
     l = gradeFor(i),
@@ -19478,6 +19804,7 @@ function ExamResultScreen({ result: s, cfg: r, xpGain: o, coins: e, boosted: bst
         e,
       ),
       React.createElement("div", { className: "ana-body", style: { fontSize: 12, color: C.inkSoft, marginTop: 4 } }, "Bestanden ab 60 %"),
+      lvn && React.createElement("div", { style: { display: "flex", justifyContent: "center", marginTop: 22 } }, React.createElement(LevelBanner, { n: lvn })),
       sg && React.createElement("div", { style: { display: "flex", justifyContent: "center", marginTop: 22 } }, React.createElement(StreakGiftBanner, { note: sg })),
       dl && React.createElement("div", { style: { display: "flex", justifyContent: "center", marginTop: 22 } }, React.createElement(DailyBanner, { fresh: dl, onClaim: dClaim })),
     ),
@@ -19869,6 +20196,7 @@ function XpScreen({ progress: s, onExit: r }) {
       React.createElement("div", { className: "ana-display", style: { fontSize: 48, fontWeight: 700, color: C.ink, lineHeight: 1 } }, fmt(s.xp || 0)),
       React.createElement("div", { className: "ana-body", style: { fontSize: 15, color: C.inkSoft } }, "XP insgesamt"),
     ),
+    React.createElement(LevelCard, { xp: s.xp || 0 }),
     React.createElement(
       "div",
       { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 } },
@@ -19981,6 +20309,8 @@ function XpScreen({ progress: s, onExit: r }) {
             ),
           );
         }),
+    React.createElement(SectionLabel, null, "ALLE STUFEN"),
+    React.createElement(LevelList, { xp: s.xp || 0 }),
   );
 }
 function StatTile({ icon: s, value: r, label: o }) {
@@ -20212,7 +20542,7 @@ function ResetScreen({ progress: s, onExit: r, onReset: o }) {
       React.createElement("br"),
       `• ${s.xp || 0} XP, ${s.coins || 0} Taler und deine Tagesserie`,
       React.createElement("br"),
-      "• Gekaufte Designs, Avatare, Titel, Joker und Erfolge",
+      "• Gekaufte Designs, Avatare, Joker und Erfolge",
       React.createElement("br"),
       "• Wiederholungsplan, Fehlerbuch, Statistik und Pr\xFCfungen",
       React.createElement("br"),
@@ -20388,6 +20718,8 @@ function AnatomiaApp() {
         m.streakCoins && (m.coins = (m.coins || 0) + m.streakCoins);
         delete m.streakCoins;
         const f = dailyBump(withMeta(p, m), ev);
+        // a new XP level: shown once, on the result page of this round
+        xpLevel(f.xp).n > xpLevel(p.xp).n && (f.levelNote = xpLevel(f.xp).n);
         return (saveProgress(f), f);
       });
     },
@@ -20398,6 +20730,13 @@ function AnatomiaApp() {
       r((p) => {
         if (!p.streakNote) return p;
         const f = { ...p, streakNote: null };
+        return (saveProgress(f), f);
+      }),
+    // so is a new level
+    levelShown = () =>
+      r((p) => {
+        if (!p.levelNote) return p;
+        const f = { ...p, levelNote: null };
         return (saveProgress(f), f);
       }),
     dailyShown = () =>
@@ -20445,6 +20784,8 @@ function AnatomiaApp() {
         ? { ...o, streakGift: o.streak, streakCoins: c, streakNote: { days: o.streak, daily: day, pack: g.taler, packDay: g.day } }
         : { ...o, streakGift: o.streak };
     };
+  // the sounds follow their switch in the settings
+  SND.on = !!s && s.sound !== !1;
   if (!s)
     return React.createElement(
       "div",
@@ -20635,29 +20976,29 @@ function AnatomiaApp() {
       e({ name: "test", unitId: u, questions: buildUnitTest(q.lessons.length ? q : p, 12) });
     },
     x = (u, p, f) => (u === "lesson" ? 20 + (p >= 0.999 ? 40 : 0) : u === "test" ? (p >= 0.8 ? 100 : 20) : f || 0),
-    S = (u, p, f, wr) => {
+    S = (u, p, f, wr, bo = 0) => {
       const k = findLesson(u),
         g = p / f,
         bx = xm(),
-        w = (p * 10 + (g === 1 ? 20 : 0)) * bx,
+        w = (p * 10 + (g === 1 ? 20 : 0) + bo) * bx,
         M = n(s);
       t(
         { ...s, xp: s.xp + w, ...M, coins: (s.coins || 0) + x("lesson", g), best: { ...s.best, [u]: Math.max(s.best[u] || 0, g) }, lastLesson: u },
         { lessons: 1, perfect: g >= 0.999 ? 1 : 0, region: regionOf(k) },
       );
-      e({ name: "result", kind: "quiz", lessonId: u, pct: g, xpGain: w, boosted: bx > 1, color: k.color, dark: k.dark, wrong: wr || [] });
+      e({ name: "result", kind: "quiz", lessonId: u, pct: g, xpGain: w, boosted: bx > 1, color: k.color, dark: k.dark, wrong: wr || [], bonus: bo * bx });
     },
-    B = (u, p, f, wr) => {
+    B = (u, p, f, wr, bo = 0) => {
       const k = UNITS.find((F) => F.id === u),
         g = p / f,
         w = g >= 0.8,
         bx = xm(),
-        M = (p * 10 + (w ? 40 : 0)) * bx,
+        M = (p * 10 + (w ? 40 : 0) + bo) * bx,
         z = n(s),
         I = { ...s.tests };
       w && (I[u] = Math.max(I[u] || 0, g));
       t({ ...s, xp: s.xp + M, ...z, tests: I, coins: (s.coins || 0) + x("test", g) }, { test: w ? 1 : 0 });
-      e({ name: "result", kind: "test", pct: g, xpGain: M, boosted: bx > 1, passed: w, unitId: u, color: k.color, dark: k.dark, wrong: wr || [] });
+      e({ name: "result", kind: "test", pct: g, xpGain: M, boosted: bx > 1, passed: w, unitId: u, color: k.color, dark: k.dark, wrong: wr || [], bonus: bo * bx });
     };
   let A = null;
   if (o.name === "home")
@@ -20701,6 +21042,7 @@ function AnatomiaApp() {
       onStreak: () => e({ name: "streak" }),
       onXpLog: () => e({ name: "xplog" }),
       onDark: toggleDark,
+      onSettings: () => e({ name: "settings" }),
       onSecOpen: setSecOpen,
       onVoice: setVoice,
       onReset: () => e({ name: "reset" }),
@@ -20710,10 +21052,19 @@ function AnatomiaApp() {
       onDailySync: dailyShown,
       onDailyClaim: dailyCollect,
     });
+  else if (o.name === "settings")
+    A = React.createElement(SettingsScreen, {
+      progress: s,
+      onExit: () => e({ name: "home" }),
+      onSet: setVoice,
+      onDark: toggleDark,
+      onSettings: () => e({ name: "settings" }),
+      onReset: () => e({ name: "reset", from: "settings" }),
+    });
   else if (o.name === "reset")
     A = React.createElement(ResetScreen, {
       progress: s,
-      onExit: () => e({ name: "home" }),
+      onExit: () => e({ name: o.from === "settings" ? "settings" : "home" }),
       onReset: () => {
         try {
           window.speechSynthesis && window.speechSynthesis.cancel();
@@ -20751,6 +21102,8 @@ function AnatomiaApp() {
       onDailyClaim: dailyCollect,
       streak: s.streakNote,
       onStreakSeen: streakShown,
+      level: s.levelNote,
+      onLevelSeen: levelShown,
       result: o.result,
       cfg: o.cfg,
       xpGain: o.xpGain,
@@ -20784,9 +21137,9 @@ function AnatomiaApp() {
       onConfuse: confuse,
       jokers: 0,
       onExit: () => e({ name: "stats" }),
-      onFinish: (u, p, wr) => {
+      onFinish: (u, p, wr, bo = 0) => {
         const bx = xm(),
-          f = u * 6 * bx;
+          f = (u * 6 + bo) * bx;
         t({ ...s, xp: s.xp + f, ...n(s) });
         e({
           name: "result",
@@ -20799,6 +21152,7 @@ function AnatomiaApp() {
           back: { name: "stats" },
           backLabel: "Zur\xFCck zur Statistik",
           wrong: wr || [],
+          bonus: bo * bx,
         });
       },
       onFail: () => e({ name: "stats" }),
@@ -20869,7 +21223,7 @@ function AnatomiaApp() {
         }),
       onConfuse: confuse,
       onExit: () => e({ name: "learn", lessonId: u.id }),
-      onFinish: (f, k, wr) => S(u.id, f, k, wr),
+      onFinish: (f, k, wr, bo) => S(u.id, f, k, wr, bo),
       onFail: () => (
         r((f) => {
           const k = { ...f, lastLesson: u.id };
@@ -20894,7 +21248,7 @@ function AnatomiaApp() {
         }),
       onConfuse: confuse,
       onExit: () => e({ name: "home" }),
-      onFinish: (p, f, wr) => B(u.id, p, f, wr),
+      onFinish: (p, f, wr, bo) => B(u.id, p, f, wr, bo),
       onFail: () => e({ name: "home" }),
     });
   } else if (o.name === "mix") {
@@ -20908,13 +21262,14 @@ function AnatomiaApp() {
       onPair: pairDone,
       jokers: 0,
       onExit: () => e({ name: "errors" }),
-      onFinish: (u, p) => {
+      onFinish: (u, p, wr, bo = 0) => {
         const bx = xm(),
-          f = u * 6 * bx;
+          f = (u * 6 + bo) * bx;
         t({ ...s, xp: s.xp + f, ...n(s) }, { conf: p });
         e({
             name: "result",
             kind: "mix",
+            bonus: bo * bx,
             pct: u / Math.max(1, p),
             xpGain: f,
             boosted: bx > 1,
@@ -21011,6 +21366,8 @@ function AnatomiaApp() {
       onDailyClaim: dailyCollect,
       streak: s.streakNote,
       onStreakSeen: streakShown,
+      level: s.levelNote,
+      onLevelSeen: levelShown,
       fx: s.fx,
       boosted: !!o.boosted,
       onHome: () => e({ name: "home" }),
