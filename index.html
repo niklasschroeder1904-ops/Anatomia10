@@ -5247,8 +5247,11 @@ html, body { overscroll-behavior-x: none; }
     badText: "#A82525",
     okText2: "#245F36",
     badText2: "#7A2E2E",
+    // the ground of the atlas plates (white; in dark mode toned down to cream, dim: the tone laid over the picture)
+    pic: "#FFFFFF",
+    dim: null,
   },
-  LIGHT_TOKENS = { ink: "#1E2836", inkSoft: "#5B6B80", mute: "#E9EDF4", okBg: "#E4F6E9", badBg: "#FBE4E4", goldBg: "#FFF8E1", blueBg: "#EEF4FB", tealBg: "#EAF4F7", okText: "#1F7F3A", badText: "#A82525", okText2: "#245F36", badText2: "#7A2E2E" },
+  LIGHT_TOKENS = { ink: "#1E2836", inkSoft: "#5B6B80", mute: "#E9EDF4", okBg: "#E4F6E9", badBg: "#FBE4E4", goldBg: "#FFF8E1", blueBg: "#EEF4FB", tealBg: "#EAF4F7", okText: "#1F7F3A", badText: "#A82525", okText2: "#245F36", badText2: "#7A2E2E", pic: "#FFFFFF", dim: null },
   DARK_TOKENS = {
     paper: "#11161E",
     card: "#1B222D",
@@ -5265,6 +5268,8 @@ html, body { overscroll-behavior-x: none; }
     badText: "#FF9A94",
     okText2: "#BDEFCB",
     badText2: "#F7C6C2",
+    pic: "#E7E0D1",
+    dim: "#E7E0D1",
   },
   UNITS = [
     {
@@ -7895,6 +7900,14 @@ function LabelLayer({
   });
 }
 let ONLY_ID = 0;
+// dark mode: the white of a plate toned down (multiplied with the cream of C.dim), its colours with it; labels stay as they are
+const picDim = () =>
+  C.dim
+    ? React.createElement("div", {
+        "data-dim": "1",
+        style: { position: "absolute", inset: 0, background: C.dim, mixBlendMode: "multiply", pointerEvents: "none" },
+      })
+    : null;
 function LabeledImage({
   src: s,
   mode: r = "la",
@@ -7962,7 +7975,7 @@ function LabeledImage({
               ),
             ),
           ),
-          React.createElement("rect", { x: 0, y: 0, width: y.w, height: y.h, fill: "#fff", mask: `url(#${oid})` }),
+          React.createElement("rect", { x: 0, y: 0, width: y.w, height: y.h, fill: C.pic, mask: `url(#${oid})` }),
         ),
       React.createElement(LabelLayer, { data: y, w: S.w, h: S.h, mode: r, hl: o, quiz: e, color: t, onTap: l, view: x ? m : null, zs: zz }),
       // a whole structure lit up (wholeArea)
@@ -8048,6 +8061,7 @@ function LabeledImage({
             draggable: !1,
             style: { display: "block", width: "100%", height: "100%", userSelect: "none" },
           }),
+          picDim(),
           B,
         ),
       ),
@@ -8065,6 +8079,7 @@ function LabeledImage({
         draggable: !1,
         style: { display: "block", maxWidth: "100%", maxHeight: a, width: "auto", height: "auto", userSelect: "none", ...(c || {}) },
       }),
+      picDim(),
       B,
     ),
   );
@@ -8203,10 +8218,10 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
     ReactDOM.createPortal(
     React.createElement(
       "div",
-      { ref: rt, className: "ana-body", onClick: (D) => D.stopPropagation(), style: { position: "fixed", inset: 0, zIndex: 60, background: "#fff", display: "flex", flexDirection: "column", height: "100dvh" } },
+      { ref: rt, className: "ana-body", onClick: (D) => D.stopPropagation(), style: { position: "fixed", inset: 0, zIndex: 60, background: C.pic, display: "flex", flexDirection: "column", height: "100dvh" } },
       React.createElement(
         "div",
-        { style: { display: "flex", alignItems: "center", gap: 8, padding: "calc(10px + env(safe-area-inset-top)) 12px 10px", borderBottom: `1px solid ${C.line}`, background: "#fff" } },
+        { style: { display: "flex", alignItems: "center", gap: 8, padding: "calc(10px + env(safe-area-inset-top)) 12px 10px", borderBottom: `1px solid ${C.line}`, background: C.card } },
         React.createElement(
           "button",
           { onClick: n, "aria-label": "Schlie\xDFen", style: { background: "none", border: "none", padding: 4, cursor: "pointer" } },
@@ -8214,7 +8229,7 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
         ),
         React.createElement(
           "div",
-          { className: "ana-display", style: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: "#1E2836", lineHeight: 1.2 } },
+          { className: "ana-display", style: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: C.ink, lineHeight: 1.2 } },
           r,
         ),
         d.s > 1 &&
@@ -8223,7 +8238,7 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
             {
               onClick: () => c({ s: 1, x: 0, y: 0 }),
               className: "ana-body",
-              style: { padding: "5px 10px", borderRadius: 999, border: "1.5px solid #DDE3EE", background: "#fff", color: "#5B6B80", fontSize: 12, fontWeight: 700, cursor: "pointer" },
+              style: { padding: "5px 10px", borderRadius: 999, border: `1.5px solid ${C.line}`, background: C.card, color: C.inkSoft, fontSize: 12, fontWeight: 700, cursor: "pointer" },
             },
             "Ganzes Bild",
           ),
@@ -8271,7 +8286,7 @@ function ZoomViewer({ src: s, title: r, credit: o, mode: e = "la", hl: t = null,
             gap: 8,
             padding: "8px 12px calc(14px + env(safe-area-inset-bottom))",
             borderTop: `1px solid ${C.line}`,
-            background: "#fff",
+            background: C.card,
           },
         },
         React.createElement(ModeSwitch, { mode: i, setMode: l, color: a }),
@@ -8322,6 +8337,22 @@ const ZoomGlass = ({ out: s = !1, size: r = 16 }) =>
     React.createElement("path", { d: "M15.4 15.4 L20.6 20.6" }),
     React.createElement("path", { d: s ? "M7.6 10.5 H13.4" : "M7.6 10.5 H13.4 M10.5 7.6 V13.4" }),
   );
+// cards start up close at their structure; switched off with the magnifier, that holds for the next lessons too
+const CARD_ZOOM = {
+    on: (() => {
+      try {
+        return localStorage.getItem("ana:cardzoom") !== "0";
+      } catch {
+        return !0;
+      }
+    })(),
+  },
+  cardZoom = (v) => {
+    CARD_ZOOM.on = !!v;
+    try {
+      localStorage.setItem("ana:cardzoom", v ? "1" : "0");
+    } catch {}
+  };
 function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270 }) {
   const n = (marksFor(r.id) || {})[o],
     // only the plates on which this structure is to be seen, lit up on each
@@ -8331,12 +8362,15 @@ function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270
     [d, c] = useState("la"),
     [m, h] = useState(!1),
     [y, b] = useState(!1),
-    // up close at the card's structure (zoomRect), in the card; stays on from card to card
-    [zm, setZm] = useState(!1),
+    // up close at the card's structure (zoomRect), in the card: the way a card starts; stays as chosen from card to card
+    [zm, setZm0] = useState(CARD_ZOOM.on),
+    setZm = (v) => (cardZoom(v), setZm0(v)),
+    // a look at the whole picture on this card only ("Ganzes Bild" under a picture shown up close)
+    [pk, setPk] = useState(!1),
     fr = useRef(null),
     fb = useBoxSize(fr, s.length ? "1" : "0");
   useEffect(() => {
-    l(P.start);
+    (l(P.start), setPk(!1));
   }, [o]);
   const ix = Math.min(i, s.length - 1),
     q = s[ix],
@@ -8349,7 +8383,7 @@ function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270
     F = q.mk && B != null ? focusRect(S, B, n.a) : null,
     A = F && (!n.al || n.al.every((D) => F.members.has(D))) ? F : null,
     Z = B != null ? zoomRect(S, B, A && !y ? A : null, Math.max(160, (fb.w || 328) - 8), t, d) : null,
-    zon = zm && !!Z,
+    zon = zm && !!Z && !pk,
     im = React.createElement(LabeledImage, {
       src: x.src,
       mode: d,
@@ -8357,7 +8391,7 @@ function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270
       color: e,
       maxHeight: t,
       onClick: () => h(!0),
-      crop: zon ? Z : y ? null : A,
+      crop: zon ? Z : y || pk ? null : A,
       area: cardArea(x.src, G),
     });
   return React.createElement(
@@ -8365,7 +8399,7 @@ function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270
     null,
     React.createElement(
       "div",
-      { ref: fr, style: { borderRadius: 14, overflow: "hidden", background: "#fff", border: `1.5px solid ${C.line}`, padding: 4 } },
+      { ref: fr, "data-pic": "1", style: { borderRadius: 14, overflow: "hidden", background: C.pic, border: `1.5px solid ${C.line}`, padding: 4 } },
       zon ? React.createElement("div", { key: "z" + ix + "-" + B, className: "ana-zoomin", "data-zoomed": "1" }, im) : im,
     ),
     React.createElement(
@@ -8373,7 +8407,7 @@ function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270
       { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, marginTop: 7, lineHeight: 1.35 } },
       x.cap,
       q.mk && n.nt && React.createElement("span", { style: { color: C.ink } }, " \xB7 ", n.nt),
-      A &&
+      (A || zon || pk) &&
         React.createElement(
           React.Fragment,
           null,
@@ -8381,11 +8415,12 @@ function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270
           React.createElement(
             "button",
             {
-              onClick: (D) => (D.stopPropagation(), b(!y)),
+              onClick: (D) => (D.stopPropagation(), zon ? setPk(!0) : pk ? setPk(!1) : b(!y)),
               className: "ana-body",
+              "data-whole": zon ? "whole" : pk ? "close" : y ? "panel" : "whole",
               style: { padding: 0, border: "none", background: "none", color: e, fontSize: 12.5, fontWeight: 700, cursor: "pointer" },
             },
-            y ? "Ausschnitt" : "Ganzes Bild",
+            zon ? "Ganzes Bild" : pk ? "Heranzoomen" : y ? "Ausschnitt" : "Ganzes Bild",
           ),
         ),
       G == null &&
@@ -8429,7 +8464,7 @@ function AtlasView({ plates: s0, lesson: r, itemId: o, color: e, height: t = 270
           React.createElement(
             "button",
             {
-              onClick: (D) => (D.stopPropagation(), setZm(!zon)),
+              onClick: (D) => (D.stopPropagation(), pk ? setPk(!1) : setZm(!zon)),
               className: "ana-body",
               "data-zoom-btn": "1",
               "aria-pressed": zon,
@@ -14168,7 +14203,7 @@ function FigureScreen({ src: s, onExit: r, onQuiz: o, q: e = "" }) {
     ),
     React.createElement(
       "div",
-      { ref: x, style: { background: "#fff", borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 4 } },
+      { ref: x, style: { background: C.pic, borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 4 } },
       React.createElement(LabeledImage, { src: s, mode: d, hl: B, color: ATLAS_COLOR, maxHeight: 330, onClick: () => b(!0), area: cardArea(s, B) }),
     ),
     React.createElement(
@@ -14319,7 +14354,7 @@ function FigureQuizScreen({ src: s, onExit: r, onFinish: o }) {
       ),
       React.createElement(
         "div",
-        { style: { background: "#fff", borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 4, marginBottom: 10 } },
+        { style: { background: C.pic, borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 4, marginBottom: 10 } },
         React.createElement(LabeledImage, {
           src: s,
           mode: "off",
@@ -17880,6 +17915,43 @@ function SpeakBtn({ text: s, color: r = C.inkSoft, size: o = 30, lang: e = "de-D
       )
     : null;
 }
+// the height for a learn card's picture: what the card's text leaves free on the screen - not less than PIC_MIN (on a
+// small screen a little less; then the page scrolls, as before), not more than a good half of the screen. R: the page,
+// T: the text block under the picture
+const PIC_MIN = 270;
+function usePicHeight(R, T, key, on) {
+  const [ph, setPh] = useState(PIC_MIN);
+  useLayoutEffect(() => {
+    if (!on) return;
+    const fit = () => {
+      const r = R.current,
+        t = T.current;
+      if (!r || !t || !t.firstElementChild) return;
+      const f = r.querySelector("[data-pic]"),
+        im = f && f.querySelector("img");
+      // a picture still loading has no height yet: fitted when it is there
+      if (!f || (im && !im.naturalWidth)) return;
+      const page = parseFloat(getComputedStyle(r).minHeight) || window.innerHeight,
+        over = Math.max(0, r.getBoundingClientRect().height - page),
+        txt = t.lastElementChild.getBoundingClientRect().bottom - t.firstElementChild.getBoundingClientRect().top,
+        spare = Math.max(0, t.getBoundingClientRect().height - txt),
+        // the picture as shown: lower than allowed when its width sets its size
+        hI = Math.min(ph, f.clientHeight - 8),
+        lo = Math.min(PIC_MIN, Math.round(page * 0.42)),
+        nx = Math.max(lo, Math.min(Math.round(page * 0.56), Math.round(hI + spare - over - 8)));
+      Math.abs(nx - ph) > 2 && setPh(nx);
+    };
+    fit();
+    const ro = typeof ResizeObserver < "u" ? new ResizeObserver(fit) : null,
+      f = R.current && R.current.querySelector("[data-pic]"),
+      im = f && f.querySelector("img");
+    (ro && (R.current && ro.observe(R.current), T.current && ro.observe(T.current), f && ro.observe(f)), im && im.addEventListener("load", fit), window.addEventListener("resize", fit));
+    return () => {
+      (ro && ro.disconnect(), im && im.removeEventListener("load", fit), window.removeEventListener("resize", fit));
+    };
+  }, [key, on, ph]);
+  return ph;
+}
 // the Zurück / Weiter row of the cards: in view at the bottom of the screen (as on the flash cards), above the home bar
 const lessonNav = () => ({
   display: "flex",
@@ -18013,12 +18085,15 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, done: dn = !1 }
     c && m.push({ id: "real3d", label: "3D echt", icon: React.createElement(Box, { size: 15 }) }),
     hasSchema(s) && m.push({ id: "schema", label: "Schema", icon: React.createElement(ImageIcon, { size: 15 }) }),
     l && !c && m.push({ id: "3d", label: "3D-Schema", icon: React.createElement(Box, { size: 15 }) }));
-  const [h, y] = useState(m.length ? m[0].id : "none");
+  const [h, y] = useState(m.length ? m[0].id : "none"),
+    pR = useRef(null),
+    pT = useRef(null),
+    ph = usePicHeight(pR, pT, a + "|" + h, h === "atlas" && d.length > 0);
   useScrollTop(a);
   return m.length
     ? React.createElement(
         "div",
-        { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
+        { ref: pR, style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
         React.createElement(
           TopBar,
           { onBack: o, right: dn ? quizChip(r, e) : null },
@@ -18088,12 +18163,12 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, done: dn = !1 }
                   label: i.la,
                 })
               : h === "atlas" && d.length
-                ? React.createElement(AtlasView, { plates: d, lesson: s, itemId: i.id, color: r.color, height: 270 })
+                ? React.createElement(AtlasView, { plates: d, lesson: s, itemId: i.id, color: r.color, height: ph })
                 : React.createElement(FigureView, { figure: s.figure, hl: i.hl, accent: r.color, height: 270 }),
         ),
         React.createElement(
           "div",
-          { style: { flex: 1 } },
+          { ref: pT, style: { flex: 1 } },
           React.createElement(
             "div",
             { className: "ana-display", style: { fontSize: 23, fontWeight: 700, color: C.ink, lineHeight: 1.15, display: "flex", alignItems: "center", gap: 10 } },
@@ -18414,7 +18489,7 @@ function PointImage({ q: s, color: r, onResult: o, done: e, init: it = null }) {
       );
   return React.createElement(
     "div",
-    { style: { background: "#fff", borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
+    { style: { background: C.pic, borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
     React.createElement(ZoomPane, { onTap: y, reset: e, tap: !e }, (b) =>
       d
         ? React.createElement(
@@ -18508,7 +18583,7 @@ function AnswerPicture({ q: s, color: r, chosen: ch }) {
     const fr = (it, ok, cap) =>
       React.createElement(
         "div",
-        { key: it.id, style: { flex: 1, minWidth: 0, background: "#fff", borderRadius: 14, border: `2px solid ${ok ? C.good : C.bad}`, padding: 4 } },
+        { key: it.id, style: { flex: 1, minWidth: 0, background: C.pic, borderRadius: 14, border: `2px solid ${ok ? C.good : C.bad}`, padding: 4 } },
         React.createElement(FigureView, { figure: s.lesson.figure, hl: it.hl, accent: r, height: 165, pulse: !1 }),
         React.createElement(
           "div",
@@ -18553,7 +18628,7 @@ function AnswerPicture({ q: s, color: r, chosen: ch }) {
   return i
     ? React.createElement(
         "div",
-        { className: "ana-pop", style: { background: "#fff", borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
+        { className: "ana-pop", style: { background: C.pic, borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
         i,
         React.createElement(
           "div",
@@ -18708,7 +18783,7 @@ function QuizScreen({
         M.mark &&
         React.createElement(
           "div",
-          { style: { background: "#fff", borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
+          { style: { background: C.pic, borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
           React.createElement(ZoomPane, { focus: !0 }, (E) =>
             React.createElement(QuizPlate, {
               plate: M.plates[Math.min(M.mark.i, M.plates.length - 1)],
@@ -19530,7 +19605,7 @@ function ExamQuiz({ questions: s, color: r, dark: dk, title: ti, timeUp: tu, onE
         M.mark &&
         React.createElement(
           "div",
-          { style: { background: "#fff", borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
+          { style: { background: C.pic, borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 6, margin: "10px 0" } },
           React.createElement(ZoomPane, { focus: !0 }, (E) =>
             React.createElement(QuizPlate, {
               plate: M.plates[Math.min(M.mark.i, M.plates.length - 1)],
