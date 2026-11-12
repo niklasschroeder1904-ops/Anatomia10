@@ -11658,12 +11658,12 @@ function StatPill({ icon: s, value: r, color: o, badge: bg, onClick: oc, label: 
       : null,
   );
 }
-function ProgressBar({ value: s, color: r }) {
+function ProgressBar({ value: s, color: r, min: m = 4 }) {
   return React.createElement(
     "div",
     { style: { flex: 1, height: 14, background: C.mute, borderRadius: 999, overflow: "hidden" } },
     React.createElement("div", {
-      style: { width: `${Math.max(4, s * 100)}%`, height: "100%", background: r, borderRadius: 999, transition: "width 0.3s ease" },
+      style: { width: `${Math.max(m, s * 100)}%`, height: "100%", background: r, borderRadius: 999, transition: "width 0.3s ease" },
     }),
   );
 }
@@ -11930,15 +11930,17 @@ function PathPreview({ skin: s }) {
     [0, 1, 2].map((r) => React.createElement("div", { key: r, style: { position: "relative" } }, React.createElement(Vertebra, { skin: s, done: !0, i: r, size: 0.8 }))),
   );
 }
-function ModeTile({ color: s, icon: r, title: o, sub: e, onClick: t }) {
+function ModeTile({ color: s, icon: r, title: o, sub: e, onClick: t, tight: g = !1 }) {
   return React.createElement(
     "button",
     {
       onClick: t,
       className: "ana-display",
+      "data-tile": o,
       style: {
         textAlign: "left",
-        padding: "11px 12px",
+        padding: g ? "9px 8px 9px 9px" : "11px 12px",
+        minWidth: 0,
         borderRadius: 14,
         border: `1.5px solid ${C.line}`,
         borderLeft: `4px solid ${s}`,
@@ -11948,11 +11950,11 @@ function ModeTile({ color: s, icon: r, title: o, sub: e, onClick: t }) {
     },
     React.createElement(
       "div",
-      { style: { display: "flex", alignItems: "center", gap: 7 } },
+      { style: g ? { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 3 } : { display: "flex", alignItems: "center", gap: 7 } },
       r,
-      React.createElement("span", { style: { fontSize: 14.5, fontWeight: 700, color: C.ink } }, o),
+      React.createElement("span", { style: { fontSize: g ? 13 : 14.5, fontWeight: 700, color: C.ink } }, o),
     ),
-    React.createElement("div", { className: "ana-body", style: { fontSize: 11.5, color: C.inkSoft, marginTop: 2 } }, e),
+    React.createElement("div", { className: "ana-body", style: { fontSize: g ? 11 : 11.5, color: C.inkSoft, marginTop: 2, lineHeight: 1.25 } }, e),
   );
 }
 function Ring({ value: s, color: r, size: o = 38 }) {
@@ -12848,17 +12850,15 @@ function bmFront(plain, opt = {}) {
     ),
     E(112.4, 21.8, 5.6, 3.2, { fill: "url(#bmGlassG)" }, "glass"),
         ]),
-    PP("M 107.6,42.6 C 109.8,41 113.6,40.8 116.2,42.2", { fill: "none", stroke: "#7A5240", strokeWidth: 1.1, strokeLinecap: "round" }),
-    EE(112, 46.8, 3.7, 3.1, { fill: "#FFFFFF", stroke: "#8A6A55", strokeWidth: 0.5 }),
-    EE(112.2, 47.1, 2.3, 2.4, { fill: "url(#bmIrisG)" }),
-    EE(112.2, 47.2, 1.1, 1.15, { fill: "#1E2836" }),
-    EE(113.1, 46.1, 0.65, 0.65, { fill: "#FFFFFF" }),
-    PP("M 108.3,46.2 C 109.7,43.7 114.3,43.7 115.7,46.2", { fill: "none", stroke: "#6E4C3C", strokeWidth: 0.75, strokeLinecap: "round" }),
-    EE(107.4, 52.4, 3, 1.6, { fill: "#F39A98", opacity: 0.38 }),
+    // a calm, neutral face (as in an atlas figure): small almond eyes, no blush, the mouth closed
+    PP("M 108.2,43.3 C 110.2,42.3 113.6,42.2 115.8,43.1", { fill: "none", stroke: "#8A6450", strokeWidth: 0.9, strokeLinecap: "round" }),
+    EE(112, 47, 2.9, 1.5, { fill: "#FBF4EE", stroke: "#8A6A55", strokeWidth: 0.4 }),
+    EE(112, 47, 1.3, 1.35, { fill: "#6B5548" }),
+    EE(112, 47, 0.55, 0.57, { fill: "#2A2320" }),
+    PP("M 108.9,46.9 C 110.2,45.2 113.8,45.2 115.1,46.9", { fill: "none", stroke: "#6E4C3C", strokeWidth: 0.7, strokeLinecap: "round" }),
     P("M 120.8,46.8 C 120.6,49.4 119.2,51.6 117.8,52.6 C 118.8,53.8 121.4,53.8 122.4,52.8", { fill: "none", stroke: "#B9806A", strokeWidth: 0.85, strokeLinecap: "round", strokeLinejoin: "round" }, "nose"),
-    P("M 114.6,56.4 C 117,57.4 123,57.4 125.4,56.4 C 124,59.8 116,59.8 114.6,56.4 Z", org("#B9443F", "#8E2F2B", 0.55), "mouth"),
-    P("M 115.8,56.9 C 118,57.6 122,57.6 124.2,56.9 L 123.8,57.9 C 121.6,58.5 118.4,58.5 116.2,57.9 Z", { fill: "#FFFFFF" }, "teeth"),
-    P("M 117.6,59.1 C 119,58.3 121,58.3 122.4,59.1 C 121.2,59.7 118.8,59.7 117.6,59.1 Z", { fill: "#EC7C80" }, "tongue"),
+    P("M 115.8,57.4 C 117.8,58 122.2,58 124.2,57.4", { fill: "none", stroke: "#A85E55", strokeWidth: 0.95, strokeLinecap: "round" }, "mouth"),
+    P("M 117.8,59.4 C 119.2,59.9 120.8,59.9 122.2,59.4", { fill: "none", stroke: "#D8A08F", strokeWidth: 0.6, strokeLinecap: "round" }, "lip"),
   );
 }
 // one plain arm with its hand (0 = viewer's left, 1 = right), for pictures that move an arm
@@ -12918,14 +12918,13 @@ function bmSide(noArm, noHair) {
       strokeLinejoin: "round",
     }),
     !noHair && s("path", { d: "M -14,13.4 C -7.6,10 0,9.2 6.6,10.2", ...line("#94694F", 1.2, 0.8) }),
-    s("path", { d: "M 13.4,39.4 C 15.8,38.2 19.4,38.2 21.8,39.6", ...line("#7A5240", 1.1) }),
-    s("ellipse", { cx: 17.2, cy: 45.6, rx: 3, ry: 2.7, fill: "#FFFFFF", stroke: "#8A6A55", strokeWidth: 0.5 }),
-    s("ellipse", { cx: 18.4, cy: 45.8, rx: 1.7, ry: 2.1, fill: "url(#bmIrisG)" }),
-    s("ellipse", { cx: 18.8, cy: 45.9, rx: 0.9, ry: 1.05, fill: "#1E2836" }),
-    s("circle", { cx: 19.3, cy: 45, r: 0.5, fill: "#FFFFFF" }),
-    s("path", { d: "M 14.2,44.6 C 15.6,42.4 19,42.2 20.6,44.4", ...line("#6E4C3C", 0.75) }),
-    s("ellipse", { cx: 12.2, cy: 54, rx: 3.4, ry: 1.8, fill: "#F39A98", opacity: 0.38 }),
-    s("path", { d: "M 21,56.8 C 22.2,58.4 23.8,58.6 24.9,57.6", ...line("#8E2F2B", 0.8) }),
+    // the same calm face from the side
+    s("path", { d: "M 13.8,40.2 C 16,39.2 19.4,39.2 21.6,40.2", ...line("#8A6450", 0.9) }),
+    s("ellipse", { cx: 17.8, cy: 45.8, rx: 2.4, ry: 1.4, fill: "#FBF4EE", stroke: "#8A6A55", strokeWidth: 0.4 }),
+    s("ellipse", { cx: 18.8, cy: 45.8, rx: 0.95, ry: 1.25, fill: "#6B5548" }),
+    s("ellipse", { cx: 19, cy: 45.8, rx: 0.42, ry: 0.55, fill: "#2A2320" }),
+    s("path", { d: "M 15.2,45.6 C 16.4,44.1 19.4,44 20.5,45.3", ...line("#6E4C3C", 0.7) }),
+    s("path", { d: "M 21.4,57.3 C 22.6,57.9 23.8,57.9 24.8,57.5", ...line("#A85E55", 0.85) }),
     // arm hanging at the side, thumb to the front (palm forward)
     !noArm && s("path", {
       d: "M 2,90 C 9.6,90 12.4,96 11.2,104 C 10.4,114 9.4,124 8.8,134 C 8.2,146 7.4,156 7,166 C 7.6,180 8.8,196 7.8,214 C 9.6,218 11.6,222 12,227.6 C 12.4,232 10.6,235 9,236 C 8.6,240 7.2,245 4.8,247.6 C 2.8,249.6 -1.4,249.4 -3.4,247 C -5,243 -5,236 -4.8,230 C -4.6,224 -4,219 -3.6,215 C -4.6,200 -6.8,186 -8.6,172 C -9.4,166 -9.8,162 -10.2,158 C -11.4,146 -12.4,130 -12.8,116 C -13.2,104 -9.6,90 2,90 Z",
@@ -15830,16 +15829,11 @@ function HomeScreen({
               React.createElement("span", { className: "ana-display", style: { fontSize: 22, color: "#B8860B" } }, "\u203A"),
             ),
           React.createElement(DailyCard, { progress: s, fresh: dfr, onGo: dgo, onClaim: dClaim }),
+          // practising and looking up, each under its heading (reviews that are due have their card further up)
+          React.createElement(SectionLabel, null, "\xDCBEN"),
           React.createElement(
             "div",
-            { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, paddingBottom: 16 } },
-            React.createElement(ModeTile, {
-              color: C.gold,
-              icon: React.createElement(RotateCcw, { size: 16, color: C.gold }),
-              title: "Wiederholen",
-              sub: c === 0 ? "nichts f\xE4llig" : `${c} Karten f\xE4llig`,
-              onClick: t,
-            }),
+            { "data-tiles": "ueben", style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 } },
             React.createElement(ModeTile, {
               color: "#7048E8",
               icon: React.createElement(Zap, { size: 16, color: "#7048E8" }),
@@ -15855,20 +15849,6 @@ function HomeScreen({
               onClick: a,
             }),
             React.createElement(ModeTile, {
-              color: C.bad,
-              icon: React.createElement(X, { size: 16, color: C.bad }),
-              title: "Fehlerbuch",
-              sub: m + cf === 0 ? "leer" : [m && `${m} Strukturen`, cf && `${cf} ${cf === 1 ? "Paar" : "Paare"}`].filter(Boolean).join(" \xB7 "),
-              onClick: n,
-            }),
-            React.createElement(ModeTile, {
-              color: ATLAS_COLOR,
-              icon: React.createElement("span", { style: { fontSize: 15 } }, "\u{1F5BC}\uFE0F"),
-              title: "Bildatlas",
-              sub: `${figuresData().figures.length} Abbildungen`,
-              onClick: d,
-            }),
-            React.createElement(ModeTile, {
               color: EXAM_COLOR,
               icon: React.createElement("span", { style: { fontSize: 15 } }, "\u{1F4DD}"),
               title: "Pr\xFCfung",
@@ -15876,6 +15856,27 @@ function HomeScreen({
               onClick: goExam,
             }),
             React.createElement(ModeTile, {
+              color: C.bad,
+              icon: React.createElement(X, { size: 16, color: C.bad }),
+              title: "Fehlerbuch",
+              sub: m + cf === 0 ? "leer" : [m && `${m} Strukturen`, cf && `${cf} ${cf === 1 ? "Paar" : "Paare"}`].filter(Boolean).join(" \xB7 "),
+              onClick: n,
+            }),
+          ),
+          React.createElement(SectionLabel, null, "NACHSCHLAGEN"),
+          React.createElement(
+            "div",
+            { "data-tiles": "nachschlagen", style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(104px, 1fr))", gap: 8, paddingBottom: 16 } },
+            React.createElement(ModeTile, {
+              tight: !0,
+              color: ATLAS_COLOR,
+              icon: React.createElement("span", { style: { fontSize: 15 } }, "\u{1F5BC}\uFE0F"),
+              title: "Bildatlas",
+              sub: `${figuresData().figures.length} Abbildungen`,
+              onClick: d,
+            }),
+            React.createElement(ModeTile, {
+              tight: !0,
               color: "#F08C00",
               icon: React.createElement("span", { style: { fontSize: 15 } }, "\u{1F4A1}"),
               title: "Eselsbr\xFCcken",
@@ -15883,10 +15884,11 @@ function HomeScreen({
               onClick: goMnemo,
             }),
             React.createElement(ModeTile, {
+              tight: !0,
               color: "#1C7ED6",
               icon: React.createElement("span", { style: { fontSize: 15 } }, "\u{1F4CA}"),
               title: "Statistik",
-              sub: "St\xE4rken & Verlauf",
+              sub: "dein Verlauf",
               onClick: goStats,
             }),
           ),
@@ -16027,6 +16029,15 @@ function HomeScreen({
                         "/",
                         SN,
                         " Lektionen",
+                      ),
+                      // how much of the region is done, at a glance
+                      React.createElement(
+                        "span",
+                        {
+                          "data-secbar": SN ? Math.round((SD / SN) * 100) : 0,
+                          style: { display: "block", height: 4, borderRadius: 2, marginTop: 7, overflow: "hidden", background: SO ? (C.dim ? "rgba(17,22,30,0.16)" : "rgba(255,255,255,0.22)") : C.mute },
+                        },
+                        React.createElement("span", { style: { display: "block", height: "100%", borderRadius: 2, width: `${SN ? (SD / SN) * 100 : 0}%`, background: C.good } }),
                       ),
                     ),
                     React.createElement(
@@ -19835,7 +19846,7 @@ function BarRow({ label: s, right: r, value: o, color: e }) {
       React.createElement("span", { style: { flex: 1 } }, s),
       React.createElement("span", { style: { color: C.inkSoft } }, r),
     ),
-    React.createElement(ProgressBar, { value: o, color: e }),
+    React.createElement(ProgressBar, { value: o, color: e, min: 0 }),
   );
 }
 function ExamResultScreen({ result: s, cfg: r, xpGain: o, coins: e, boosted: bst, onAgain: t, onHome: a, onErrors: n, daily: dly, onDailySeen: dSeen, onDailyClaim: dClaim, streak: sn, onStreakSeen: sSeen, level: lvl, onLevelSeen: lSeen }) {
