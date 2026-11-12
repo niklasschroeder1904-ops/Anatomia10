@@ -11745,13 +11745,13 @@ function LessonRow({ lesson: s, index: r, best: o, color: e, onOpen: t, locked: 
         gap: 11,
         width: "100%",
         textAlign: "left",
-        padding: "11px 12px",
-        marginBottom: 6,
-        background: a ? C.mute : C.card,
+        // a row of the topic's list: no frame of its own (the fine line between the rows comes from the list)
+        padding: "10px 2px 10px 0",
+        background: "none",
         cursor: a && !ol ? "default" : "pointer",
         opacity: a ? 0.75 : 1,
-        border: `1.5px solid ${n ? e : C.line}`,
-        borderRadius: 13,
+        border: "none",
+        borderRadius: 0,
       },
     },
     React.createElement(
@@ -11899,15 +11899,15 @@ function SpineBone({ done: s, first: r, last: o, next: n, i: k = 0 }) {
         position: "absolute",
         left: 10,
         width: 4,
-        top: r ? "45%" : 0,
-        bottom: o ? "55%" : 0,
+        top: r ? "50%" : 0,
+        bottom: o ? "50%" : 0,
         borderRadius: `${r ? 2 : 0}px ${r ? 2 : 0}px ${o ? 2 : 0}px ${o ? 2 : 0}px`,
         ...c.style,
       },
     }),
     React.createElement(
       "div",
-      { style: { position: "absolute", left: 0, top: "calc(45% - 10px)" } },
+      { style: { position: "absolute", left: 0, top: "calc(50% - 9.5px)" } },
       // the next lesson to do: a pulsing ring in the colour of the material
       n &&
         React.createElement("div", {
@@ -14050,10 +14050,9 @@ function FigureAtlasScreen({ onExit: s, onOpen: r, initCat: o = null, initQ: e =
           React.Fragment,
           null,
           React.createElement(
-            "div",
-            { className: "ana-body", style: { fontSize: 13.5, color: C.inkSoft, lineHeight: 1.45, margin: "0 2px 12px" } },
-            t.figures.length,
-            " Abbildungen mit lateinischer und deutscher Beschriftung. Zum Lernen umschalten oder die Beschriftung ausblenden und sich abfragen lassen.",
+            InfoMore,
+            { k: "figatlas", label: "Mehr zum Bildatlas", style: { margin: "0 2px 12px" }, lead: `${t.figures.length} beschriftete Abbildungen zum Nachschlagen.` },
+            "Mit lateinischer und deutscher Beschriftung. Zum Lernen umschalten oder die Beschriftung ausblenden und sich abfragen lassen.",
           ),
           React.createElement(
             "div",
@@ -14685,6 +14684,8 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
     // the Taler of an earlier day as the menu opened (the row stays, collected, after the tap)
     [lf] = useState(() => ({ taler: e.left || 0, day: e.leftDay })),
     [jg, setJg] = useState([]),
+    // the rules (what each level pays, the bonus) wait behind the "i" beside the heading
+    [io, setIo] = useState(!1),
     op = t.filter((l) => e.done.includes(l.id) && !e.got.includes(l.id)).length + (e.left > 0 ? 1 : 0),
     // a tap on what waits: the coins fly from its Taler to the count at the top, the Taler are added
     claim = (ids, ev) => {
@@ -14739,11 +14740,14 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
             gap: 10,
             width: "100%",
             textAlign: "left",
-            padding: "8px 10px",
-            marginBottom: 6,
-            borderRadius: 12,
-            border: `1.5px solid ${st === "open" ? C.gold : st === "got" ? C.good : C.line}`,
-            background: st === "open" ? C.goldBg : st === "got" ? C.okBg : C.card,
+            padding: "9px 2px",
+            // a row of the card: a fine line above it instead of a frame of its own (what waits shows in its icon and its Taler)
+            borderTop: `1px solid ${C.line}`,
+            borderRight: "none",
+            borderBottom: "none",
+            borderLeft: "none",
+            borderRadius: 0,
+            background: "none",
             cursor: st === "got" ? "default" : "pointer",
           },
         },
@@ -14782,22 +14786,30 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
     "div",
     {
       "data-daily": "1",
-      style: { background: C.card, border: `1.5px solid ${a || op ? C.gold : C.line}`, borderRadius: 18, padding: "10px 12px 8px", marginBottom: 12 },
+      style: { background: C.card, border: `1.5px solid ${a || op ? C.gold : C.line}`, borderRadius: 18, padding: "10px 12px 2px", marginBottom: 12 },
     },
     React.createElement(
       "div",
-      { style: { display: "flex", alignItems: "baseline", gap: 8, paddingBottom: 6 } },
+      // on a very narrow phone the note on the right moves under the heading instead of breaking in two
+      { style: { display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 9, rowGap: 3, paddingBottom: 8 } },
       React.createElement(
         "div",
-        { className: "ana-display", style: { flex: 1, fontSize: 12, fontWeight: 700, color: C.inkSoft, letterSpacing: 0.8 } },
+        { className: "ana-display", style: { fontSize: 12, fontWeight: 700, color: C.inkSoft, letterSpacing: 0.8 } },
         "\u{1F3AF} T\xC4GLICHE CHALLENGES",
       ),
+      React.createElement(InfoDot, { open: io, onToggle: () => setIo(!io), label: "So funktionieren die Challenges", k: "daily" }),
       React.createElement(
         "div",
-        { className: "ana-body", style: { fontSize: 12, color: a || op ? "#C29204" : C.inkSoft, fontWeight: a || op ? 700 : 400 } },
+        { className: "ana-body", style: { flex: "1 0 auto", textAlign: "right", whiteSpace: "nowrap", fontSize: 12, color: a || op ? "#C29204" : C.inkSoft, fontWeight: a || op ? 700 : 400 } },
         op ? "\u{1FA99} abholen!" : a ? "alle geschafft \u{1F389}" : `neu in ${i} Std.`,
       ),
     ),
+    io &&
+      React.createElement(
+        InfoText,
+        { k: "daily", style: { padding: "0 2px 9px" } },
+        `Jeden Tag gibt es drei neue Challenges. Leicht ${DAILY_PAY[0]}, mittel ${DAILY_PAY[1]}, schwer ${DAILY_PAY[2]} Taler \u2013 wer alle drei schafft, bekommt noch ${DAILY_BONUS} Taler dazu. Geschafft? Antippen und abholen!`,
+      ),
     lf.taler > 0 &&
       (() => {
         const g = !(e.left > 0),
@@ -14857,11 +14869,6 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
         pay: dailyPay(l),
       });
     }),
-    React.createElement(
-      "div",
-      { className: "ana-body", style: { fontSize: 12, color: C.inkSoft, lineHeight: 1.4, padding: "0 2px 2px" } },
-      `Leicht ${DAILY_PAY[0]}, mittel ${DAILY_PAY[1]}, schwer ${DAILY_PAY[2]} Taler \u2013 wer alle drei schafft, bekommt noch ${DAILY_BONUS} Taler dazu. Geschafft? Antippen und abholen!`,
-    ),
   );
 }
 // how the names are spoken, at the end of the menu: the recordings, which also play when the iPhone is set to silent,
@@ -14870,6 +14877,8 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
 function VoiceCard({ progress: s, onVoice: sv }) {
   const [vl, setVl] = useState(() => voicesFor("de-DE")),
     [dl, setDl] = useState(null),
+    // the notes on the chosen voice, folded away until asked for
+    [hn, setHn] = useState(!1),
     busy = useRef(!1);
   useEffect(() => {
     if (!speechOk()) return;
@@ -15049,8 +15058,8 @@ function VoiceCard({ progress: s, onVoice: sv }) {
         ),
       React.createElement(
         "div",
-        { style: { display: "flex", alignItems: "flex-start", gap: 10, marginTop: 10 } },
-        React.createElement("div", { className: "ana-body", style: { flex: 1, fontSize: 12.5, color: C.inkSoft, lineHeight: 1.45 } }, hint),
+        { style: { display: "flex", alignItems: "center", gap: 10, marginTop: 8 } },
+        React.createElement("div", { style: { flex: 1, minWidth: 0 } }, React.createElement(InfoLine, { open: hn, onToggle: () => setHn(!hn), label: "Hinweise zur Stimme", k: "voice" })),
         React.createElement(
           "button",
           {
@@ -15072,6 +15081,7 @@ function VoiceCard({ progress: s, onVoice: sv }) {
           "\u25B6 Probe",
         ),
       ),
+      hn && React.createElement(InfoText, { k: "voice", style: { padding: "2px 2px 0" } }, hint),
     ),
   );
 }
@@ -15211,6 +15221,112 @@ function FxBurst() {
         style: { position: "absolute", top: -22, left: `${e.left}%`, width: e.w, height: e.w * 1.6, background: e.col, borderRadius: 2, animationDelay: `${e.delay}s`, animationDuration: `${e.dur}s` },
       }),
     ),
+  );
+}
+// A longer explanation waits behind a small round "i": a tap shows the text, another one hides it again.
+// the "i" itself
+const infoGlyph = (on) =>
+  React.createElement(
+    "span",
+    {
+      "aria-hidden": "true",
+      className: "ana-display",
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 18,
+        height: 18,
+        flex: "0 0 18px",
+        borderRadius: 9,
+        fontSize: 12,
+        fontWeight: 700,
+        lineHeight: 1,
+        letterSpacing: 0,
+        border: `1.5px solid ${on ? C.ink : C.inkSoft}`,
+        background: on ? C.ink : "transparent",
+        color: on ? C.card : C.inkSoft,
+      },
+    },
+    "i",
+  );
+// the "i" beside a heading (the heading's owner keeps whether it is open)
+function InfoDot({ open: s, onToggle: r, label: o = "Erkl\xE4rung", k: e = "1" }) {
+  return React.createElement(
+    "button",
+    {
+      onClick: (t) => (t.stopPropagation(), r()),
+      "aria-expanded": s ? "true" : "false",
+      "aria-label": o,
+      "data-info": e,
+      // the dot is small, the finger is not: the button reaches 9px beyond it on all sides
+      style: { flex: "0 0 auto", padding: 9, margin: -9, border: "none", background: "none", cursor: "pointer", lineHeight: 0, WebkitTapHighlightColor: "transparent" },
+    },
+    infoGlyph(s),
+  );
+}
+// the "i" with a few words that say what it explains, as a line of its own
+function InfoLine({ open: s, onToggle: r, label: o, k: e = "1", style: t }) {
+  return React.createElement(
+    "button",
+    {
+      onClick: r,
+      "aria-expanded": s ? "true" : "false",
+      "data-info": e,
+      className: "ana-body",
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        maxWidth: "100%",
+        padding: "8px 2px",
+        border: "none",
+        background: "none",
+        cursor: "pointer",
+        fontSize: 13,
+        fontWeight: 600,
+        color: C.inkSoft,
+        textAlign: "left",
+        WebkitTapHighlightColor: "transparent",
+        ...t,
+      },
+    },
+    infoGlyph(s),
+    React.createElement("span", { style: { minWidth: 0 } }, o),
+    React.createElement(
+      "span",
+      { "aria-hidden": "true", className: "ana-display", style: { fontSize: 15, lineHeight: 1, transform: s ? "rotate(90deg)" : "none", transition: "transform .15s" } },
+      "\u203A",
+    ),
+  );
+}
+// the explanation itself
+function InfoText({ children: s, style: r, k: o = "1" }) {
+  return React.createElement("div", { className: "ana-body", "data-info-text": o, style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.45, ...r } }, s);
+}
+// line and text together: "(i) So funktioniert ..." with the text under it
+function InfoFold({ label: s, children: r, k: o = "1", style: e }) {
+  const [t, a] = useState(!1);
+  return React.createElement(
+    "div",
+    { style: e },
+    React.createElement(InfoLine, { open: t, onToggle: () => a(!t), label: s, k: o }),
+    t && React.createElement(InfoText, { k: o, style: { padding: "0 2px 4px 27px" } }, r),
+  );
+}
+// a short line that stays, with the rest behind the "i" at its end
+function InfoMore({ lead: s, children: r, k: o = "1", label: e, style: t, cls: a = "ana-body", rowStyle: n }) {
+  const [i, l] = useState(!1);
+  return React.createElement(
+    "div",
+    { style: t },
+    React.createElement(
+      "div",
+      { className: a, style: { display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, color: C.inkSoft, lineHeight: 1.45, ...n } },
+      React.createElement("span", { style: { flex: 1, minWidth: 0 } }, s),
+      React.createElement(InfoDot, { open: i, onToggle: () => l(!i), label: e, k: o }),
+    ),
+    i && React.createElement(InfoText, { k: o, style: { paddingTop: 4 } }, r),
   );
 }
 // an on/off switch (settings)
@@ -15932,8 +16048,8 @@ function HomeScreen({
                       borderRadius: 11,
                       cursor: "pointer",
                       fontSize: 13,
-                      border: `1.5px solid ${N ? C.ink : C.line}`,
-                      background: N ? C.ink : C.card,
+                      border: "none",
+                      background: N ? C.ink : C.mute,
                       color: N ? C.paper : C.ink,
                     },
                   },
@@ -16118,7 +16234,7 @@ function HomeScreen({
               N &&
                 React.createElement(
                   "div",
-                  { style: { padding: "2px 12px 12px" } },
+                  { "data-lessons": v.id, style: { padding: "0 12px 2px", borderTop: `1px solid ${C.line}` } },
                   v.lessons.map((T, K) =>
                     React.createElement(
                       "div",
@@ -16132,7 +16248,7 @@ function HomeScreen({
                       }),
                       React.createElement(
                         "div",
-                        { style: { flex: 1, minWidth: 0 } },
+                        { style: { flex: 1, minWidth: 0, borderTop: K ? `1px solid ${C.line}` : "none" } },
                         React.createElement(LessonRow, {
                           lesson: T,
                           index: K,
@@ -16146,35 +16262,51 @@ function HomeScreen({
                       ),
                     ),
                   ),
+                  // the test of the topic: one more row at the end of the list (the path ends at the last lesson)
                   React.createElement(
-                    "button",
-                    {
-                      onClick: () => o(v.id),
-                      "aria-label": `Test: ${v.title}`,
-                      className: "ana-body",
-                      style: {
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "11px 12px",
-                        background: Z ? C.goldBg : C.card,
-                        border: `1.5px solid ${Z ? C.gold : C.line}`,
-                        borderRadius: 13,
-                        cursor: "pointer",
+                    "div",
+                    { style: { display: "flex", gap: 8 } },
+                    React.createElement("div", { "aria-hidden": "true", style: { width: 24, flex: "0 0 24px" } }),
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: () => o(v.id),
+                        "aria-label": `Test: ${v.title}`,
+                        "data-topic-test": v.id,
+                        className: "ana-body",
+                        style: {
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 11,
+                          flex: 1,
+                          minWidth: 0,
+                          textAlign: "left",
+                          padding: "10px 2px 10px 0",
+                          background: "none",
+                          borderTop: `1px solid ${C.line}`,
+                          borderRight: "none",
+                          borderBottom: "none",
+                          borderLeft: "none",
+                          borderRadius: 0,
+                          cursor: "pointer",
+                        },
                       },
-                    },
-                    React.createElement(Trophy, { size: 19, color: Z ? C.gold : "#B6BECC", fill: Z ? C.gold : "none" }),
-                    React.createElement(
-                      "span",
-                      { className: "ana-display", style: { flex: 1, fontSize: 14.5, fontWeight: 600, color: C.ink } },
-                      "Themen-Test",
-                    ),
-                    React.createElement(
-                      "span",
-                      { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft } },
-                      Z ? `${Math.round(s.tests[v.id] * 100)} %` : "12 Fragen",
+                      React.createElement(
+                        "span",
+                        { style: { width: 28, height: 28, flex: "0 0 28px", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", background: Z ? C.gold : C.mute } },
+                        React.createElement(Trophy, { size: 16, color: Z ? "#fff" : "#9AA3B2", fill: Z ? "#fff" : "none" }),
+                      ),
+                      React.createElement(
+                        "span",
+                        { className: "ana-display", style: { flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, color: C.ink } },
+                        "Themen-Test",
+                      ),
+                      React.createElement(
+                        "span",
+                        { className: "ana-body", style: { fontSize: 12.5, whiteSpace: "nowrap", color: Z ? "#C29204" : C.inkSoft, fontWeight: Z ? 700 : 400 } },
+                        Z ? `${Math.round(s.tests[v.id] * 100)} %` : "12 Fragen",
+                      ),
+                      React.createElement("span", { className: "ana-display", style: { fontSize: 17, color: "#B6BECC" } }, "\u203A"),
                     ),
                   ),
                 ),
@@ -16352,8 +16484,8 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
       React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, "Belohnungen"),
     ),
     React.createElement(
-      "div",
-      { className: "ana-body", style: { color: C.inkSoft, fontSize: 13.5, padding: "0 4px 14px", lineHeight: 1.45 } },
+      InfoFold,
+      { label: "So verdienst du Taler", k: "shop", style: { padding: "0 2px 8px" } },
       "Taler verdienst du beim Lernen: 20 pro abgeschlossener Lektion, 40 extra f\xFCr ein fehlerfreies Quiz, 100 f\xFCr einen bestandenen Themen-Test, 1 pro gewusster Karteikarte, 5 pro gel\xF6stem Fall und Extra-Taler f\xFCr jeden Erfolg. Gekaufte Designs kannst du jederzeit an- und wieder ausschalten.",
     ),
     s.jokers > 0 || s.freezes > 0 || s.tokens > 0 || h
@@ -16987,17 +17119,28 @@ function ErrorBody3D({ errors: s, onOpenLesson: r }) {
   return React.createElement(
     "div",
     { style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 18, padding: "10px 10px 12px", marginBottom: 14 } },
-    React.createElement(
-      "div",
-      { className: "ana-display", style: { fontSize: 15.5, fontWeight: 700, color: C.ink, padding: "2px 4px 2px" } },
-      "Deine Fehler am K\xF6rper",
-    ),
+    s.length === 0
+      ? React.createElement(
+          "div",
+          { className: "ana-display", style: { fontSize: 15.5, fontWeight: 700, color: C.ink, padding: "2px 4px 2px" } },
+          "Deine Fehler am K\xF6rper",
+        )
+      : React.createElement(
+          InfoMore,
+          {
+            k: "errors",
+            label: "Mehr zur Fehlerkarte",
+            cls: "ana-display",
+            style: { padding: "2px 4px 2px" },
+            rowStyle: { fontSize: 15.5, fontWeight: 700, color: C.ink, lineHeight: 1.25 },
+            lead: "Deine Fehler am K\xF6rper",
+          },
+          `${h} von ${s.length} Fehlern sind als Struktur rot markiert${y ? `, ${y} als roter Punkt an der K\xF6rperstelle` : ""}.`,
+        ),
     React.createElement(
       "div",
       { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, padding: "0 4px 8px", lineHeight: 1.4 } },
-      s.length === 0
-        ? "Noch keine Fehler – hier erscheinen falsch beantwortete Strukturen rot."
-        : `${h} von ${s.length} Fehlern sind als Struktur rot markiert${y ? `, ${y} als roter Punkt an der K\xF6rperstelle` : ""}. Je dunkler das Rot, desto \xF6fter falsch. Antippen zeigt den Namen.`,
+      s.length === 0 ? "Noch keine Fehler \u2013 hier erscheinen falsch beantwortete Strukturen rot." : "Je dunkler das Rot, desto \xF6fter falsch. Antippen zeigt den Namen.",
     ),
     React.createElement(
       "div",
@@ -17424,8 +17567,8 @@ function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
       React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, "Karteikarten"),
     ),
     React.createElement(
-      "div",
-      { className: "ana-body", style: { color: C.inkSoft, fontSize: 14, padding: "0 4px 12px", lineHeight: 1.45 } },
+      InfoFold,
+      { label: "So sehen die Karten aus", k: "deck", style: { padding: "0 2px 6px" } },
       "Vorderseite: das anatomische Bild ohne Beschriftung, die gesuchte Struktur mit Pfeil markiert. R\xFCckseite: Name und Funktion.",
     ),
     React.createElement(
@@ -19443,8 +19586,8 @@ function ExamSetupScreen({ progress: s, onExit: r, onStart: o }) {
       React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, "Pr\xFCfungsmodus"),
     ),
     React.createElement(
-      "div",
-      { className: "ana-body", style: { color: C.inkSoft, fontSize: 13.5, padding: "0 4px 4px", lineHeight: 1.45 } },
+      InfoFold,
+      { label: "So l\xE4uft die Pr\xFCfung", k: "exam", style: { padding: "0 2px" } },
       "Stell dir deine Pr\xFCfung zusammen: Regionen, Fachrichtungen, Lernstufe, Anzahl der Fragen und Zeit. Am Ende gibt es eine Note und eine Auswertung.",
     ),
     React.createElement(SectionLabel, { right: p(t, a, EXAM_REGIONS) }, "REGIONEN"),
@@ -20060,10 +20203,9 @@ function MnemonicScreen({ onExit: s }) {
       React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, "Eselsbr\xFCcken"),
     ),
     React.createElement(
-      "div",
-      { className: "ana-body", style: { color: C.inkSoft, fontSize: 13.5, padding: "0 4px 10px", lineHeight: 1.45 } },
-      MNEMONICS.length,
-      " Merkhilfen f\xFCr typische Pr\xFCfungsthemen. Passende Eselsbr\xFCcken erscheinen auch direkt in den Lektionen.",
+      InfoMore,
+      { k: "mnemo", label: "Mehr zu den Eselsbr\xFCcken", style: { padding: "0 4px 10px" }, lead: `${MNEMONICS.length} Merkhilfen f\xFCr typische Pr\xFCfungsthemen.` },
+      "Passende Eselsbr\xFCcken erscheinen auch direkt in den Lektionen.",
     ),
     React.createElement("input", {
       value: r,
@@ -20501,9 +20643,19 @@ function StatsScreen({ progress: s, onExit: r, onReset: rs, onPractice: op }) {
       const nx = streakNext(s.streak || 0);
       return nx
         ? React.createElement(
-            "div",
-            { className: "ana-body", "data-streak-next": "1", style: { fontSize: 13, color: C.inkSoft, padding: "8px 2px 0", lineHeight: 1.4 } },
-            `\u{1FA99} Serien-Taler: zurzeit ${streakDaily(s.streak || 1)} Taler am Tag (1\u20134 Tage: 10, ab 5 Tagen: 20, ab 10: 30, ab 15: 40, ab 20: 50), dazu ein Extra-Paket bei 5, 10, 20, 30 \u2026 Tagen in Folge. N\xE4chstes Paket bei ${nx} Tagen (+${streakGift(nx)} Taler), noch ${nx - (s.streak || 0)} ${nx - (s.streak || 0) === 1 ? "Tag" : "Tage"}.`,
+            InfoMore,
+            {
+              k: "streak",
+              label: "So wachsen die Serien-Taler",
+              style: { padding: "8px 2px 0" },
+              rowStyle: { fontSize: 13, lineHeight: 1.4 },
+              lead: React.createElement(
+                "span",
+                { "data-streak-next": "1" },
+                `\u{1FA99} Serien-Taler: zurzeit ${streakDaily(s.streak || 1)} Taler am Tag. N\xE4chstes Paket bei ${nx} Tagen (+${streakGift(nx)} Taler), noch ${nx - (s.streak || 0)} ${nx - (s.streak || 0) === 1 ? "Tag" : "Tage"}.`,
+              ),
+            },
+            "F\xFCr jeden Tag deiner Serie gibt es Taler: an den Tagen 1\u20134 je 10, ab 5 Tagen 20, ab 10 Tagen 30, ab 15 Tagen 40, ab 20 Tagen 50. Dazu kommt ein Extra-Paket bei 5, 10, 20, 30 \u2026 Tagen in Folge.",
           )
         : null;
     })(),
@@ -20551,18 +20703,25 @@ function StatsScreen({ progress: s, onExit: r, onReset: rs, onPractice: op }) {
           { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 } },
           React.createElement(
             "div",
-            { style: { background: C.card, border: `1.5px solid ${C.line}`, borderTop: `4px solid ${C.good}`, borderRadius: 12, padding: "8px 10px" } },
-            React.createElement("div", { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: C.good, marginBottom: 4 } }, "\u{1F4AA} St\xE4rken"),
+            { style: { background: C.card, border: `1.5px solid ${C.line}`, borderTop: `4px solid ${C.good}`, borderRadius: 12, padding: "8px 10px 4px" } },
+            React.createElement("div", { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: C.good, marginBottom: 1 } }, "\u{1F4AA} St\xE4rken"),
             d.length
-              ? d.map((v) => React.createElement("div", { key: v.id, className: "ana-body", style: { fontSize: 13, color: C.ink } }, v.label, " ", Math.round(v.rate * 100), " %"))
-              : React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.35 } }, "Noch keine Region \xFCber 80 %."),
+              ? d.map((v, W) =>
+                  React.createElement(
+                    "div",
+                    { key: v.id, className: "ana-body", style: { display: "flex", alignItems: "center", padding: "6px 0", borderTop: W ? `1px solid ${C.line}` : "none", fontSize: 13, color: C.ink } },
+                    React.createElement("span", { style: { flex: 1, minWidth: 0 } }, v.label),
+                    React.createElement("span", { className: "ana-display", style: { fontSize: 12.5, fontWeight: 700, color: C.good, whiteSpace: "nowrap", marginLeft: 6 } }, Math.round(v.rate * 100), " %"),
+                  ),
+                )
+              : React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.35, padding: "3px 0 4px" } }, "Noch keine Region \xFCber 80 %."),
           ),
           React.createElement(
             "div",
-            { style: { background: C.card, border: `1.5px solid ${C.line}`, borderTop: `4px solid ${C.bad}`, borderRadius: 12, padding: "8px 10px" } },
-            React.createElement("div", { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: C.bad, marginBottom: 4 } }, "\u{1F3AF} \xDCben"),
+            { style: { background: C.card, border: `1.5px solid ${C.line}`, borderTop: `4px solid ${C.bad}`, borderRadius: 12, padding: "8px 10px 4px" } },
+            React.createElement("div", { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: C.bad, marginBottom: 1 } }, "\u{1F3AF} \xDCben"),
             c.length
-              ? c.map((v) =>
+              ? c.map((v, W) =>
                   React.createElement(
                     "button",
                     {
@@ -20570,13 +20729,30 @@ function StatsScreen({ progress: s, onExit: r, onReset: rs, onPractice: op }) {
                       onClick: () => op && op(v.id),
                       "data-practice": v.id,
                       className: "ana-body",
-                      style: { display: "flex", alignItems: "center", width: "100%", textAlign: "left", padding: "5px 8px", margin: "0 0 4px", borderRadius: 9, border: `1.5px solid ${C.line}`, background: C.paper, color: C.ink, fontSize: 13, cursor: "pointer" },
+                      // a row of the box with a fine line above it (no frame of its own); the arrow says it can be tapped
+                      style: {
+                        display: "flex",
+                        alignItems: "center",
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "6px 0",
+                        margin: 0,
+                        borderTop: W ? `1px solid ${C.line}` : "none",
+                        borderRight: "none",
+                        borderBottom: "none",
+                        borderLeft: "none",
+                        borderRadius: 0,
+                        background: "none",
+                        color: C.ink,
+                        fontSize: 13,
+                        cursor: "pointer",
+                      },
                     },
                     React.createElement("span", { style: { flex: 1, minWidth: 0 } }, v.label),
                     React.createElement("span", { className: "ana-display", style: { fontSize: 12.5, fontWeight: 700, color: C.bad, whiteSpace: "nowrap", marginLeft: 6 } }, Math.round(v.rate * 100), " % \u203A"),
                   ),
                 )
-              : React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.35 } }, "Alles \xFCber 80 % \u2013 stark!"),
+              : React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.35, padding: "3px 0 4px" } }, "Alles \xFCber 80 % \u2013 stark!"),
           ),
         ),
     React.createElement(SectionLabel, null, "WIEDERHOLUNGSSTUFEN (LEITNER)"),
