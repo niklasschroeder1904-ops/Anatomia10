@@ -18763,8 +18763,9 @@ function PointImage({ q: s, color: r, onResult: o, done: e, init: it = null }) {
 }
 function TypeAnswer({ q: s, color: r, onResult: o, done: e, right: t, init: it = "", onDraft: od, exam: ex = !1 }) {
   const [a, n] = useState(it || ""),
+    // nothing typed counts as wrong too, and the right answer is shown (in the exam only handing in decides)
     i = () => {
-      !e && a.trim() && o(answerMatches(a, s.item), a);
+      !e && (a.trim() ? o(answerMatches(a, s.item), a) : ex || o(!1, ""));
     };
   return React.createElement(
     "div",
@@ -18776,7 +18777,7 @@ function TypeAnswer({ q: s, color: r, onResult: o, done: e, right: t, init: it =
       onKeyDown: (l) => {
         l.key === "Enter" && (ex ? l.target.blur() : i());
       },
-      placeholder: "Name eintippen \u2026",
+      placeholder: e && !a.trim() ? "keine Antwort" : "Name eintippen \u2026",
       autoComplete: "off",
       autoCorrect: "off",
       autoCapitalize: "off",
