@@ -5215,9 +5215,11 @@ html, body { overscroll-behavior-x: none; }
 @keyframes ana-claim-glow { 0% { box-shadow: 0 0 0 0 rgba(242,183,5,0.65); } 70%, 100% { box-shadow: 0 0 0 9px rgba(242,183,5,0); } }
 .ana-claim { animation: ana-claim 1.4s ease-in-out infinite, ana-claim-glow 1.4s ease-out infinite; }
 .ana-claim-glow { animation: ana-claim-glow 1.6s ease-out infinite; }
+@keyframes ana-bye { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.97); } }
+.ana-bye { animation: ana-bye 0.36s ease-in both; }
 @media (prefers-reduced-motion: reduce) {
   .ana-fall { display: none; }
-  .ana-pop, .ana-slide-up, .ana-shake, .ana-part-glow, .ana-ping, .ana-claim, .ana-claim-glow { animation: none; }
+  .ana-pop, .ana-slide-up, .ana-shake, .ana-part-glow, .ana-ping, .ana-claim, .ana-claim-glow, .ana-bye { animation: none; }
   .ana-vb-shine, .ana-vb-twinkle, .ana-vb-pulse, .ana-vb-hue, .ana-vb-cordpulse, .ana-vb-next { animation: none; }
   .ana-vb-twinkle { opacity: 0; }
 }
@@ -14539,7 +14541,9 @@ function TickLayer() {
 // coins for collected Taler: they burst from el and fly to the Taler count at the top of the menu ([data-coin-target], when it
 // is in view; else they rise and fade), with the amount rising over el; the count follows when they land (COIN_LAND, CoinCount).
 // The phone ticks lightly (tick)
-const COIN_LAND = 720;
+const COIN_LAND = 720,
+  // a collected challenge: fades once its coins have landed, then leaves the card
+  DAILY_BYE = [COIN_LAND + 380, COIN_LAND + 760];
 function coinFx(el, taler, bonus) {
   tick();
   try {
@@ -14765,6 +14769,8 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
     // the Taler of an earlier day as the menu opened (the row stays, collected, after the tap)
     [lf] = useState(() => ({ taler: e.left || 0, day: e.leftDay })),
     [jg, setJg] = useState([]),
+    // collected on this visit: the row shows "eingesammelt" while the coins fly, then fades (1) and goes (2)
+    [bye, setBye] = useState({}),
     // the rules (what each level pays, the bonus) wait behind the "i" beside the heading
     [io, setIo] = useState(!1),
     op = t.filter((l) => e.done.includes(l.id) && !e.got.includes(l.id)).length + (e.left > 0 ? 1 : 0),
@@ -14776,6 +14782,8 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
         pl = el && el.querySelector ? el.querySelector("[data-coin-pill]") : null;
       coinFx(pl || el, q.taler, q.bonus);
       setJg((g) => [...g, ...ids]);
+      const by = (v) => setBye((b) => ({ ...b, ...Object.fromEntries(ids.map((k) => [k, v])) }));
+      (setTimeout(() => by(1), DAILY_BYE[0]), setTimeout(() => by(2), DAILY_BYE[1]));
       // the row turns "collected" after this tap's click is through (its TickLayer flips the switch first: the tick)
       setTimeout(() => oc(ids), 0);
     },
@@ -14805,6 +14813,8 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
         st === "got" ? "\u{1FA99} \u2713" : `\u{1FA99} +${pay}`,
         st === "open" ? React.createElement("span", { style: { fontSize: 10.5, fontWeight: 600, letterSpacing: 0.3 } }, "abholen") : null,
       ),
+    // a collected challenge stays only for its goodbye after the tap (collected earlier, it is not shown at all)
+    keep = (k, got) => !got || (jg.includes(k) && bye[k] !== 2),
     row = ({ key: k, st, onClick: oclick, label: al, icon: ic, title: tt, sub: sb, pay, pop }) =>
       React.createElement(
         "button",
@@ -14812,7 +14822,7 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
           key: k,
           onClick: oclick,
           "data-daily-row": st,
-          className: (pop ? "ana-pop " : "") + "ana-body",
+          className: (pop ? "ana-pop " : "") + (bye[k] === 1 ? "ana-bye " : "") + "ana-body",
           "aria-label": al,
           style: {
             display: "flex",
@@ -14863,6 +14873,10 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
         pill(st, pay, k),
         st === "open" && React.createElement(TickLayer),
       );
+  const showLeft = lf.taler > 0 && keep("left", !(e.left > 0)),
+    shown = t.filter((l) => keep(l.id, e.done.includes(l.id) && e.got.includes(l.id)));
+  // all done and collected (or nothing for today): no card
+  if (!showLeft && !shown.length) return null;
   return React.createElement(
     "div",
     {
@@ -14891,7 +14905,7 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
         { k: "daily", style: { padding: "0 2px 9px" } },
         `Jeden Tag gibt es drei neue Challenges. Leicht ${DAILY_PAY[0]}, mittel ${DAILY_PAY[1]}, schwer ${DAILY_PAY[2]} Taler \u2013 wer alle drei schafft, bekommt noch ${DAILY_BONUS} Taler dazu. Geschafft? Antippen und abholen!`,
       ),
-    lf.taler > 0 &&
+    showLeft &&
       (() => {
         const g = !(e.left > 0),
           tt = lf.day === yesterdayStr() ? "Von gestern noch abzuholen" : "Von fr\xFCher noch abzuholen";
@@ -14910,7 +14924,7 @@ function DailyCard({ progress: s, fresh: r = [], onGo: o, onClaim: oc }) {
           pay: lf.taler,
         });
       })(),
-    t.map((l) => {
+    shown.map((l) => {
       const d = e.done.includes(l.id),
         g = d && e.got.includes(l.id),
         c = Math.min(l.goal, dailyVal(s, e, l)),
