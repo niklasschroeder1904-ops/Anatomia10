@@ -7627,6 +7627,15 @@ const AREA_CACHE = {},
       return null;
     }
   },
+  // a tap question needs the outline of the structure: its answer lights up that area (a ring at a line's end would only
+  // be a pointer); m: the card's mark, pl: the lesson's plates
+  pointAreaOk = (m, pl) => {
+    if (!m || m.np || m.li == null || !pl || !pl.length) return !1;
+    const p = pl[Math.min(m.i || 0, pl.length - 1)];
+    if (!p || !labelsFor(p.src)) return !1;
+    const T = pointTarget(p.src, m.li);
+    return !!(T && T.areas.length);
+  },
   focusRect = (s, r, o) => {
     if (!s || !s.p || s.p.length < 2 || r == null) return null;
     const e = s.labels[r];
@@ -10866,7 +10875,7 @@ function buildLessonQuiz(s, r = 8) {
     can = {
       fig: (i) => !!((t[i.id] && a.length) || s.figure || (q3 && q3.items && q3.items[i.id])),
       type: (i) => !!(s.figure || (t[i.id] && t[i.id].li != null && a.length)),
-      point: (i) => !!(t[i.id] && !t[i.id].np && a.length),
+      point: (i) => pointAreaOk(t[i.id], a),
       // definition questions only where the definition reads clearly without the answer; no name question where both
       // names are alike - otherwise makeQuestion would ask another kind and the structure could come twice in a picture
       fact: (i) => hasQuizFact(i),
@@ -18579,7 +18588,7 @@ function PointImage({ q: s, color: r, onResult: o, done: e, init: it = null }) {
         f = l && B > l[0] - 0.02 * m && B < l[0] + l[2] + 0.02 * m && A > l[1] - 0.025 * h && A < l[1] + l[3] + 0.025 * h,
         k = T.areas.some((g) => g.filter((w) => inPoly(w, B, A)).length % 2 === 1),
         ok = !!(p || f || k);
-      // where it was tapped, and whether that was right (a right tap shows only the lit-up area)
+      // where it was tapped, and whether that was right (after the answer only the right area is shown, not the tap)
       a([B, A, ok]);
       o(ok, [B, A, ok]);
     },
@@ -18661,7 +18670,7 @@ function PointImage({ q: s, color: r, onResult: o, done: e, init: it = null }) {
               quiz: e ? { idx: s.mark.li, reveal: !0, revealText: s.item && s.item.la } : null,
               zs: b,
             },
-            t && !(e && t[2]) && U(t, b),
+            t && !e && U(t, b),
             R(b),
           )
         : React.createElement(
@@ -18676,7 +18685,7 @@ function PointImage({ q: s, color: r, onResult: o, done: e, init: it = null }) {
                 draggable: !1,
                 style: { display: "block", maxWidth: "100%", maxHeight: 300, width: "auto", cursor: e ? "default" : "crosshair", userSelect: "none" },
               }),
-              t && !(e && t[2]) && U(t, b),
+              t && !e && U(t, b),
               e && V(i, b, "sol"),
             ),
           ),
@@ -19520,7 +19529,7 @@ const TOPICS = [
         ? makeNumQuestion(n, a)
         : c === "type" && l && l.li != null && d.length
         ? makeTypeQuestion(a, n, l, d)
-        : c === "point" && l && !l.np && d.length
+        : c === "point" && pointAreaOk(l, d)
           ? makePointQuestion(a, n, l, d)
           : askItem(a, n, c === "type" ? "term-de" : c === "point" ? "term-la" : c);
     });
