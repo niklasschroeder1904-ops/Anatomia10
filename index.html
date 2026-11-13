@@ -7716,7 +7716,9 @@ const AREA_CACHE = {},
   };
 // up close at a card's structure: its label (as drawn lit up, in the names shown: md), its line tips and its outline when
 // there is one, with a margin, in a view of the frame's shape (fw x fh px) and at most 3x the picture as shown; inside cr
-// (the panel shown) when given, keeping what that leaves out; null when that would hardly be closer
+// (the panel shown) when given, keeping what that leaves out. A label far off (at the edge of a big picture) would leave the
+// view hardly closer: then the view takes the structure alone (its outline, else the ends of its lines); its label is then
+// outside the view, and LabeledImage draws the lines to the structure in the lit colour. null when no view is closer
 const zoomRect = (s, r, cr, fw, fh, md = "la") => {
   const e = s && s.labels && s.labels[r];
   if (!e || !s.w || !s.h || !fw || !fh) return null;
@@ -7729,7 +7731,14 @@ const zoomRect = (s, r, cr, fw, fh, md = "la") => {
     F = e.rot ? t : e.al === "r" ? t + n - I : e.al === "l" ? t : t + n / 2 - I / 2,
     hh = Math.max(i, kh * 1.2) / 2,
     ar = areasFor(s.__src || ""),
-    pts = [[F, a + i / 2 - hh], [F + I, a + i / 2 + hh], ...(e.a || []), ...((ar && ar.a[r]) || []).flat()];
+    own = ((ar && ar.a[r]) || []).flat();
+  return (
+    zoomFit(W, H, [[F, a + i / 2 - hh], [F + I, a + i / 2 + hh], ...(e.a || []), ...own], cr, fw, fh) ||
+    (own.length || (e.a && e.a.length) ? zoomFit(W, H, [...(e.a || []), ...own], cr, fw, fh) : null)
+  );
+};
+// the view around the points pts (parts of the picture W x H px) for zoomRect
+const zoomFit = (W, H, pts, cr, fw, fh) => {
   let X0 = Infinity,
     Y0 = Infinity,
     X1 = -Infinity,
@@ -7814,7 +7823,7 @@ function LabelLayer({
     } catch {}
   }, []);
   if (!s || !r || !o) return null;
-  const [c, m, h] = d || [0, 0, 1, 1],
+  const [c, m, h, vh] = d || [0, 0, 1, 1],
     y = d && d.members;
   return s.labels.map((b, x) => {
     const S = Array.isArray(t) ? t.includes(x) : t === x,
@@ -7823,6 +7832,8 @@ function LabelLayer({
       wr = S && !B && !b.rot && (b.n || 1) > 1 && Array.isArray(t) && t.length > 1;
     if ((y && !y.has(x) && !S && !B) || (a && !B && !a.others) || (e === "off" && !S && !B)) return null;
     const [A, u, p, f] = b.b;
+    // a lit label wholly outside a view up close stays out (LabeledImage colours its line to the structure)
+    if (d && S && !B && (A > c + h || A + p < c || u > m + vh || u + f < m)) return null;
     let k = Math.max(3.5, (b.f || b.lh || f) * o * 0.86);
     B ? (k = Math.max(k, i) / Z) : S && (k = wr ? Math.min(k * 1.1, k + 2) : Math.min(k * 1.3, k + 4));
     const w = ((B && a.lang ? a.lang : e) === "de" && b.de) || b.la,
@@ -7986,6 +7997,56 @@ function LabeledImage({
           ),
           React.createElement("rect", { x: 0, y: 0, width: y.w, height: y.h, fill: C.pic, mask: `url(#${oid})` }),
         ),
+      // a view up close that leaves a lit label out: its lines to the structure in the lit colour
+      x &&
+        o != null &&
+        (() => {
+          const [vx, vy, vw, vh] = m,
+            L = (Array.isArray(o) ? o : [o])
+              .map((k) => y.labels[k])
+              .filter((u) => u && u.a && u.a.length && (u.b[0] > vx + vw || u.b[0] + u.b[2] < vx || u.b[1] > vy + vh || u.b[1] + u.b[3] < vy));
+          if (!L.length) return null;
+          // from the line's start beside the label (s), else from the point of the label's box nearest the line's end
+          const seg = L.flatMap((u) =>
+            u.a.map((q) => [u.s && u.a.length === 1 ? u.s : [Math.min(Math.max(q[0], u.b[0]), u.b[0] + u.b[2]), Math.min(Math.max(q[1], u.b[1]), u.b[1] + u.b[3])], q]),
+          );
+          return React.createElement(
+            "svg",
+            {
+              viewBox: `0 0 ${y.w} ${y.h}`,
+              preserveAspectRatio: "none",
+              "data-litline": "1",
+              style: { position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible", pointerEvents: "none", zIndex: 1 },
+            },
+            seg.map(([p0, p1], k) =>
+              React.createElement(
+                "g",
+                { key: k },
+                React.createElement("line", {
+                  x1: p0[0] * y.w,
+                  y1: p0[1] * y.h,
+                  x2: p1[0] * y.w,
+                  y2: p1[1] * y.h,
+                  stroke: "#fff",
+                  strokeOpacity: 0.85,
+                  strokeWidth: 6,
+                  strokeLinecap: "round",
+                  vectorEffect: "non-scaling-stroke",
+                }),
+                React.createElement("line", {
+                  x1: p0[0] * y.w,
+                  y1: p0[1] * y.h,
+                  x2: p1[0] * y.w,
+                  y2: p1[1] * y.h,
+                  stroke: t,
+                  strokeWidth: 3,
+                  strokeLinecap: "round",
+                  vectorEffect: "non-scaling-stroke",
+                }),
+              ),
+            ),
+          );
+        })(),
       React.createElement(LabelLayer, { data: y, w: S.w, h: S.h, mode: r, hl: o, quiz: e, color: t, onTap: l, view: x ? m : null, zs: zz }),
       // a whole structure lit up (wholeArea)
       ar &&
