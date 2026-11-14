@@ -5215,11 +5215,9 @@ html, body { overscroll-behavior-x: none; }
 @keyframes ana-claim-glow { 0% { box-shadow: 0 0 0 0 rgba(242,183,5,0.65); } 70%, 100% { box-shadow: 0 0 0 9px rgba(242,183,5,0); } }
 .ana-claim { animation: ana-claim 1.4s ease-in-out infinite, ana-claim-glow 1.4s ease-out infinite; }
 .ana-claim-glow { animation: ana-claim-glow 1.6s ease-out infinite; }
-@keyframes ana-bye { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.97); } }
-.ana-bye { animation: ana-bye 0.36s ease-in both; }
 @media (prefers-reduced-motion: reduce) {
   .ana-fall { display: none; }
-  .ana-pop, .ana-slide-up, .ana-shake, .ana-part-glow, .ana-ping, .ana-claim, .ana-claim-glow, .ana-bye { animation: none; }
+  .ana-pop, .ana-slide-up, .ana-shake, .ana-part-glow, .ana-ping, .ana-claim, .ana-claim-glow { animation: none; }
   .ana-vb-shine, .ana-vb-twinkle, .ana-vb-pulse, .ana-vb-hue, .ana-vb-cordpulse, .ana-vb-next { animation: none; }
   .ana-vb-twinkle { opacity: 0; }
 }
@@ -15042,6 +15040,7 @@ function VoiceCard({ progress: s, onVoice: sv }) {
       ("voice" in u && (VOICE.pref = u.voice),
         "voiceUri" in u && (VOICE.uri = u.voiceUri),
         "recVoice" in u && (VOICE.rec = u.recVoice),
+        "autoSay" in u && (VOICE.auto = u.autoSay),
         sv && sv(u));
     },
     // a row with a list to choose from (the device's voices, or the recorded voices)
@@ -15095,6 +15094,22 @@ function VoiceCard({ progress: s, onVoice: sv }) {
     React.createElement(
       "div",
       { style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 14, padding: 12, marginBottom: 4 } },
+      // the name of each lesson card read out as the card appears
+      React.createElement(
+        "div",
+        { "data-autosay": "1", style: { display: "flex", alignItems: "center", gap: 12, paddingBottom: 11, marginBottom: 11, borderBottom: `1px solid ${C.line}` } },
+        React.createElement(
+          "div",
+          { style: { flex: 1, minWidth: 0 } },
+          React.createElement("div", { className: "ana-display", style: { fontSize: 15, fontWeight: 700, color: C.ink } }, "Namen automatisch vorlesen"),
+          React.createElement(
+            "div",
+            { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.35, marginTop: 1 } },
+            "In den Lektionen wird der Name jeder Karte einmal vorgelesen, sobald sie erscheint.",
+          ),
+        ),
+        React.createElement(Switch, { on: s.autoSay !== !1, onChange: (v) => set({ autoSay: v }), label: "Namen automatisch vorlesen" }),
+      ),
       can &&
         React.createElement(
           "div",
@@ -18015,7 +18030,8 @@ const LA_ABBR = [
   ],
   REC_DEFAULT = "thorsten",
   recVoiceOf = (id) => REC_VOICES.find((v) => v.id === id) || REC_VOICES.find((v) => v.id === REC_DEFAULT),
-  VOICE = { pref: "dev", uri: "", rec: REC_DEFAULT },
+  // auto: a lesson card reads its name out as it appears (settings)
+  VOICE = { pref: "dev", uri: "", rec: REC_DEFAULT, auto: !0 },
   appleTouch = () => {
     try {
       return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -18128,7 +18144,13 @@ const LA_ABBR = [
     } catch {
       speakVoice(o, r);
     }
-  };
+  },
+  // a lesson card's name, read out once as the card appears (k: the card). In a layout effect: it runs within the tap
+  // that brought the card ("Weiter", the lesson in the menu), and an iPhone plays sound only from a tap
+  useAutoSay = (k, t) =>
+    useLayoutEffect(() => {
+      VOICE.auto && t && speakTerm(t);
+    }, [k]);
 function SpeakBtn({ text: s, color: r = C.inkSoft, size: o = 30, lang: e = "de-DE", label: t = "Aussprechen" }) {
   return speechOk() || sayHas(s)
     ? React.createElement(
@@ -18219,6 +18241,7 @@ function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e, done: dn = !1 
     i = s.items[a],
     l = s.items.length;
   useScrollTop(a);
+  useAutoSay(s.id + "|" + a, i && i.la);
   return React.createElement(
     "div",
     { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
@@ -18339,6 +18362,7 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, done: dn = !1 }
     pT = useRef(null),
     ph = usePicHeight(pR, pT, a + "|" + h, h === "atlas" && d.length > 0);
   useScrollTop(a);
+  useAutoSay(s.id + "|" + a, i && i.la);
   return m.length
     ? React.createElement(
         "div",
@@ -21098,8 +21122,9 @@ function AnatomiaApp() {
     }, [s && s.theme, s && s.pathSkin, s && s.dark]));
   // the voice for the names, for speakTerm, which every screen calls
   useEffect(() => {
-    s && ((VOICE.pref = s.voice === "dev" ? "dev" : "rec"), (VOICE.uri = s.voiceUri || ""), (VOICE.rec = recVoiceOf(s.recVoice).id));
-  }, [s && s.voice, s && s.voiceUri, s && s.recVoice]);
+    s &&
+      ((VOICE.pref = s.voice === "dev" ? "dev" : "rec"), (VOICE.uri = s.voiceUri || ""), (VOICE.rec = recVoiceOf(s.recVoice).id), (VOICE.auto = s.autoSay !== !1));
+  }, [s && s.voice, s && s.voiceUri, s && s.recVoice, s && s.autoSay]);
   // save a finished round (u: the progress as the round leaves it, worked out from s), then count it for the daily
   // challenges (ev). Laid over the latest progress: an answer saved in the same moment (the last flashcard) stays, and
   // numbers the round changed (XP, Taler) are added as differences
