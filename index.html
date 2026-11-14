@@ -17871,11 +17871,11 @@ function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
                       className: "ana-body",
                       style: {
                         display: "flex",
-                        alignItems: "center",
+                        alignItems: "flex-start",
                         gap: 10,
                         width: "100%",
                         textAlign: "left",
-                        padding: "9px 12px 9px 46px",
+                        padding: "11px 12px 11px 46px",
                         borderTop: `1px solid ${C.line}`,
                         borderRight: "none",
                         borderBottom: "none",
@@ -17884,17 +17884,32 @@ function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
                         cursor: "pointer",
                       },
                     },
-                    React.createElement(TickBox, { v: isOn(L.id), size: 20 }),
+                    React.createElement("span", { style: { marginTop: 1, display: "flex" } }, React.createElement(TickBox, { v: isOn(L.id), size: 20 })),
                     React.createElement(
                       "span",
                       { style: { flex: 1, minWidth: 0 } },
-                      React.createElement("span", { style: { ...CLAMP2, fontSize: 14, color: C.ink, lineHeight: 1.25 } }, titleNb(L.title)),
                       React.createElement(
                         "span",
-                        { style: { display: "block", fontSize: 12, color: C.inkSoft } },
+                        { className: "ana-display", style: { display: "block", fontSize: 14.5, fontWeight: 600, color: C.ink, lineHeight: 1.25 } },
+                        titleNb(L.title),
+                      ),
+                      React.createElement(
+                        "span",
+                        { style: { display: "block", fontSize: 12, color: C.inkSoft, marginTop: 1 } },
                         L.items.length,
                         L.items.length === 1 ? " Karte" : " Karten",
                         s.best && s.best[L.id] != null ? React.createElement("span", { style: { color: C.okText, fontWeight: 700 } }, " \xB7 gelernt \u2713") : null,
+                      ),
+                      // what the lesson holds: all its structures, whole names kept together on a line
+                      React.createElement(
+                        "span",
+                        { "data-deck-items": L.id, style: { display: "block", fontSize: 13, color: C.ink, opacity: 0.8, lineHeight: 1.45, marginTop: 4 } },
+                        L.items
+                          .map((it) => {
+                            const nm = bareLabel(it.la);
+                            return nm.length <= 30 ? nm.replace(/ /g, "\xA0") : nm;
+                          })
+                          .join(" \xB7 "),
                       ),
                     ),
                   ),
