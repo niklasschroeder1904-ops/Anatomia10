@@ -17658,16 +17658,92 @@ function buildCases(s, r = 10) {
       );
     });
 }
+// a box to tick: v true, false or "some" (part of a topic)
+const TickBox = ({ v, color: o = "#7048E8", size: z = 22 }) =>
+  React.createElement(
+    "span",
+    {
+      "aria-hidden": "true",
+      style: {
+        width: z,
+        height: z,
+        flex: `0 0 ${z}px`,
+        borderRadius: 7,
+        border: `2px solid ${v ? o : C.line}`,
+        background: v ? o : C.card,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      },
+    },
+    v === "some"
+      ? React.createElement("span", { style: { width: z * 0.45, height: 2.5, borderRadius: 2, background: "#fff" } })
+      : v
+        ? React.createElement(Check, { size: z * 0.64, color: "#fff", strokeWidth: 3 })
+        : null,
+  );
 function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
-  const [e, t] = useState("alle"),
-    [a, n] = useState(30),
-    [i, l] = useState(!1),
-    d = cardsForRegion(e),
+  // the last choice (region, size, only new ones, the lessons of the region) comes back
+  const cf = s.deckCfg || {},
+    [e, t0] = useState(() => (REGIONS.some((x) => x.id === cf.region) ? cf.region : "alle")),
+    [a, n] = useState(cf.size || 30),
+    [i, l] = useState(!!cf.newOnly),
+    // the lessons chosen in the region: null, all of them
+    [sel, setSel] = useState(() => (cf.region && cf.region !== "alle" && Array.isArray(cf.lessons) ? new Set(cf.lessons) : null)),
+    [openU, setOpenU] = useState({}),
+    t = (x) => x !== e && (t0(x), setSel(null), setOpenU({})),
+    // the region's lessons by topic, in the order of the menu
+    G = useMemo(() => (e === "alle" ? [] : UNITS.map((u) => ({ u, ls: u.lessons.filter((L) => regionOf(L) === e) })).filter((g) => g.ls.length)), [e]),
+    allIds = useMemo(() => G.flatMap((g) => g.ls.map((L) => L.id)), [G]),
+    isOn = (id) => !sel || sel.has(id),
+    // ticks for some lessons (v: on or off); all on is kept as "all" (null), so lessons added later count too
+    setMany = (ids, v) =>
+      setSel((p) => {
+        const S2 = new Set(p || allIds);
+        ids.forEach((id) => (v ? S2.add(id) : S2.delete(id)));
+        return allIds.every((id) => S2.has(id)) ? null : new Set(allIds.filter((id) => S2.has(id)));
+      }),
+    learned = allIds.filter((id) => s.best && s.best[id] != null),
+    d = cardsForRegion(e).filter((x) => e === "alle" || isOn(x.lesson.id)),
     c = s.srs || {},
     m = i ? d.filter((x) => !c[cardKey(x.lesson.id, x.item.id)]) : d,
     h = m.length,
     y = a === "alle" ? h : Math.min(a, h),
-    b = (REGIONS.find((x) => x.id === e) || {}).label;
+    rl = (REGIONS.find((x) => x.id === e) || {}).label,
+    chosen = e === "alle" ? null : allIds.filter(isOn),
+    // the name of the stack: the region, a whole topic, one lesson, or the region's choice
+    b =
+      !sel || e === "alle"
+        ? rl
+        : chosen.length === 1
+          ? (ALL_LESSONS.find((L) => L.id === chosen[0]) || {}).title || rl
+          : (() => {
+              const g = G.find((g) => g.ls.length === chosen.length && g.ls.every((L) => sel.has(L.id)));
+              return g ? g.u.title : `${rl} \xB7 Auswahl`;
+            })(),
+    nOn = chosen ? chosen.length : 0,
+    small = (lab, on, fn, key) =>
+      React.createElement(
+        "button",
+        {
+          key,
+          onClick: fn,
+          "data-pick": key,
+          className: "ana-body",
+          style: {
+            padding: "4px 10px",
+            borderRadius: 999,
+            border: `1.5px solid ${on ? "#7048E8" : C.line}`,
+            background: on ? "#7048E8" : C.card,
+            color: on ? "#fff" : C.inkSoft,
+            fontSize: 12.5,
+            fontWeight: 700,
+            cursor: "pointer",
+            letterSpacing: 0,
+          },
+        },
+        lab,
+      );
   return React.createElement(
     "div",
     { style: { minHeight: PAGE_H } },
@@ -17717,6 +17793,116 @@ function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
         );
       }),
     ),
+    // the lessons of the region, by topic: a topic's box ticks all its lessons, the topic opens to its lessons
+    e !== "alle" &&
+      React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(
+          "div",
+          { className: "ana-display", style: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", fontSize: 12.5, fontWeight: 700, color: C.inkSoft, letterSpacing: 0.8, padding: "0 2px 7px" } },
+          React.createElement("span", { style: { flex: 1, minWidth: 0 } }, "LEKTIONEN \xB7 ", nOn, " VON ", allIds.length),
+          small("alle", !sel, () => setSel(null), "alle"),
+          learned.length > 0 &&
+            small(
+              "gelernte",
+              !!sel && sel.size === learned.length && learned.every((id) => sel.has(id)),
+              () => setSel(learned.length === allIds.length ? null : new Set(learned)),
+              "gelernte",
+            ),
+          small("keine", !!sel && sel.size === 0, () => setSel(new Set()), "keine"),
+        ),
+        React.createElement(
+          "div",
+          { "data-deck-lessons": e, style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 14, marginBottom: 16, overflow: "hidden" } },
+          G.map((g, gi) => {
+            const ids = g.ls.map((L) => L.id),
+              k = ids.filter(isOn).length,
+              v = k === ids.length ? !0 : k ? "some" : !1,
+              op = !!openU[g.u.id];
+            return React.createElement(
+              "div",
+              { key: g.u.id, "data-deck-topic": g.u.id, style: { borderTop: gi ? `1px solid ${C.line}` : "none" } },
+              React.createElement(
+                "div",
+                { style: { display: "flex", alignItems: "center" } },
+                React.createElement(
+                  "button",
+                  {
+                    onClick: () => setMany(ids, v !== !0),
+                    "aria-label": `${g.u.title}: ${v === !0 ? "alle abw\xE4hlen" : "alle w\xE4hlen"}`,
+                    "data-topic-tick": g.u.id,
+                    style: { padding: "12px 6px 12px 12px", border: "none", background: "none", cursor: "pointer", display: "flex" },
+                  },
+                  React.createElement(TickBox, { v }),
+                ),
+                React.createElement(
+                  "button",
+                  {
+                    onClick: () => setOpenU((u) => ({ ...u, [g.u.id]: !op })),
+                    "aria-expanded": op ? "true" : "false",
+                    "data-topic-open": g.u.id,
+                    className: "ana-body",
+                    style: { flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8, padding: "12px 12px 12px 6px", border: "none", background: "none", cursor: "pointer", textAlign: "left" },
+                  },
+                  React.createElement("span", { style: { fontSize: 17, flex: "0 0 auto" } }, g.u.icon),
+                  React.createElement(
+                    "span",
+                    { style: { flex: 1, minWidth: 0 } },
+                    React.createElement("span", { className: "ana-display", style: { ...CLAMP2, fontSize: 14.5, fontWeight: 600, color: C.ink, lineHeight: 1.2 } }, g.u.title),
+                    React.createElement("span", { style: { display: "block", fontSize: 12, color: C.inkSoft } }, k, " von ", ids.length, ids.length === 1 ? " Lektion" : " Lektionen"),
+                  ),
+                  React.createElement(
+                    "span",
+                    { className: "ana-display", style: { fontSize: 17, color: "#B6BECC", transform: op ? "rotate(90deg)" : "none", transition: "transform .15s" } },
+                    "\u203A",
+                  ),
+                ),
+              ),
+              op &&
+                g.ls.map((L) =>
+                  React.createElement(
+                    "button",
+                    {
+                      key: L.id,
+                      onClick: () => setMany([L.id], !isOn(L.id)),
+                      "aria-pressed": isOn(L.id) ? "true" : "false",
+                      "data-deck-lesson": L.id,
+                      className: "ana-body",
+                      style: {
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "9px 12px 9px 46px",
+                        borderTop: `1px solid ${C.line}`,
+                        borderRight: "none",
+                        borderBottom: "none",
+                        borderLeft: "none",
+                        background: "none",
+                        cursor: "pointer",
+                      },
+                    },
+                    React.createElement(TickBox, { v: isOn(L.id), size: 20 }),
+                    React.createElement(
+                      "span",
+                      { style: { flex: 1, minWidth: 0 } },
+                      React.createElement("span", { style: { ...CLAMP2, fontSize: 14, color: C.ink, lineHeight: 1.25 } }, titleNb(L.title)),
+                      React.createElement(
+                        "span",
+                        { style: { display: "block", fontSize: 12, color: C.inkSoft } },
+                        L.items.length,
+                        L.items.length === 1 ? " Karte" : " Karten",
+                        s.best && s.best[L.id] != null ? React.createElement("span", { style: { color: C.okText, fontWeight: 700 } }, " \xB7 gelernt \u2713") : null,
+                      ),
+                    ),
+                  ),
+                ),
+            );
+          }),
+        ),
+      ),
     React.createElement(
       "div",
       { className: "ana-display", style: { fontSize: 12.5, fontWeight: 700, color: C.inkSoft, letterSpacing: 0.8, padding: "0 2px 7px" } },
@@ -17785,17 +17971,26 @@ function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
       ),
       React.createElement("span", { style: { fontSize: 14.5, color: C.ink } }, "Nur Strukturen, die ich noch nie hatte"),
     ),
+    // the start stays at the bottom while the lessons scroll
+    React.createElement(
+      "div",
+      { "data-deck-start": "1", style: { ...lessonNav(), flexDirection: "column", gap: 6 } },
     React.createElement(
       Btn,
-      { color: "#7048E8", dark: "#5B36C4", onClick: () => o(shuffle(m).slice(0, y), `${b} \xB7 ${y} Karten`) },
-      y,
-      " Karten starten",
+      {
+        color: "#7048E8",
+        dark: "#5B36C4",
+        disabled: y === 0,
+        onClick: () => y > 0 && o(shuffle(m).slice(0, y), `${b} \xB7 ${y} Karten`, { region: e, size: a, newOnly: i, lessons: sel ? [...sel] : null }),
+      },
+      y === 0 ? (e !== "alle" && nOn === 0 ? "Erst Lektionen w\xE4hlen" : "Keine Karten in dieser Auswahl") : React.createElement(React.Fragment, null, y, " Karten starten"),
     ),
     React.createElement(
       "div",
-      { className: "ana-body", style: { fontSize: 12.5, color: "#9AA3B2", textAlign: "center", padding: "10px 0 24px" } },
+      { className: "ana-body", style: { fontSize: 12.5, color: "#9AA3B2", textAlign: "center" } },
       h,
       " Strukturen in dieser Auswahl verf\xFCgbar",
+    ),
     ),
   );
 }
@@ -21716,7 +21911,14 @@ function AnatomiaApp() {
     A = React.createElement(DeckSetupScreen, {
       progress: s,
       onExit: () => e({ name: "home" }),
-      onStart: (u, p) => d({ cards: u, title: p, color: "#7048E8", dark: "#5B36C4", back: "deck" }),
+      onStart: (u, p, cf) => (
+        cf &&
+          r((f) => {
+            const k = { ...f, deckCfg: cf };
+            return (saveProgress(k), k);
+          }),
+        d({ cards: u, title: p, color: "#7048E8", dark: "#5B36C4", back: "deck" })
+      ),
     });
   else if (o.name === "errors")
     A = React.createElement(ErrorBookScreen, {
