@@ -13506,7 +13506,9 @@ function BasicsCavitiesFig({ hl: h = [], accent: a = "#1C7ED6", pulse: p = !0 })
     ),
   );
 }
-// organ systems: the figure from the front and from behind; everything is veiled except the asked system
+// organ systems: the figure from the front and from behind; everything is veiled except the asked system. On the front
+// only the system's own parts of the figure are drawn again over the veil (picked by their keys), so that nothing else
+// lying in the same place looks marked too - the heart between the lungs, the thyroid beside the larynx
 function BasicsSystemsFig({ hl: h = [], accent: a = "#1C7ED6", pulse: p = !0 }) {
   const s = React.createElement,
     k = h[0],
@@ -13514,25 +13516,62 @@ function BasicsSystemsFig({ hl: h = [], accent: a = "#1C7ED6", pulse: p = !0 }) 
     BX = 250,
     O = (...ids) => ids.flatMap((id) => (BM_ORGANS.find((o) => o.id === id) || { hit: [] }).hit),
     W = bmW,
-    bladder = W("M 112.6,213 C 112.6,207.6 127.4,207.6 127.4,213 C 127.4,216.6 124.6,218.6 120,218.6 C 115.4,218.6 112.6,216.6 112.6,213 Z"),
-    ureters = W("M 97,183 L 100,183 L 116.4,209.6 L 113.6,210.4 Z M 140,179 L 143,179 L 126.4,210.4 L 123.6,209.6 Z"),
-    vessels = W("M 109,88 L 133,88 L 133,107 L 109,107 Z"),
-    gullet = W("M 117.4,60 L 122.6,60 L 123.4,140 L 130,151 L 126,154 L 118.4,142 Z"),
-    front =
+    // the front figure has no skeleton (its trunk shows the organs): the skeleton is shown from behind
+    PARTS =
       {
-        // the front figure has no skeleton (its trunk shows the organs): the skeleton is shown from behind
-        skelett: [],
-        muskel: [BM_REGIONS.arm, BM_REGIONS.bein],
-        kreislauf: [...O("herz"), vessels],
-        atmung: O("lunge", "hals", "nase"),
-        verdauung: [...O("mund", "magen", "leber", "darm", "pankreas"), gullet],
-        nerven: O("gehirn"),
-        hormone: O("hals", "pankreas"),
-        harn: [...O("niere"), bladder, ureters],
-        lymph: O("milz"),
+        muskel: ["arm", "leg"],
+        kreislauf: ["vcs", "aoO", "ao", "aob", "heart", "pulm", "cor", "hs"],
+        atmung: ["nose", "larynx", "trachea", "rings", "bronchi", "lungL", "lungR", "fiss"],
+        verdauung: ["liver", "livl", "ls", "gall", "panc", "stomach", "stl", "ss", "small", "loops", "colO", "col", "colH", "mouth", "teeth", "tongue"],
+        nerven: ["brL", "brR", "gyri", "glass"],
+        hormone: ["thyroid", "panc"],
+        harn: ["kidL", "kidR", "ureter", "bladder", "bs"],
+        lymph: ["spleen"],
       }[k] || [],
-    spine = (BM_BACK_EXTRA.find((o) => o.id === "wirbelsaeule") || { back: [] }).back,
-    back = { nerven: [...(BM_BACK_HITS.gehirn || []), ...spine], harn: BM_BACK_HITS.niere || [] }[k] || [],
+    // their main shapes framed (the nose is a line: its area)
+    FRAME =
+      {
+        kreislauf: ["heart"],
+        atmung: ["larynx", "trachea", "lungL", "lungR"],
+        verdauung: ["mouth", "liver", "stomach", "panc", "small"],
+        nerven: ["brL", "brR"],
+        hormone: ["thyroid", "panc"],
+        harn: ["kidL", "kidR", "bladder"],
+        lymph: ["spleen"],
+      }[k] || [],
+    flat = (c) => (Array.isArray(c) ? c.flatMap(flat) : c ? [c] : []),
+    art = flat(BodyArt().props.children),
+    parts = art.filter((e) => PARTS.includes(e.key)),
+    front = [...art.filter((e) => FRAME.includes(e.key) && e.props.d).map((e) => e.props.d), ...(k === "atmung" ? O("nase") : [])],
+    back = { nerven: BM_BACK_HITS.gehirn || [], harn: BM_BACK_HITS.niere || [] }[k] || [],
+    // the gullet, which the figure does not show: from the throat behind the trachea and the heart to the stomach
+    gullet =
+      k === "verdauung" &&
+      s(
+        "g",
+        { key: "gu" },
+        ["#A74E43", "#E59A8A"].map((c, i) =>
+          s("path", {
+            key: i,
+            d: W("M 120,61 L 120.4,100 C 120.8,118 121.8,132 124.4,142 C 126,147 128,149.8 130.4,151.6"),
+            fill: "none",
+            stroke: c,
+            strokeWidth: i ? 2.8 : 4,
+            strokeLinecap: "round",
+            strokeLinejoin: "round",
+          }),
+        ),
+      ),
+    // behind: the spinal cord in the spinal canal down to L1/L2, then the cauda equina, spinal nerves on both sides
+    cord =
+      k === "nerven" &&
+      s(
+        "g",
+        { key: "cord", className: cls, fill: "none", stroke: "#E0A82E", strokeLinecap: "round" },
+        s("path", { d: "M 120,60 L 120,174", strokeWidth: 2.4 }),
+        s("path", { d: "M 120,174 C 119,190 118.4,206 118,226 M 120,174 L 120,228 M 120,174 C 121,190 121.6,206 122,226", strokeWidth: 1 }),
+        s("path", { d: [86, 100, 114, 128, 142, 156, 170].map((y) => `M 120,${y} L 112.6,${y + 4} M 120,${y} L 127.4,${y + 4}`).join(" "), strokeWidth: 0.9 }),
+      ),
     // the back figure shows muscles on one half and the skeleton on the other: the asked half, below the head, is
     // shown on both sides (mirrored), so the whole skeleton or the whole back muscles stand out
     half = k === "skelett" ? [120, 250] : k === "muskel" ? [-10, 120] : null,
@@ -13576,7 +13615,6 @@ function BasicsSystemsFig({ hl: h = [], accent: a = "#1C7ED6", pulse: p = !0 }) 
                   bmP("M 141.2,167.4 C 143.4,162.4 148.4,162 150.2,166.4 C 147.6,168.4 144,168.6 141.2,167.4 Z", { fill: "#F2C14E", stroke: "#B88A1B", strokeWidth: 0.6 }, "adR"),
                 ]
               : null,
-    idF = "bsF-" + (k || "x"),
     idB = "bsB-" + (k || "x");
   return s(
     "svg",
@@ -13585,13 +13623,13 @@ function BasicsSystemsFig({ hl: h = [], accent: a = "#1C7ED6", pulse: p = !0 }) 
     s(
       "defs",
       null,
-      s("clipPath", { id: idF }, front.map((d, i) => s("path", { key: i, d }))),
       s("clipPath", { id: idB }, half ? s("rect", { x: half[0], y: HY, width: half[1] - half[0], height: 422 - HY }) : back.map((d, i) => s("path", { key: i, d }))),
     ),
     s(BodyArt, null),
     k && veilF,
-    front.length > 0 && s("g", { clipPath: `url(#${idF})` }, s(BodyArt, null)),
-    front.length > 0 && k !== "muskel" && k !== "skelett" && outline(front, "of"),
+    gullet,
+    parts.length > 0 && s("g", { pointerEvents: "none", "data-parts": k }, parts),
+    front.length > 0 && outline(front, "of"),
     extra && s("g", { className: cls }, extra),
     s(
       "g",
@@ -13609,6 +13647,7 @@ function BasicsSystemsFig({ hl: h = [], accent: a = "#1C7ED6", pulse: p = !0 }) 
           s("g", { transform: "translate(240,0) scale(-1,1)" }, (BM_BACK_HITS.niere || []).map((d, i) => s("path", { key: "m" + i, d }))),
         ),
       back.length > 0 && outline(back, "ob"),
+      cord,
     ),
   );
 }
