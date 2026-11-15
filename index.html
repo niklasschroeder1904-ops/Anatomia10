@@ -11195,22 +11195,56 @@ function buildConfusionQuiz(s, r = 10, p = null) {
     .map((t) => t.q)
     .slice(0, r);
 }
+// the lessons a topic's test asks: those of the chosen level, without any of them all of the topic
+const testLessons = (s, r) => {
+    const o = s.lessons.filter((e) => inLevel(e, r));
+    return o.length ? o : s.lessons;
+  },
+  // the questions of a topic's test: the more lessons, the more questions - 6 and 2 per lesson, 40 at most
+  testSize = (s) => Math.min(40, 6 + 2 * s),
+  testSizeOf = (s, r) => {
+    const o = UNITS.find((e) => e.id === s);
+    return o ? testSize(testLessons(o, r).length) : 12;
+  };
+// a topic's test: r questions spread over all its lessons - first each lesson once (those with the fewest structures
+// first, so that the others leave them theirs), then by turns, the lessons with more structures first - each on a
+// structure not asked yet in the test (the same name in two lessons only once), where the topic has enough; the kinds
+// by turns. One number question where the topic's cards teach numbers, in place of a question of a lesson that has more
 function buildUnitTest(s, r = 12) {
-  const o = [],
+  const L = s.lessons,
     e = ["fig", "fact", "term-de", "term-la"],
-    t = Math.ceil(r / s.lessons.length);
-  return (
-    s.lessons.forEach((a) => {
-      const n = shuffle(a.items);
-      for (let i = 0; i < t; i++) o.push(askItem(n[i % n.length], a, e[(i + o.length) % e.length]));
-    }),
-    (() => {
-      // one number question, where the topic's cards teach numbers
-      const a = shuffle(o).slice(0, r),
-        n = makeNumQuestion(sample(s.lessons.filter((i) => numQuestionsFor(i).length), 1)[0]);
-      return (n && a.splice(Math.floor(Math.random() * a.length), 1, n), a);
-    })()
-  );
+    P = new Map(L.map((a) => [a, shuffle(a.items)])),
+    seen = new Set(),
+    kinds = new Map(),
+    o = [],
+    // a question on a structure of lesson a not asked yet; with any, on another of its structures if none is left
+    take = (a, any) => {
+      const n = P.get(a),
+        i = n.findIndex((l) => !seen.has(l.la));
+      if (i < 0 && !any) return !1;
+      const l = i < 0 ? sample(a.items, 1)[0] : n.splice(i, 1)[0],
+        u = kinds.get(l.la) || [],
+        k = [...e.slice(o.length % e.length), ...e].find((d) => !u.includes(d)) || e[o.length % e.length];
+      return (seen.add(l.la), kinds.set(l.la, [...u, k]), o.push(askItem(l, a, k)), !0);
+    };
+  shuffle(L)
+    .sort((a, n) => a.items.length - n.items.length)
+    .forEach((a) => o.length < r && take(a, !0));
+  for (let f = !0; o.length < r && f; ) {
+    f = !1;
+    for (const a of shuffle(L).sort((d, n) => n.items.length - d.items.length)) {
+      if (o.length >= r) break;
+      take(a) && (f = !0);
+    }
+  }
+  // fewer structures in the topic than questions: some once more, by another kind of question
+  for (let k = 0; o.length < r; k = (k + 1) % L.length) take(L[k], !0);
+  const a = shuffle(o.filter(Boolean)),
+    c = new Map();
+  a.forEach((i) => i.lesson && c.set(i.lesson.id, (c.get(i.lesson.id) || 0) + 1));
+  const n = makeNumQuestion(sample(L.filter((i) => numQuestionsFor(i).length), 1)[0]),
+    J = a.map((i, l) => l).filter((l) => !a[l].lesson || c.get(a[l].lesson.id) > 1);
+  return (n && J.length && a.splice(J[Math.floor(Math.random() * J.length)], 1, n), a);
 }
 const STORAGE_KEY = "anatomia-v1",
   DAY_MS = 864e5,
@@ -16589,7 +16623,7 @@ function HomeScreen({
                       React.createElement(
                         "span",
                         { className: "ana-body", style: { fontSize: 12.5, whiteSpace: "nowrap", color: Z ? "#C29204" : C.inkSoft, fontWeight: Z ? 700 : 400 } },
-                        Z ? `${Math.round(s.tests[v.id] * 100)} %` : "12 Fragen",
+                        Z ? `${Math.round(s.tests[v.id] * 100)} %` : `${testSizeOf(v.id, lv)} Fragen`,
                       ),
                       React.createElement("span", { className: "ana-display", style: { fontSize: 17, color: "#B6BECC" } }, "\u203A"),
                     ),
@@ -20002,7 +20036,9 @@ function ResultScreen({
             "div",
             { className: "ana-body", style: { fontSize: 13.5, fontWeight: 600, letterSpacing: 0, opacity: 0.92, marginTop: 3, lineHeight: 1.3 } },
             ts.title,
-            " \xB7 12 Fragen",
+            " \xB7 ",
+            ts.n || 12,
+            " Fragen",
           ),
         ),
       // cards due for review: a short round on offer right after the lesson
@@ -21894,8 +21930,8 @@ function AnatomiaApp() {
     },
     b = (u) => {
       const p = UNITS.find((f) => f.id === u),
-        q = { ...p, lessons: p.lessons.filter((f) => inLevel(f, s.level)) };
-      e({ name: "test", unitId: u, questions: buildUnitTest(q.lessons.length ? q : p, 12) });
+        q = { ...p, lessons: testLessons(p, s.level) };
+      e({ name: "test", unitId: u, questions: buildUnitTest(q, testSize(q.lessons.length)) });
     },
     x = (u, p, f) => (u === "lesson" ? 20 + (p >= 0.999 ? 40 : 0) : u === "test" ? (p >= 0.8 ? 100 : 20) : f || 0),
     S = (u, p, f, wr, bo = 0) => {
@@ -22304,7 +22340,7 @@ function AnatomiaApp() {
       onRetry: () => b(o.unitId),
       next: p && !T ? { title: p.title, topic: f ? f.title : null } : null,
       onNext: p && !T ? () => i(p.id) : void 0,
-      test: T ? { title: T.title } : null,
+      test: T ? { title: T.title, n: testSizeOf(T.id, s.level) } : null,
       onTest: T ? () => b(T.id) : void 0,
       // after a lesson the cards due for review are on offer, ten at a time
       due: o.kind === "quiz" ? dueCards(s, 999).length : 0,
