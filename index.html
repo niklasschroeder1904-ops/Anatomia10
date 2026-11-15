@@ -18262,6 +18262,8 @@ function DeckSetupScreen({ progress: s, onExit: r, onStart: o }) {
     ),
   );
 }
+// cards rated by swiping on this device: the hint under the cards stays until it has been used three times
+const SWIPES_KEY = "ana:flash-swipes";
 function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinish: a, onRate: n }) {
   useSwipeBack(t);
   const [i, l] = useState(s),
@@ -18270,8 +18272,68 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
     [y, b] = useState([]),
     [x, S] = useState(0),
     [B, A] = useState(1),
+    // swiping the card: to the right "Gewusst", to the left "Nochmal" - the card follows the finger; far or fast enough
+    // it flies off that way, else it springs back. Not from the screen's left edge (that goes back), not on a 3D model
+    // or a zoomed picture, not up and down (that scrolls)
+    [dx, setDx] = useState(0),
+    [fly, setFly] = useState(0),
+    sw = useRef(null),
+    moved = useRef(!1),
+    [swN] = useState(() => {
+      try {
+        return +localStorage.getItem(SWIPES_KEY) || 0;
+      } catch {
+        return 0;
+      }
+    }),
     u = i[d],
     p = i.length,
+    far = () => Math.min(120, window.innerWidth * 0.28),
+    down = (D) => {
+      const T = D.target;
+      fly ||
+        D.button > 0 ||
+        D.clientX <= 28 ||
+        (T.closest && (T.closest("canvas") || T.closest("button") || T.closest('[style*="touch-action: none"]'))) ||
+        ((sw.current = { x: D.clientX, y: D.clientY, t: Date.now(), id: D.pointerId, on: !1 }), (moved.current = !1));
+    },
+    move = (D) => {
+      const g = sw.current;
+      if (!g || D.pointerId !== g.id) return;
+      const X = D.clientX - g.x,
+        Y = D.clientY - g.y;
+      if (!g.on) {
+        if (Math.abs(Y) > 12 && Math.abs(Y) > Math.abs(X)) return void (sw.current = null);
+        if (Math.abs(X) < 10) return;
+        ((g.on = !0), (moved.current = !0));
+        try {
+          D.currentTarget.setPointerCapture(D.pointerId);
+        } catch {}
+      }
+      setDx(X);
+    },
+    up = (D) => {
+      const g = sw.current;
+      if (((sw.current = null), !g || !g.on)) return;
+      const X = D.clientX - g.x,
+        v = Math.abs(X) / Math.max(1, Date.now() - g.t);
+      if (Math.abs(X) >= far() || (Math.abs(X) > 50 && v > 0.6)) {
+        const R = X > 0 ? 1 : -1;
+        try {
+          localStorage.setItem(SWIPES_KEY, String((+localStorage.getItem(SWIPES_KEY) || 0) + 1));
+        } catch {}
+        (setFly(R),
+          setTimeout(() => {
+            (setFly(0), setDx(0), f(R > 0));
+          }, 200));
+      } else setDx(0);
+    },
+    cancel = () => {
+      ((sw.current = null), setDx(0));
+    },
+    // how far towards a verdict (0 to 1) and which
+    lean = fly ? 1 : Math.min(1, Math.abs(dx) / Math.max(1, far())),
+    side = fly || Math.sign(dx),
     f = (D) => {
       n && n(u, D);
       const v = D ? y : [...y, u];
@@ -18295,7 +18357,7 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
     H = F && z.length ? "blind" : M.length ? "real" : hasSchema(g) ? "schema" : null;
   return React.createElement(
     "div",
-    { style: { display: "flex", flexDirection: "column" } },
+    { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
     React.createElement(
       "div",
       { style: { display: "flex", alignItems: "center", gap: 10, padding: "12px 0 8px" } },
@@ -18316,12 +18378,57 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
     React.createElement(
       "div",
       {
-        onClick: () => h((D) => !D),
+        "data-swipe": side > 0 ? "right" : side < 0 ? "left" : "",
+        onPointerDown: down,
+        onPointerMove: move,
+        onPointerUp: up,
+        onPointerCancel: cancel,
+        style: {
+          position: "relative",
+          touchAction: "pan-y",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          transform: fly ? `translateX(${fly * 130}%) rotate(${fly * 14}deg)` : dx ? `translateX(${dx}px) rotate(${dx / 24}deg)` : void 0,
+          opacity: fly ? 0 : 1,
+          transition: fly ? "transform 0.2s ease-in, opacity 0.2s ease-in" : sw.current ? "none" : "transform 0.18s ease-out",
+        },
+      },
+      // the verdict the swipe gives, in its colour, growing with the way
+      side !== 0 &&
+        React.createElement(
+          "div",
+          {
+            className: "ana-display",
+            "aria-hidden": "true",
+            style: {
+              position: "absolute",
+              top: -13,
+              [side > 0 ? "left" : "right"]: 18,
+              zIndex: 3,
+              padding: "5px 11px",
+              borderRadius: 10,
+              border: `2.5px solid ${side > 0 ? C.good : C.bad}`,
+              background: C.card,
+              color: side > 0 ? C.good : C.bad,
+              fontSize: 15,
+              fontWeight: 700,
+              letterSpacing: 0.6,
+              opacity: lean,
+              transform: `rotate(${side > 0 ? -8 : 8}deg)`,
+              pointerEvents: "none",
+            },
+          },
+          side > 0 ? "GEWUSST" : "NOCHMAL",
+        ),
+    React.createElement(
+      "div",
+      {
+        onClick: () => (moved.current ? (moved.current = !1) : h((D) => !D)),
         style: {
           background: C.card,
           borderRadius: 20,
-          border: `2px solid ${m ? o : C.line}`,
-          borderBottom: `5px solid ${m ? e : C.line}`,
+          border: `2px solid ${side > 0 && lean > 0.15 ? C.good : side < 0 && lean > 0.15 ? C.bad : m ? o : C.line}`,
+          borderBottom: `5px solid ${side > 0 && lean > 0.15 ? C.goodDark : side < 0 && lean > 0.15 ? C.badDark : m ? e : C.line}`,
           padding: 14,
           cursor: "pointer",
         },
@@ -18427,28 +18534,31 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
               ),
             ),
     ),
+    ),
+    React.createElement("div", { style: { flex: 1, minHeight: 12 } }),
     React.createElement(
       "div",
-      {
-        style: {
-          display: "flex",
-          gap: 10,
-          padding: "12px 0 calc(12px + env(safe-area-inset-bottom))",
-          marginBottom: "calc(-1 * env(safe-area-inset-bottom))",
-          position: "sticky",
-          bottom: 0,
-          zIndex: 5,
-          background: C.paper,
-        },
-      },
-      m
-        ? React.createElement(
-            React.Fragment,
-            null,
-            React.createElement(Btn, { ghost: !0, color: C.bad, onClick: () => f(!1), style: { width: "48%" } }, "Nochmal"),
-            React.createElement(Btn, { color: C.good, dark: C.goodDark, onClick: () => f(!0) }, "Gewusst"),
-          )
-        : React.createElement(Btn, { color: o, dark: e, onClick: () => h(!0) }, "Umdrehen"),
+      { style: { ...lessonNav(), flexDirection: "column", gap: 8 } },
+      swN < 3 &&
+      React.createElement(
+        "div",
+        { className: "ana-body", "data-swipe-hint": "", style: { display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 600, color: "#9AA3B2", padding: "0 4px" } },
+        React.createElement("span", { style: { color: C.bad } }, "← Nochmal"),
+        React.createElement("span", null, "Karte wischen"),
+        React.createElement("span", { style: { color: C.good } }, "Gewusst →"),
+      ),
+      React.createElement(
+        "div",
+        { style: { display: "flex", gap: 10 } },
+        m
+          ? React.createElement(
+              React.Fragment,
+              null,
+              React.createElement(Btn, { ghost: !0, color: C.bad, onClick: () => f(!1), style: { width: "48%" } }, "Nochmal"),
+              React.createElement(Btn, { color: C.good, dark: C.goodDark, onClick: () => f(!0) }, "Gewusst"),
+            )
+          : React.createElement(Btn, { color: o, dark: e, onClick: () => h(!0) }, "Umdrehen"),
+      ),
     ),
   );
 }
