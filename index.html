@@ -10403,6 +10403,40 @@ const typoCanon = (x) =>
     for (const [k, c] of out.reverse()) seg.length && seg[seg.length - 1][0] === k ? (seg[seg.length - 1][1] += c) : seg.push([k, c]);
     return seg;
   };
+// the letter joker: the names a typed answer can head for (the Latin one first, then the German one and the other
+// names, also without M., A., N. ... in front and as their last two words, as typed answers count), and what the next
+// joker puts in the input: the name as far as it was typed right from its start, and one letter more (a full stop or
+// a space before that letter comes along). null: the name is complete
+const HINT_HEAD = /^(m|mm|a|aa|v|vv|n|nn|r|rr|lig|ligg|proc|gl|musculi|musculus|arteriae|arteria|venae|vena|nervi|nervus|ligamenta|ligamentum|processus|glandulae|glandula|rami|ramus|truncus|os|ossa)\.?\s+/i,
+  hintNames = (it) => {
+    const out = [],
+      add = (x) => {
+        x = (x || "").trim().replace(/\s+/g, " ");
+        x && !out.includes(x) && out.push(x);
+      },
+      base = [bareName(it.la, "la"), bareName(it.de, "de"), ...(it.alt || [])].filter(Boolean);
+    base.forEach(add);
+    base.forEach((x) => {
+      const w = x.trim().split(/\s+/);
+      (add(x.replace(HINT_HEAD, "")), w.length > 2 && add(w.slice(-2).join(" ")));
+    });
+    return out;
+  },
+  letterHint = (typed, it) => {
+    if (!it) return null;
+    const t = (typed || "").replace(/^\s+/, "").replace(/\s+/g, " ").toLowerCase();
+    let b = null;
+    for (const n of hintNames(it)) {
+      const l = n.toLowerCase();
+      let k = 0;
+      for (; k < t.length && k < l.length && t[k] === l[k]; k++);
+      (!b || k > b.k) && (b = { n, k });
+    }
+    if (!b) return null;
+    let e = b.k;
+    for (; e < b.n.length && !/[a-z0-9\xC0-\u024F]/i.test(b.n[e]); e++);
+    return e < b.n.length ? b.n.slice(0, e + 1) : null;
+  };
 function makeTypeQuestion(s, r, o, e) {
   const t = o && o.li != null && e && e.length && (!r.figure || Math.random() < 0.7),
     K = markKind(s);
@@ -11264,6 +11298,8 @@ const STORAGE_KEY = "anatomia-v1",
     coins: 0,
     owned: [],
     jokers: 0,
+    // letter jokers: each shows the next letter of a name to type
+    letters: 0,
     freezes: 0,
     tokens: 0,
     unlocked: {},
@@ -11513,6 +11549,9 @@ const STORAGE_KEY = "anatomia-v1",
       grant: { freezes: 1 },
     },
     { id: "joker15", cat: "Hilfen", icon: "\u{1F4A1}", name: "Joker-Gro\xDFpaket", desc: "15 Hinweise \xB7 150 Taler gespart", price: 300, grant: { jokers: 15 } },
+    // in a question where the name is typed: each joker shows one letter more of it (the first, then the second, ...)
+    { id: "letter10", cat: "Hilfen", icon: "\u{1F524}", name: "Buchstaben-Joker", desc: "10 Buchstaben: zeigt beim Eintippen den n\xE4chsten Buchstaben", price: 100, grant: { letters: 10 } },
+    { id: "letter30", cat: "Hilfen", icon: "\u{1F524}", name: "Buchstaben-Gro\xDFpaket", desc: "30 Buchstaben \xB7 50 Taler gespart", price: 250, grant: { letters: 30 } },
     { id: "freeze3", cat: "Hilfen", icon: "\u{1F9CA}", name: "Serien-Schutz \xD73", desc: "Rettet deine Tagesserie dreimal", price: 400, grant: { freezes: 3 } },
     // double XP for a span of time: the longer, the less each quarter hour costs (150 / 125 / 100 / 75 Taler)
     { id: "xp2-15", cat: "Hilfen", icon: "\u{1F680}", name: "Doppel-XP \xB7 15 Min.", desc: "15 Minuten lang z\xE4hlt jede Aufgabe doppelt", price: 150, boost: 15 },
@@ -16851,7 +16890,7 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
       { label: "So verdienst du Taler", k: "shop", style: { padding: "0 2px 8px" } },
       "Taler verdienst du beim Lernen: 20 pro abgeschlossener Lektion, 40 extra f\xFCr ein fehlerfreies Quiz, 100 f\xFCr einen bestandenen Themen-Test, 1 pro gewusster Karteikarte, 5 pro gel\xF6stem Fall und Extra-Taler f\xFCr jeden Erfolg. Gekaufte Designs kannst du jederzeit an- und wieder ausschalten.",
     ),
-    s.jokers > 0 || s.freezes > 0 || s.tokens > 0 || h
+    s.jokers > 0 || s.letters > 0 || s.freezes > 0 || s.tokens > 0 || h
       ? React.createElement(
           "div",
           {
@@ -16868,7 +16907,9 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
           },
           "Vorrat: \u{1F4A1} ",
           s.jokers || 0,
-          " Joker \xB7 \u{1F9CA} ",
+          " Joker \xB7 \u{1F524} ",
+          s.letters || 0,
+          " Buchstaben \xB7 \u{1F9CA} ",
           s.freezes || 0,
           " Serien-Schutz \xB7 \u{1F511} ",
           s.tokens || 0,
@@ -19372,16 +19413,27 @@ function PointImage({ q: s, color: r, onResult: o, done: e, init: it = null }) {
     ),
   );
 }
-function TypeAnswer({ q: s, color: r, dark: dk, onResult: o, done: e, right: t, init: it = "", onDraft: od, exam: ex = !1 }) {
+function TypeAnswer({ q: s, color: r, dark: dk, onResult: o, done: e, right: t, init: it = "", onDraft: od, exam: ex = !1, letters: lt = 0, onLetter: ol }) {
   const [a, n] = useState(it || ""),
+    // the letter joker (not in the exam): what the next one puts in the input, null with none left or the name complete
+    ir = useRef(null),
+    fw = useRef(!1),
+    nx = !e && !ex && lt > 0 && ol ? letterHint(a, s.item) : null,
     // nothing typed counts as wrong too, and the right answer is shown (in the exam only handing in decides)
     i = () => {
       !e && (a.trim() ? o(answerMatches(a, s.item), a) : ex || o(!1, ""));
+    },
+    lj = () => {
+      if (!nx) return;
+      (n(nx), od && od(nx), ol());
+      // typing goes on where it was: an open keyboard stays (the new value puts the caret at its end)
+      fw.current && ir.current && ir.current.focus();
     };
   return React.createElement(
     "div",
     { style: { marginTop: 12 } },
     React.createElement("input", {
+      ref: ir,
       value: a,
       onChange: (l) => (n(l.target.value), od && od(l.target.value)),
       disabled: e,
@@ -19389,6 +19441,7 @@ function TypeAnswer({ q: s, color: r, dark: dk, onResult: o, done: e, right: t, 
         l.key === "Enter" && (ex ? l.target.blur() : i());
       },
       placeholder: e && !a.trim() ? "keine Antwort" : "Name eintippen \u2026",
+      "data-type-input": "1",
       autoComplete: "off",
       autoCorrect: "off",
       autoCapitalize: "off",
@@ -19406,6 +19459,35 @@ function TypeAnswer({ q: s, color: r, dark: dk, onResult: o, done: e, right: t, 
         color: C.ink,
       },
     }),
+    nx &&
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          "data-letters": lt,
+          // the input keeps the focus on a computer; on the phone it gets it back after the tap
+          onPointerDown: () => {
+            fw.current = document.activeElement === ir.current;
+          },
+          onMouseDown: (l) => l.preventDefault(),
+          onClick: lj,
+          className: "ana-body",
+          style: {
+            marginTop: 10,
+            padding: "9px 14px",
+            borderRadius: 999,
+            border: `2px solid ${C.gold}`,
+            background: C.goldBg,
+            color: C.ink,
+            fontSize: 13.5,
+            fontWeight: 700,
+            cursor: "pointer",
+          },
+        },
+        "\u{1F524} Buchstabe zeigen (",
+        lt,
+        ")",
+      ),
     !e &&
       !ex &&
       React.createElement(
@@ -19607,6 +19689,8 @@ function QuizScreen({
   maxHearts: l = 3,
   jokers: d = 0,
   onUseJoker: c,
+  letters: ltr = 0,
+  onUseLetter: uLt,
   onConfuse: oc,
   onPair: op,
   retryWrong: rw = !1,
@@ -19759,7 +19843,8 @@ function QuizScreen({
           React.createElement(RealModel3D, { file: M.model, highlight: M.highlight, accent: r.color, height: 260, label: I ? M.item.la : "" }),
         ),
       M.kind === "point" && React.createElement(PointImage, { q: M, color: r.color, done: I, onResult: (E) => v(E) }),
-      M.kind === "type" && React.createElement(TypeAnswer, { q: M, color: r.color, dark: r.dark, done: I, right: F, onResult: (E, N) => v(E, N) }),
+      M.kind === "type" &&
+        React.createElement(TypeAnswer, { q: M, color: r.color, dark: r.dark, done: I, right: F, letters: ltr, onLetter: uLt, onResult: (E, N) => v(E, N) }),
       // several right answers to tick; once answered, the structure in the picture below the answers
       M.kind === "multi" && React.createElement(MultiAnswer, { q: M, color: r.color, dark: r.dark, done: I, onResult: (E) => v(E) }),
       M.kind === "multi" && I && React.createElement(AnswerPicture, { q: M, color: r.color, chosen: null }),
@@ -22333,6 +22418,12 @@ function AnatomiaApp() {
           const k = { ...f, jokers: Math.max(0, (f.jokers || 0) - 1) };
           return (saveProgress(k), k);
         }),
+      letters: s.letters || 0,
+      onUseLetter: () =>
+        r((f) => {
+          const k = { ...f, letters: Math.max(0, (f.letters || 0) - 1) };
+          return (saveProgress(k), k);
+        }),
       onConfuse: confuse,
       onExit: () => e({ name: "learn", lessonId: u.id }),
       onFinish: (f, k, wr, bo) => S(u.id, f, k, wr, bo),
@@ -22356,6 +22447,12 @@ function AnatomiaApp() {
       onUseJoker: () =>
         r((p) => {
           const f = { ...p, jokers: Math.max(0, (p.jokers || 0) - 1) };
+          return (saveProgress(f), f);
+        }),
+      letters: s.letters || 0,
+      onUseLetter: () =>
+        r((p) => {
+          const f = { ...p, letters: Math.max(0, (p.letters || 0) - 1) };
           return (saveProgress(f), f);
         }),
       onConfuse: confuse,
