@@ -18942,15 +18942,18 @@ const LA_ABBR = [
     return findVoice(a, VOICE.uri) || a[0] || null;
   },
   // the device voice plays like a video too where the system allows it: the page asks for the playback audio session
-  // (Safari 17 and later) and plays a twentieth of a second of silence, which also moves older versions into it;
-  // otherwise the iPhone's silent switch mutes the voice. Runs in the tap, before speechSynthesis.speak (an audio
-  // element may only start from a tap)
+  // (Safari 17 and later; a setting, nothing is played). Older versions only move into it by playing sound: there a
+  // twentieth of a second of silence plays in the tap, before speechSynthesis.speak (an audio element may only start
+  // from a tap). Not on the newer ones: playing it before each name held the voice back
   SILENT = { el: null },
   preferPlayback = () => {
     if (!appleTouch()) return;
     try {
       const a = navigator.audioSession;
-      a && a.type !== "playback" && (a.type = "playback");
+      if (a) {
+        a.type !== "playback" && (a.type = "playback");
+        return;
+      }
     } catch {}
     try {
       if (typeof Audio > "u") return;
@@ -18978,7 +18981,9 @@ const LA_ABBR = [
     if (!speechOk() || !o) return;
     try {
       const e = window.speechSynthesis;
-      e.cancel();
+      // a name still being spoken stops for the new one; with nothing to stop no stop is sent (on the iPhone a stop
+      // right before a name holds that name back)
+      (e.speaking || e.pending) && e.cancel();
       const t = new SpeechSynthesisUtterance(o);
       t.lang = r;
       t.rate = 0.82;
@@ -22182,6 +22187,12 @@ function AnatomiaApp() {
         (p && p.setAttribute("content", s.dark ? "#11161E" : "#1E2836"), (document.documentElement.style.colorScheme = s.dark ? "dark" : "light"));
       } catch {}
     }, [s && s.theme, s && s.pathSkin, s && s.dark]));
+  // the device's voices, fetched from the system once now rather than when the first name is spoken
+  useEffect(() => {
+    try {
+      speechOk() && window.speechSynthesis.getVoices();
+    } catch {}
+  }, []);
   // the voice for the names, for speakTerm, which every screen calls
   useEffect(() => {
     s && ((VOICE.uri = s.voiceUri || ""), (VOICE.auto = s.autoSay !== !1));
