@@ -11976,13 +11976,13 @@ const DAILY_POOL = [
     { id: "e-xp", tier: 0, m: "xp", goal: 150, icon: "\u26A1\uFE0F", text: _T("150 XP sammeln") },
     { id: "m-lessons", tier: 1, m: "lessons", goal: 3, icon: "\u{1F4DA}", text: _T("3 Lektionen abschlie\xDFen") },
     { id: "m-correct", tier: 1, m: "correct", goal: 50, icon: "\u2705", text: _T("50 Fragen richtig beantworten") },
-    { id: "m-run", tier: 1, m: "run", goal: 10, icon: "\u{1F525}", text: _T("10 Fragen hintereinander richtig") },
+    { id: "m-run", tier: 1, m: "run", goal: 10, icon: "\u2705", text: _T("10 Fragen hintereinander richtig") },
     { id: "m-regions", tier: 1, m: "regions", goal: 2, icon: "\u{1F9ED}", text: _T("Lektionen aus 2 verschiedenen Regionen") },
     { id: "m-cases", tier: 1, m: "cases", goal: 3, icon: "\u{1FA7A}", text: _T("3 klinische F\xE4lle richtig l\xF6sen") },
     { id: "m-conf", tier: 1, m: "conf", goal: 10, icon: "\u{1F500}", text: _T("10 Verwechslungen \xFCben"), ok: (s) => confPairs(s).length >= 3 },
     { id: "h-perfect", tier: 2, m: "perfect", goal: 1, icon: "\u2B50", text: _T("Eine Lektion ganz ohne Fehler") },
     { id: "h-lessons", tier: 2, m: "lessons", goal: 5, icon: "\u{1F3C3}", text: _T("5 Lektionen abschlie\xDFen") },
-    { id: "h-run", tier: 2, m: "run", goal: 20, icon: "\u{1F525}", text: _T("20 Fragen hintereinander richtig") },
+    { id: "h-run", tier: 2, m: "run", goal: 20, icon: "\u2705", text: _T("20 Fragen hintereinander richtig") },
     { id: "h-test", tier: 2, m: "test", goal: 1, icon: "\u{1F3C6}", text: _T("Einen Themen-Test bestehen") },
     { id: "h-exam", tier: 2, m: "exam", goal: 1, icon: "\u{1F4DD}", text: _T("Eine Pr\xFCfung bestehen (Note 4 oder besser)") },
     { id: "h-xp", tier: 2, m: "xp", goal: 500, icon: "\u26A1\uFE0F", text: _T("500 XP sammeln") },
@@ -20181,8 +20181,9 @@ function QuizScreen({
       run >= 3 &&
         React.createElement(
           "span",
-          { key: "run" + run, className: "ana-display ana-pop", "data-run": run, "aria-label": _T("{0} in Folge richtig", run), style: { fontSize: 13.5, fontWeight: 700, color: "#D95A0B", whiteSpace: "nowrap" } },
-          "\u{1F525} ",
+          { key: "run" + run, className: "ana-display ana-pop", "data-run": run, "aria-label": _T("{0} in Folge richtig", run), style: { fontSize: 13.5, fontWeight: 700, color: C.okText, whiteSpace: "nowrap" } },
+          // its own sign (a green tick), not the flame of the daily streak
+          "\u2705 ",
           run,
         ),
     ),
@@ -20363,8 +20364,8 @@ function QuizScreen({
             cb &&
             React.createElement(
               "div",
-              { className: "ana-display", "data-combo": cb.n, style: { fontSize: 14, fontWeight: 700, color: "#D95A0B", marginTop: 4 } },
-              "\u{1F525} ",
+              { className: "ana-display", "data-combo": cb.n, style: { fontSize: 14, fontWeight: 700, color: C.okText, marginTop: 4 } },
+              "\u2705 ",
               cb.n,
               _T(" in Folge \xB7 +"),
               cb.xp,
@@ -20659,8 +20660,8 @@ function ResultScreen({
     bo > 0 &&
       React.createElement(
         "div",
-        { className: "ana-display", "data-bonus": bo, style: { fontSize: 13, fontWeight: 700, color: "#D95A0B", margin: "0 0 18px" } },
-        _T("\u{1F525} davon "),
+        { className: "ana-display", "data-bonus": bo, style: { fontSize: 13, fontWeight: 700, color: C.okText, margin: "0 0 18px" } },
+        _T("\u2705 davon "),
         bo,
         _T(" XP Serien-Bonus"),
       ),
