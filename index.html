@@ -18882,25 +18882,38 @@ const LA_ABBR = [
   },
   // what tells two voices apart in the list: the name without its bracket ("Anna (Erweitert)") and the country
   voiceKey = (n) => `${String(n.name || "").replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase()}|${(n.lang || "").replace("_", "-").toLowerCase()}`,
+  // Apple's joke voices: the Eloquence voices (Eddy, Flo, Grandma ...) and the old novelty voices (Albert, Bahh, Bells,
+  // Jester, Organ, Whisper ...). The iPhone shows them under names in its own language ("Spa\xDFvogel", "Orgel",
+  // "Fl\xFCstern", "Katrin"), so they are told by their address, which keeps the English id
+  // (com.apple.eloquence.en-US.Eddy, com.apple.speech.synthesis.voice.Organ; Jester is ...Hysterical, Wobble
+  // ...Deranged, Superstar ...Princess), and else by their English or German names
+  NOVELTY_ID = /^(albert|badnews|bahh|bells|boing|bubbles|cellos|deranged|fred|goodnews|hysterical|jester|junior|kathy|organ|pipeorgan|princess|ralph|superstar|trinoids|whisper|wobble|zarvox)$/i,
+  NOVELTY_NAME =
+    /^(albert|bad news|bahh|bells|boing|bubbles|cellos|eddy|flo|fred|good news|grandma|grandpa|jester|junior|kathy|organ|pipe organ|ralph|reed|rocko|sandy|shelley|superstar|trinoids|whisper|wobble|zarvox|oma|opa|spa\xDFvogel|orgel|fl\xFCstern|katrin|monster|glocken|blasen|seifenblasen|gute nachrichten|schlechte nachrichten)$/i,
+  isNovelty = (n) => {
+    const u = n.voiceURI || "";
+    return (
+      /eloquence|novelty/i.test(u) ||
+      (/speech\.synthesis\.voice\./i.test(u) && NOVELTY_ID.test(u.split(".").pop())) ||
+      NOVELTY_NAME.test(String(n.name || "").replace(/\s*\(.*\)\s*$/, "").trim())
+    );
+  },
   // the device's voices of a language, the best first: Premium and enhanced ones (downloaded in the iPhone settings)
-  // before the compact ones, the usual voices before the novelty ones (Eddy, Flo, Grandpa ...), the country (de-DE)
-  // before the other countries of the language; otherwise in the device's order. Each name once: the iPhone lists
-  // some twice ("Anna" compact and enhanced, or the same one again); the best of them stays
+  // before the compact ones, the country (de-DE) before the other countries of the language; otherwise in the
+  // device's order. Only real voices (no joke voices, unless the device has nothing else). Each name once: the
+  // iPhone lists some twice ("Anna" compact and enhanced, or the same one again); the best of them stays
   voicesFor = (r = "de-DE") => {
     if (!speechOk()) return [];
     try {
       const l = r.slice(0, 2).toLowerCase(),
         q = (n) =>
           [0, 4, 6][voiceQ(n)] +
-          (/eloquence|novelty/i.test(n.voiceURI || "") ||
-          /\b(eddy|flo|grandma|grandpa|oma|opa|reed|rocko|sandy|shelley|albert|bahh|bells|boing|bubbles|cellos|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|kathy|fred|ralph)\b/i.test(n.name || "")
-            ? -10
-            : 0) +
           (/anna|helena|petra|markus|yannick|martin|google|katja|hedda|conrad|amala|killian|seraphina|florian/i.test(n.name || "") ? 1 : 0) +
           ((n.lang || "").replace("_", "-").toLowerCase() === r.toLowerCase() ? 0.5 : 0);
-      const seen = new Set();
-      return (window.speechSynthesis.getVoices() || [])
-        .filter((n) => (n.lang || "").toLowerCase().startsWith(l))
+      const seen = new Set(),
+        all = (window.speechSynthesis.getVoices() || []).filter((n) => (n.lang || "").toLowerCase().startsWith(l)),
+        real = all.filter((n) => !isNovelty(n));
+      return (real.length ? real : all)
         .map((n, i) => ({ n, s: q(n), i }))
         .sort((a, b) => b.s - a.s || a.i - b.i)
         .map((x) => x.n)
