@@ -5080,7 +5080,16 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
   var need = [];
   if (ui !== "de") need.push(ui);
   if ((term === "en" || term === "es") && need.indexOf(term) < 0) need.push(term);
-  for (var j = 0; j < need.length; j++) document.write('<script src="./i18n-' + need[j] + '.js"><\/script>');
+  for (var j = 0; j < need.length; j++) document.write('<script src="./i18n-' + need[j] + '.js"><\/script><script src="./names-' + need[j] + '.js"><\/script>');
+  // the names in the other languages come a little later: a typed answer counts only in the app's and the learning
+  // language, and they tell such a name from a typo
+  ["en", "es"].forEach(function (l) {
+    if (need.indexOf(l) >= 0) return;
+    var e = document.createElement("script");
+    e.src = "./names-" + l + ".js";
+    e.async = true;
+    document.head.appendChild(e);
+  });
 })();
 </script>
 <script>
@@ -5165,8 +5174,12 @@ const LANGS = ["de", "en", "es"],
     return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
   },
   // a name (Latin|German) in language l; the Latin when there is no translation
-  nameKnown = (l, la, de) => !!((I18N[l] || {}).n || {})[hashKey((la || "") + "|" + (de || ""))],
-  nameIn = (l, la, de) => (l === "la" ? la : l === "de" ? de : ((I18N[l] || {}).n || {})[hashKey((la || "") + "|" + (de || ""))] || la),
+  // the names of the terms in language l, from its name file (window.ANATOMIA_NAMES): those of the app's and the
+  // learning language are there from the start, the others come a little later (they only tell a name in a language
+  // that does not count from a typo)
+  namesOf = (l) => (typeof window < "u" && window.ANATOMIA_NAMES && window.ANATOMIA_NAMES[l]) || (I18N[l] || {}).n || {},
+  nameKnown = (l, la, de) => !!namesOf(l)[hashKey((la || "") + "|" + (de || ""))],
+  nameIn = (l, la, de) => (l === "la" ? la : l === "de" ? de : namesOf(l)[hashKey((la || "") + "|" + (de || ""))] || la),
   factIn = (l, de) => (l === "de" || !de ? de : ((I18N[l] || {}).f || {})[hashKey(de)] || de),
   // a text of the app in language l (the German text as key)
   textIn = (l, s) => (l === "de" || !s ? s : ((I18N[l] || {}).t || {})[s] || s),
@@ -5195,7 +5208,8 @@ const LANGS = ["de", "en", "es"],
   // German wording in the Latin name: a concept without a Latin term ("Anatomische Grundstellung", "Trendelenburg-Zeichen")
   GERM_RE = /[\xE4\xF6\xFC\xDF]|\b(der|die|das|des|dem|den|zum|zur|vom|beim)\b|[a-z](ung|ungen|ische|ischer|isches|ischen|heit|keit|lich|liche|licher|chen|zeichen)\b/i,
   // "the Latin name" - in the learning language
-  termNameWord = () => _T({ la: "lateinische Name", de: "deutsche Name", en: "englische Name", es: "spanische Name" }[TERM_LANG]),
+  LANG_NAME_WORD = { la: "lateinische Name", de: "deutsche Name", en: "englische Name", es: "spanische Name" },
+  termNameWord = () => _T(LANG_NAME_WORD[TERM_LANG]),
   // the line under a question to type: the learning language and the app's
   typeSub = () =>
     TERM_LANG === "la"
@@ -10523,12 +10537,50 @@ const ABBR_FULL = [
           .replace(/(.)\1+/g, "$1"),
       )
       .join(" "),
+  // the languages a typed name counts in: the app's and the learning language (app in English, Latin learnt: the
+  // English and the Latin name, not the German or the Spanish one). Latin wording that is German ("Anatomische
+  // Grundstellung") counts as German
+  ANS_LANGS = [TERM_LANG, UI_LANG],
+  latGerman = (r) => GERM_RE.test(bareLabel(orLa(r))),
+  okLatin = (r) => ANS_LANGS.includes(latGerman(r) ? "de" : "la"),
+  // the names of a card that count: the two it is shown with, its Latin, its German ones (also "Kompakta" for
+  // "Kompakte Knochensubstanz") when German is one of the two
+  ansNames = (r) => [r.la, r.de, ...(okLatin(r) ? [orLa(r)] : []), ...(ANS_LANGS.includes("de") ? [orDe(r), ...(r.alt || [])] : [])],
+  // its names in the languages that do not count (unless written just like one that counts: "Femur")
+  otherNames = (r) => {
+    const out = [],
+      ok = new Set(ansNames(r).filter(Boolean).flatMap((x) => [normAnswer(x), normAnswer(x, 1)])),
+      add = (l, x) => {
+        if (!x) return;
+        const n = normAnswer(x),
+          f = normAnswer(x, 1);
+        n && !ok.has(n) && !ok.has(f) && out.push({ l, n, f });
+      };
+    okLatin(r) || add(latGerman(r) ? "de" : "la", orLa(r));
+    ANS_LANGS.includes("de") || (add("de", orDe(r)), (r.alt || []).forEach((x) => add("de", x)));
+    for (const l of ["en", "es"]) ANS_LANGS.includes(l) || (nameKnown(l, orLa(r), orDe(r)) && add(l, nameIn(l, orLa(r), orDe(r))));
+    return out;
+  },
+  // the typed answer is this card's name in a language that does not count: its language (else null). d: how near it
+  // came to a name that counts (it must come nearer to the other one); without d: near enough to be that name
+  wrongLang = (s, r, d) => {
+    const o = normAnswer(s),
+      of = normAnswer(s, 1);
+    if (!o) return null;
+    let b = null;
+    for (const x of otherNames(r)) {
+      const k = Math.min(levenshtein(o, x.n), levenshtein(of, x.f)),
+        lim = d == null ? (x.n.length > 14 ? 3 : x.n.length > 8 ? 2 : 1) : d - 1;
+      k <= lim && (!b || k < b.k) && (b = { l: x.l, k });
+    }
+    return b ? b.l : null;
+  },
   answerMatches = (s, r) => {
     const o = normAnswer(s),
       of = normAnswer(s, 1);
     if (!o) return !1;
-    // alt: other names that count as right ("Kompakta" for "Kompakte Knochensubstanz (Kompakta)")
-    const N0 = [...new Set([r.la, r.de, r.lat, ...(r.alt || [])].filter(Boolean))],
+    // the names in the two languages that count (alt: "Kompakta" for "Kompakte Knochensubstanz (Kompakta)")
+    const N0 = [...new Set(ansNames(r).filter(Boolean))],
       N = [...N0, ...[bareName(r.la, "la"), bareName(r.de, "de")].filter((x) => x && !N0.includes(x))],
       own = N.map((x) => normAnswer(x)).filter(Boolean),
       ownF = N.map((x) => normAnswer(x, 1)).filter(Boolean),
@@ -10562,7 +10614,7 @@ const ABBR_FULL = [
         v.k == null && ((v.k = soundKey(v.s)), (v.kf = soundKey(v.f)));
         if (v.kf === sf || (!hw && v.k === so)) return !1;
       }
-      return !0;
+      return !wrongLang(s, r, 1);
     }
     // not right after all: another term of the app as it stands ("Adductio" for "Abductio", "V. femoralis" for
     // "A. femoralis", "M. pectoralis minor" for "major"), or a typo that comes as near to another term as to this one
@@ -10574,7 +10626,7 @@ const ABBR_FULL = [
       if (v.f === of || (d > 0 && v.s === o)) return !1;
       if (d > 0 && Math.abs(v.s.length - o.length) <= d && levenshtein(o, v.s) <= d && levenshtein(of, v.f) <= df) return !1;
     }
-    return !0;
+    return !wrongLang(s, r, d);
   };
 // a small typo that still counts: the name the learner meant, spelled right (the closest of the Latin, German and
 // other names, also without M./Musculus in front or as its last two words, in the form typed); null when only the
@@ -10594,7 +10646,7 @@ const typoCanon = (x) =>
       raw = (typed || "").trim().replace(/\s+/g, " ").toLowerCase();
     if (!T || !it) return null;
     let best = null;
-    for (const n of [...new Set([it.la, it.de, it.lat, ...(it.alt || [])].filter(Boolean))]) {
+    for (const n of [...new Set(ansNames(it).filter(Boolean))]) {
       const full = bareLabel(n),
         exp = (typeof LA_ABBR < "u" ? LA_ABBR : []).reduce((r, [o, e]) => r.replace(o, e), full),
         wd = exp.split(/\s+/).filter(Boolean),
@@ -10648,7 +10700,7 @@ const HINT_HEAD = /^(m|mm|a|aa|v|vv|n|nn|r|rr|lig|ligg|proc|gl|musculi|musculus|
         x = (x || "").trim().replace(/\s+/g, " ");
         x && !out.includes(x) && out.push(x);
       },
-      base = [bareName(it.la, "la"), bareName(it.de, "de"), ...(it.alt || [])].filter(Boolean);
+      base = [bareName(it.la, "la"), bareName(it.de, "de"), ...(ANS_LANGS.includes("de") ? it.alt || [] : [])].filter(Boolean);
     base.forEach(add);
     base.forEach((x) => {
       const w = x.trim().split(/\s+/);
@@ -20296,6 +20348,20 @@ function QuizScreen({
                     : M.item.la
                 : M.options.find((E) => E.correct).label,
             ),
+          // typed in a language that does not count ("Hueso coxal" with English and Latin): which name that was
+          !F &&
+            M.kind === "type" &&
+            g &&
+            (() => {
+              const wl = wrongLang(g, M.item);
+              return wl
+                ? React.createElement(
+                    "div",
+                    { className: "ana-body", "data-wrong-lang": wl, style: { fontSize: 13.5, fontWeight: 700, color: C.badText, marginTop: 4, lineHeight: 1.35 } },
+                    _T("Das ist der {0} \u2013 hier z\xE4hlen nur {1} und {2}.", _T(LANG_NAME_WORD[wl]), langName(TERM_LANG), langName(UI_LANG)),
+                  )
+                : null;
+            })(),
           // a typed answer with a small typo counts, and shows how it is written: what was missing underlined in green, what
           // was wrong in red
           F &&
