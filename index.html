@@ -15586,14 +15586,15 @@ const DAILY_TIER = [
   ["mittel", "#E8590C"],
   ["schwer", "#C2255C"],
 ];
-// a light, short tick of the phone when Taler are collected. Android: a very short vibration (tick, from the tap).
+// a short buzz of the phone when Taler are collected. Android: two short pulses (TICK_BUZZ, from the tap).
 // iPhone: Safari has no vibration for web pages; the light tick of the system comes when a switch
 // (<input type="checkbox" switch>) is flipped, and since iOS 26.5 only when the finger itself flips it (a switch flipped
 // from code no longer ticks). So a collect button carries TickLayer: a transparent label over the button holding a hidden
 // switch; the finger's tap on the label flips the switch (the tick), and the tap's click still reaches the button once
+const TICK_BUZZ = [32, 45, 42];
 function tick() {
   try {
-    TICK_IOS || (typeof navigator.vibrate == "function" && navigator.vibrate(15));
+    TICK_IOS || (typeof navigator.vibrate == "function" && navigator.vibrate(TICK_BUZZ));
   } catch (e) {}
 }
 const TICK_IOS = (() => {
