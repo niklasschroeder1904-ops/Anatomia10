@@ -14813,6 +14813,42 @@ function FigureAtlasScreen({ onExit: s, onOpen: r, initCat: o = null, initQ: e =
         ),
   );
 }
+// the explanation of a structure in a picture of the atlas: from the card of the same name whose mark points at this
+// label of this picture (the picture's own atlas lesson first: it describes the structure, a topic lesson may tell only
+// one side of it), else from any card of that name; null without one
+const ATLAS_FACTS = { mark: null, name: null },
+  atlasNameKey = (s) =>
+    (s || "")
+      .toLowerCase()
+      .replace(/\s*\([^()]*\)/g, "")
+      .replace(/[:.,;]+\s*$/, "")
+      .replace(/\s+/g, " ")
+      .trim(),
+  atlasFact = (src, idx, lab) => {
+    if (!ATLAS_FACTS.mark) {
+      const M = new Map(),
+        N = new Map(),
+        add = (m, k, v) => (m.get(k) || m.set(k, []).get(k)).push(v);
+      ALL_LESSONS.forEach((L) => {
+        const pl = platesFor(L.id) || [],
+          mk = marksFor(L.id) || {};
+        L.items.forEach((it) => {
+          if (!it.fact) return;
+          const v = { it, atl: /^atl-/.test(L.id) },
+            m = mk[it.id];
+          add(N, atlasNameKey(orLa(it)), v);
+          m && m.li != null && pl.length && add(M, (pl[Math.min(m.i || 0, pl.length - 1)].src || "").split("/").pop() + "|" + m.li, v);
+        });
+      });
+      ((ATLAS_FACTS.mark = M), (ATLAS_FACTS.name = N));
+    }
+    const f = (src || "").split("/").pop(),
+      k = atlasNameKey(orLa(lab)),
+      hits = (idx || []).flatMap((i) => ATLAS_FACTS.mark.get(f + "|" + i) || []).filter((v) => atlasNameKey(orLa(v.it)) === k),
+      pool = hits.length ? hits : ATLAS_FACTS.name.get(k) || [],
+      v = pool.find((x) => x.atl) || pool[0];
+    return v ? v.it.fact : null;
+  };
 function FigureScreen({ src: s, onExit: r, onQuiz: o, q: e = "" }) {
   const t = figuresData().figures.find((p) => p.src === s) || { title: "", src: s },
     a = labelsFor(s) || { labels: [] },
@@ -14820,7 +14856,7 @@ function FigureScreen({ src: s, onExit: r, onQuiz: o, q: e = "" }) {
   a.labels.forEach((p, f) => {
     if (p.k !== "l") return;
     const k = n.find((g) => g.la === p.la);
-    k ? k.idx.push(f) : n.push({ la: p.la, de: p.de, idx: [f] });
+    k ? k.idx.push(f) : n.push({ la: p.la, de: p.de, idx: [f], lab: p });
   });
   const i = (e || "").trim().toLowerCase(),
     l =
@@ -14833,6 +14869,8 @@ function FigureScreen({ src: s, onExit: r, onQuiz: o, q: e = "" }) {
     x = useRef(null),
     S = n.find((p) => p.la === m),
     B = S ? S.idx : null,
+    // the explanation of the marked structure
+    fx = S ? atlasFact(s, S.idx, S.lab) : null,
     A = (p) => {
       h(m === p ? null : p);
       const f = x.current;
@@ -14857,8 +14895,40 @@ function FigureScreen({ src: s, onExit: r, onQuiz: o, q: e = "" }) {
     React.createElement(
       "div",
       { ref: x, style: { background: C.pic, borderRadius: 16, border: `1.5px solid ${C.line}`, padding: 4 } },
-      React.createElement(LabeledImage, { src: s, mode: d, hl: B, color: ATLAS_COLOR, maxHeight: 330, onClick: () => b(!0), area: cardArea(s, B) }),
+      React.createElement(LabeledImage, {
+        src: s,
+        mode: d,
+        hl: B,
+        color: ATLAS_COLOR,
+        maxHeight: 330,
+        onClick: () => b(!0),
+        onTapLabel: (k) => {
+          const p = a.labels[k];
+          p && p.k === "l" && A(p.la);
+        },
+        area: cardArea(s, B),
+      }),
     ),
+    // the marked structure: its names and a short explanation, as on the lesson cards
+    S &&
+      React.createElement(
+        "div",
+        { "data-atlas-info": "1", style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 14, padding: "10px 12px", marginTop: 10 } },
+        React.createElement(
+          "div",
+          { style: { display: "flex", alignItems: "center", gap: 10 } },
+          React.createElement(
+            "div",
+            { style: { flex: 1, minWidth: 0 } },
+            React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink, lineHeight: 1.2 } }, S.la.replace(/:$/, "")),
+            S.de &&
+              S.de !== S.la &&
+              React.createElement("div", { className: "ana-display", style: { fontSize: 14, fontWeight: 600, color: C.inkSoft, marginTop: 2 } }, S.de.replace(/:$/, "")),
+          ),
+          React.createElement(SpeakBtn, { text: S.la.replace(/:$/, ""), color: ATLAS_COLOR, size: 32 }),
+        ),
+        fx && React.createElement("div", { className: "ana-body", style: { fontSize: 14.5, color: C.ink, lineHeight: 1.5, marginTop: 6 } }, fx),
+      ),
     React.createElement(
       "div",
       { style: { display: "flex", alignItems: "center", gap: 8, margin: "10px 0 12px", flexWrap: "wrap" } },
@@ -14899,7 +14969,7 @@ function FigureScreen({ src: s, onExit: r, onQuiz: o, q: e = "" }) {
             className: "ana-display",
             style: { fontSize: 12, fontWeight: 700, color: C.inkSoft, letterSpacing: 0.8, margin: "4px 2px 6px" },
           },
-          _T("STRUKTUREN \xB7 ANTIPPEN ZUM MARKIEREN"),
+          _T("STRUKTUREN \xB7 ANTIPPEN F\xDCR ERKL\xC4RUNG"),
         ),
         React.createElement(
           "div",
