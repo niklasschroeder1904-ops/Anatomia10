@@ -8909,7 +8909,7 @@ function OldAtlasView({ plates: s, lesson: r, itemId: o, color: e, height: t = 2
                         left: B.ring ? `${f * 105}%` : -2,
                         top: -2,
                         background: A ? e : "rgba(255,255,255,0.97)",
-                        color: A ? "#fff" : C.ink,
+                        color: A ? "#fff" : "#1E2836",
                         border: `1.5px solid ${A ? e : "#C9D0DC"}`,
                         borderRadius: 5,
                         padding: "0 4px",
@@ -9459,13 +9459,14 @@ function RealModel3D({ file: s, highlight: r = [], accent: o = "#DE3D3D", height
       f.anim = { t0: performance.now(), dur: 260, p0: f.camera.position.clone(), p1: k.clone().add(g), q0: k.clone(), q1: k.clone() };
     };
   if (l === "error" && t) return t;
+  // the buttons on the model: the ground behind it stays light in dark mode, so they keep the light mode's colours
   const u = {
     width: 34,
     height: 34,
     borderRadius: 10,
-    border: `1.5px solid ${C.line}`,
+    border: "1.5px solid #DDE3EE",
     background: "rgba(255,255,255,0.92)",
-    color: C.ink,
+    color: "#1E2836",
     fontSize: 16,
     fontWeight: 700,
     cursor: "pointer",
@@ -9501,7 +9502,7 @@ function RealModel3D({ file: s, highlight: r = [], accent: o = "#DE3D3D", height
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: C.inkSoft,
+              color: "#5B6B80",
               fontSize: 13,
             },
           },
@@ -9521,7 +9522,7 @@ function RealModel3D({ file: s, highlight: r = [], accent: o = "#DE3D3D", height
               padding: "4px 10px",
               borderRadius: 999,
               background: h ? o : "rgba(255,255,255,0.92)",
-              color: h ? "#fff" : C.inkSoft,
+              color: h ? "#fff" : "#5B6B80",
               fontSize: 12.5,
               fontWeight: 700,
               pointerEvents: "none",
@@ -9551,8 +9552,8 @@ function RealModel3D({ file: s, highlight: r = [], accent: o = "#DE3D3D", height
                   padding: "0 9px",
                   fontSize: 12,
                   background: c ? o : "rgba(255,255,255,0.92)",
-                  color: c ? "#fff" : C.ink,
-                  borderColor: c ? o : C.line,
+                  color: c ? "#fff" : "#1E2836",
+                  borderColor: c ? o : "#DDE3EE",
                 },
                 onClick: () => m((p) => !p),
               },
@@ -14989,7 +14990,7 @@ function FigureScreen({ src: s, onExit: r, onQuiz: o, q: e = "" }) {
                   border: "none",
                   cursor: "pointer",
                   borderTop: f ? `1px solid ${C.line}` : "none",
-                  background: m === p.la ? "#EAF2FB" : "transparent",
+                  background: m === p.la ? C.blueBg : "transparent",
                 },
               },
               React.createElement("span", { style: { fontSize: 14, fontWeight: 700, color: C.ink } }, p.la.replace(/:$/, "")),
@@ -19573,7 +19574,7 @@ function ZoomPane({ onTap: s, reset: r, tap: f = !0, focus: fz = !1, children: o
       { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 6 } },
       React.createElement(
         "div",
-        { className: "ana-body", style: { flex: 1, minWidth: 0, fontSize: 11.5, color: "#8B95A6", lineHeight: 1.35 } },
+        { className: "ana-body", style: { flex: 1, minWidth: 0, fontSize: 11.5, color: "#5B6B80", lineHeight: 1.35 } },
         e.s > 1.02
           ? _T("{0}× · mit einem Finger verschieben", e.s.toFixed(1).replace(".", ","))
           : !s
