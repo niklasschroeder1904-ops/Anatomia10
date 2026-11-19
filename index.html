@@ -12150,7 +12150,10 @@ async function loadProgress() {
       }
       m.title = null;
       (o.splitV || 0) < SPLIT_V && ((m.srs = splitCards(m.srs)), (m.errors = splitCards(m.errors)), (m.splitV = SPLIT_V));
-      return migrateCurriculum(m);
+      // the days missed since the last visit: Serien-Schutz used, or the streak lost (kept at once)
+      const mg = migrateCurriculum(m),
+        st = settleStreak(mg);
+      return (st !== mg && saveProgress(st), st);
     }
   } catch {}
   return { ...DEFAULT_STATE, curV: (CURRICULUM && CURRICULUM.version) || 0 };
@@ -21497,9 +21500,27 @@ const calStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
   // the bars of the XP page: one dark gold that reads on the light and the dark card (checked for both)
   XP_BAR = "#B08300",
   FLAME = "#E8590C",
-  // the streak as it stands today: it runs on when the last day of learning was today or yesterday, or a Serien-Schutz
-  // will cover the gap
-  liveStreak = (s) => (s.lastDay === todayStr() || s.lastDay === yesterdayStr() || (s.lastDay && (s.freezes || 0) > 0) ? s.streak || 0 : 0);
+  // the Serien-Schutz at work: every day missed since the streak's last day (lastDay: the last day learnt or covered),
+  // up to yesterday, takes one Serien-Schutz, and the day is kept as iced (the calendar shows it as ice). The streak runs
+  // on through it, its count does not grow on such a day. Not enough Serien-Schutz for all the days missed: the streak
+  // is lost, and the Serien-Schutz stays (it could not have saved it). The same object back when nothing changes
+  ICE = "#A5D8FF",
+  ICE_TEXT = "#0B4F8A",
+  settleStreak = (u) => {
+    if (!u || !u.lastDay || !((u.streak || 0) > 0)) return u;
+    const y = yesterdayStr();
+    if (u.lastDay >= y) return u;
+    const miss = [];
+    for (let d = calShift(u.lastDay, 1); d <= y && miss.length < 400; d = calShift(d, 1)) miss.push(d);
+    const f = u.freezes || 0;
+    return miss.length > f ? { ...u, streak: 0 } : { ...u, freezes: f - miss.length, lastDay: y, iced: [...(u.iced || []), ...miss].slice(-120) };
+  },
+  // the streak as it stands today: it runs on when its last day was today or yesterday (a Serien-Schutz covers the days
+  // missed in between, settleStreak)
+  liveStreak = (s) => {
+    const q = settleStreak(s) || {};
+    return q.lastDay === todayStr() || q.lastDay === yesterdayStr() ? q.streak || 0 : 0;
+  };
 // the flame on the menu: on which days learnt, on which not (a month at a time)
 function StreakScreen({ progress: s, onExit: r }) {
   const t = todayStr(),
@@ -21594,9 +21615,14 @@ function StreakScreen({ progress: s, onExit: r }) {
           const k = st(d),
             col = i % 7,
             num = calDate(d).getDate(),
-            // learnt days side by side in a week of this month are joined: a run reads as one band
-            l = k === "on" && col > 0 && num > 1 && st(calShift(d, -1)) === "on",
-            rr = k === "on" && col < 6 && num < n && st(calShift(d, 1)) === "on",
+            // days of the streak side by side in a week of this month (learnt, or kept by a Serien-Schutz) are joined: a
+            // run reads as one band, orange between learnt days, ice blue where a Serien-Schutz kept it
+            run = (x) => x === "on" || x === "ice",
+            kl = col > 0 && num > 1 ? st(calShift(d, -1)) : null,
+            kr = col < 6 && num < n ? st(calShift(d, 1)) : null,
+            l = run(k) && run(kl),
+            rr = run(k) && run(kr),
+            band = (x) => (k === "on" && x === "on" ? "rgba(232,89,12,0.22)" : "rgba(116,192,252,0.42)"),
             on = k === "on",
             xp = L[d];
           return React.createElement(
@@ -21609,10 +21635,8 @@ function StreakScreen({ progress: s, onExit: r }) {
               "aria-label": `${calLong(d)}: ${on ? _T("gelernt, {0} XP", xp) : k === "ice" ? _T("Serien-Schutz") : k === "off" ? _T("nicht gelernt") : k === "today" ? _T("heute, noch nicht gelernt") : "–"}`,
               style: { position: "relative", height: 38, padding: 0, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
             },
-            (l || rr) &&
-              React.createElement("span", {
-                style: { position: "absolute", top: 4, bottom: 4, left: l ? 0 : "50%", right: rr ? 0 : "50%", background: "rgba(232,89,12,0.22)" },
-              }),
+            l && React.createElement("span", { style: { position: "absolute", top: 4, bottom: 4, left: 0, right: "50%", background: band(kl) } }),
+            rr && React.createElement("span", { style: { position: "absolute", top: 4, bottom: 4, left: "50%", right: 0, background: band(kr) } }),
             React.createElement(
               "span",
               {
@@ -21626,9 +21650,9 @@ function StreakScreen({ progress: s, onExit: r }) {
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 13.5,
-                  fontWeight: on || k === "today" ? 700 : 600,
-                  background: on ? FLAME : k === "ice" ? "rgba(28,126,214,0.22)" : k === "off" ? C.mute : "transparent",
-                  color: on ? "#fff" : k === "ice" ? (s.dark ? "#74C0FC" : "#1C7ED6") : k === "off" ? C.inkSoft : k === "today" ? C.ink : "#9AA3B2",
+                  fontWeight: on || k === "today" || k === "ice" ? 700 : 600,
+                  background: on ? FLAME : k === "ice" ? ICE : k === "off" ? C.mute : "transparent",
+                  color: on ? "#fff" : k === "ice" ? ICE_TEXT : k === "off" ? C.inkSoft : k === "today" ? C.ink : "#9AA3B2",
                   boxShadow: k === "today" ? `inset 0 0 0 2px ${FLAME}` : d === sel ? `0 0 0 2px ${C.card}, 0 0 0 4px ${C.inkSoft}` : "none",
                   opacity: k === "future" || k === "none" ? 0.55 : 1,
                 },
@@ -21666,7 +21690,7 @@ function StreakScreen({ progress: s, onExit: r }) {
       { className: "ana-body", style: { display: "flex", flexWrap: "wrap", gap: "6px 14px", fontSize: 12.5, color: C.inkSoft, padding: "10px 4px 0" } },
       React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 5 } }, swatch(FLAME), _T("gelernt")),
       React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 5 } }, swatch(C.mute), _T("nicht gelernt")),
-      I.size > 0 && React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 5 } }, swatch("rgba(28,126,214,0.22)"), _T("Serien-Schutz")),
+      I.size > 0 && React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 5 } }, swatch(ICE), _T("Serien-Schutz")),
       React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 5 } }, swatch("transparent", !0), _T("heute")),
     ),
     React.createElement(
@@ -22240,6 +22264,22 @@ function AnatomiaApp() {
   (useEffect(() => {
     loadProgress().then(r);
   }, []),
+    // a new day while the app is open (checked each minute and when it comes back from the background): the days missed
+    // take their Serien-Schutz, or the streak is lost
+    useEffect(() => {
+      const f = () =>
+          r((p) => {
+            if (!p) return p;
+            const q = settleStreak(p);
+            return q === p ? p : (saveProgress(q), q);
+          }),
+        v = () => document.visibilityState === "visible" && f(),
+        id = setInterval(f, 6e4);
+      document.addEventListener("visibilitychange", v);
+      return () => {
+        (clearInterval(id), document.removeEventListener("visibilitychange", v));
+      };
+    }, []),
     useEffect(() => {
       if (!s) return;
       const u = s.dark ? DARK_TOKENS : THEMES[s.theme] || THEMES.papier;
@@ -22316,26 +22356,14 @@ function AnatomiaApp() {
         return q.taler ? (saveProgress(q.s), q.s) : p;
       }),
     [, a] = useState(0),
-    n = (u) => {
-      const p = todayStr(),
-        o =
-          u.lastDay === p
-            ? { streak: u.streak || 1, lastDay: p }
-            : u.lastDay === yesterdayStr()
-              ? { streak: (u.streak || 0) + 1, lastDay: p }
-              : u.lastDay && (u.freezes || 0) > 0
-                ? {
-                    streak: (u.streak || 0) + 1,
-                    lastDay: p,
-                    freezes: u.freezes - 1,
-                    freezeUsed: !0,
-                    iced: (() => {
-                      const k = [...(u.iced || [])];
-                      for (let d = calShift(u.lastDay, 1), j = 0; d < p && j < 60; d = calShift(d, 1), j++) k.push(d);
-                      return k.slice(-120);
-                    })(),
-                  }
-                : { streak: 1, lastDay: p },
+    n = (u0) => {
+      // the days missed before today: Serien-Schutz or a lost streak (settleStreak); then today counts
+      const u = settleStreak(u0),
+        p = todayStr(),
+        o = {
+          ...(u !== u0 ? { freezes: u.freezes, iced: u.iced } : {}),
+          ...(u.lastDay === p ? { streak: u.streak || 1, lastDay: p } : u.lastDay === yesterdayStr() ? { streak: (u.streak || 0) + 1, lastDay: p } : { streak: 1, lastDay: p }),
+        },
         // packages paid so far in this streak (a new streak starts at nothing); everything up to today's day is paid now
         run = o.streak === 1 || o.streak < (u.streak || 0) ? 0 : u.streakGift || 0,
         g = streakGifts(run, o.streak),
