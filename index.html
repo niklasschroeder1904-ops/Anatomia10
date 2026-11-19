@@ -12371,11 +12371,58 @@ function useSwipeBack(s, v) {
 // a screen as high as the visible screen, inside #root's safe-area padding: no scrolling just to reach the bottom of
 // a short screen (iPhone: status bar and home bar; Safari: its toolbar, with dvh)
 const PAGE_H = `calc(${typeof CSS < "u" && CSS.supports && CSS.supports("min-height", "100dvh") ? "100dvh" : "100vh"} - env(safe-area-inset-top) - env(safe-area-inset-bottom))`;
+// where the bar at the top ends on screen (0 without one): what is scrolled into view goes below it
+const topBarBottom = () => {
+  try {
+    const t = document.querySelector("[data-topbar]");
+    return t ? Math.max(0, t.getBoundingClientRect().bottom) : 0;
+  } catch {
+    return 0;
+  }
+};
+// whether the page is scrolled down (for the line under the bar at the top)
+function useScrolled() {
+  const [up, setUp] = useState(!1);
+  useEffect(() => {
+    const f = () => setUp(window.scrollY > 2);
+    f();
+    window.addEventListener("scroll", f, { passive: !0 });
+    return () => window.removeEventListener("scroll", f);
+  }, []);
+  return up;
+}
+// the bar at the top of a screen stays at the top while the screen scrolls: on the screen's ground, reaching over the
+// screen's side margins (#ana-screen: 14px) and up over the status bar's strip, a fine line under it once scrolled
+// (px: its inner side padding)
+const stickyTop = (up, px = 4) => ({
+  position: "sticky",
+  top: 0,
+  zIndex: 7,
+  margin: "calc(-1 * env(safe-area-inset-top)) -14px 0",
+  paddingTop: "calc(12px + env(safe-area-inset-top))",
+  paddingLeft: 14 + px,
+  paddingRight: 14 + px,
+  background: C.paper,
+  boxShadow: up ? `0 1px 0 ${C.line}, 0 10px 14px -14px rgba(16,24,40,0.45)` : "none",
+  transition: "box-shadow .15s",
+});
 function TopBar({ onBack: s, children: r, right: o, swipe: sw = !0 }) {
   useSwipeBack(sw ? s : null);
+  const up = useScrolled(),
+    ref = useRef(null);
+  // its height, for what sticks right under it (the shop's tabs)
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const set = () => document.documentElement.style.setProperty("--ana-topbar", el.offsetHeight + "px");
+    set();
+    const ro = typeof ResizeObserver < "u" ? new ResizeObserver(set) : null;
+    ro && ro.observe(el);
+    return () => ro && ro.disconnect();
+  }, []);
   return React.createElement(
     "div",
-    { style: { display: "flex", alignItems: "center", gap: 10, padding: "12px 4px" } },
+    { ref, "data-topbar": "1", style: { display: "flex", alignItems: "center", gap: 10, paddingBottom: 12, ...stickyTop(up) } },
     React.createElement(
       "button",
       {
@@ -14932,8 +14979,9 @@ function FigureScreen({ src: s, onExit: r, onQuiz: o, q: e = "" }) {
       h(m === p ? null : p);
       const f = x.current;
       if (f && m !== p) {
-        const k = f.getBoundingClientRect().top;
-        k < 0 && window.scrollTo({ top: window.scrollY + k - 12, behavior: "smooth" });
+        const k = f.getBoundingClientRect().top,
+          bh = topBarBottom();
+        k < bh && window.scrollTo({ top: window.scrollY + k - bh - 12, behavior: "smooth" });
       }
     },
     u = new Set(n.map((p) => p.la)).size;
@@ -17293,7 +17341,7 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
       {
         role: "tablist",
         "data-shoptabs": "1",
-        style: { display: "flex", gap: 5, padding: "8px 0 10px", marginBottom: 6, position: "sticky", top: "env(safe-area-inset-top)", zIndex: 6, background: C.paper },
+        style: { display: "flex", gap: 5, padding: "8px 14px 10px", margin: "0 -14px 6px", position: "sticky", top: "var(--ana-topbar, 0px)", zIndex: 6, background: C.paper },
       },
       Object.keys(TABS).map((x) =>
         React.createElement(
@@ -17425,7 +17473,7 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
                 background: fo ? C.goldBg : C.card,
                 border: `1.5px solid ${k ? C.good : fo ? C.gold : C.line}`,
                 borderRadius: 14,
-                scrollMarginTop: 70,
+                scrollMarginTop: "calc(var(--ana-topbar, 0px) + 72px)",
               },
             },
             b.apply && b.apply.pathSkin
@@ -18688,6 +18736,7 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
     // or a zoomed picture, not up and down (that scrolls)
     [dx, setDx] = useState(0),
     [fly, setFly] = useState(0),
+    scr = useScrolled(),
     sw = useRef(null),
     moved = useRef(!1),
     [swN] = useState(() => {
@@ -18771,7 +18820,7 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
     { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
     React.createElement(
       "div",
-      { style: { display: "flex", alignItems: "center", gap: 10, padding: "12px 0 8px" } },
+      { "data-topbar": "1", style: { display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, ...stickyTop(scr, 0) } },
       React.createElement(
         "button",
         { onClick: t, "aria-label": _T("Zur\xFCck"), style: { background: "none", border: "none", cursor: "pointer", padding: 4 } },
