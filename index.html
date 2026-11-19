@@ -13143,6 +13143,277 @@ function BodyArtBack() {
 function BodyArtBackMuscles() {
   return BM_ART.backM || (BM_ART.backM = bmBack(!0));
 }
+// ---------- the figure for one body system (the map on the menu) ----------
+// the body faint and only the chosen system drawn: bones, muscles, vessels or nerves, from the front or the back. Parts
+// of the organ figures are taken over by their keys (bmPick): the back's skeleton half and muscle half (each also
+// mirrored to the other side), the front's limb muscles, heart and brain. The back of the vessels and nerves is their
+// front drawing mirrored (the figure is symmetric, the heart then on the left as seen from behind); what lies behind
+// is dashed in front and solid from behind, and the other way round
+const bmFlat = (a) => a.flatMap((x) => (Array.isArray(x) ? bmFlat(x) : x ? [x] : [])),
+  bmPick = (el, keys) => bmFlat([el.props.children]).filter((c) => keys.includes(c.key)),
+  BM_MIRROR = "matrix(-1 0 0 1 240 0)";
+function BodyArtSys({ sys: s, back: b }) {
+  const k = "sys-" + s + (b ? "-b" : "-f");
+  return BM_ART[k] || (BM_ART[k] = bmSys(s, b));
+}
+function bmSys(sys, back) {
+  const s = React.createElement,
+    P = bmP,
+    PP = bmPP,
+    PA = bmPA,
+    PPA = bmPPA,
+    E = bmE,
+    EE = bmEE,
+    EA = bmEA,
+    MO = "#A2433A",
+    TD = "#F7E8D6",
+    BO = "#B59D6C",
+    FR = BodyArt(),
+    BK = BodyArtBack(),
+    gh = sys === "knochen" ? { fill: "#EDF1F6", stroke: "#C5CFDB", strokeWidth: 0.9, strokeLinejoin: "round" } : { fill: "#FBF1EA", stroke: "#D9BCA8", strokeWidth: 0.9, strokeLinejoin: "round" },
+    bone = { fill: "url(#bmBoneG)", stroke: BO, strokeWidth: 0.6, strokeLinejoin: "round" },
+    mus = { fill: "url(#bmMuscleG)", stroke: MO, strokeWidth: 0.5, strokeLinejoin: "round" },
+    musL = { fill: "url(#bmMuscleL)", stroke: MO, strokeWidth: 0.5, strokeLinejoin: "round" },
+    musD = { fill: "url(#bmMuscleD)", stroke: MO, strokeWidth: 0.5, strokeLinejoin: "round" },
+    fib = (o) => ({ fill: "none", stroke: "#FFC4B8", strokeWidth: 0.45, strokeLinecap: "round", opacity: o || 0.65 }),
+    ten = (w, o) => ({ fill: "none", stroke: TD, strokeWidth: w || 1, strokeLinecap: "round", opacity: o || 1 }),
+    dark = { fill: "#6B5642", opacity: 0.62 },
+    rod = (w) => [
+      { fill: "none", stroke: BO, strokeWidth: w + 0.9, strokeLinecap: "round" },
+      { fill: "none", stroke: "#FBF1DD", strokeWidth: w, strokeLinecap: "round" },
+    ],
+    // a bone as a rod on both sides (RA: through the arm map)
+    R = (d, w, k) => s("g", { key: k }, P(d, rod(w)[0], "o"), P(d, rod(w)[1], "i"), P(bmMirror(d), rod(w)[0], "mo"), P(bmMirror(d), rod(w)[1], "mi")),
+    RA = (d, w, k) => s("g", { key: k }, PA(d, rod(w)[0], "o"), PA(d, rod(w)[1], "i"), PA(bmMirror(d), rod(w)[0], "mo"), PA(bmMirror(d), rod(w)[1], "mi")),
+    // a vessel or nerve with its darker edge (dash: lies behind), on one side (L) or on both (B; BA through the arm map)
+    ln = (F, d, w, c, k, dash) => {
+      const o = { fill: "none", strokeLinecap: "round", strokeLinejoin: "round", strokeDasharray: dash ? "2.6 1.9" : void 0 };
+      return [F(d, { ...o, stroke: c[0], strokeWidth: w + 0.7 }, k + "o"), F(d, { ...o, stroke: c[1], strokeWidth: w }, k)];
+    },
+    L = (d, w, c, k, dash) => s("g", { key: k }, ln(P, d, w, c, "", dash)),
+    B = (d, w, c, k, dash) => s("g", { key: k }, ln(P, d, w, c, "l", dash), ln(P, bmMirror(d), w, c, "r", dash)),
+    BA = (d, w, c, k, dash) => s("g", { key: k }, ln(PA, d, w, c, "l", dash), ln(PA, bmMirror(d), w, c, "r", dash)),
+    ART = ["#8E1B1F", "#E8483F"],
+    VEN = ["#2F4F9A", "#5B86D6"],
+    NER = ["#A8790F", "#FFD43B"],
+    FOOT = "M 97.5,384 C 98,390 95,394 94,399 C 92.5,404 95,409.5 100,410 C 105,410.5 111,410.5 113,408 C 115,402 113,396 112,390 L 112,384 Z",
+    // the body faint
+    ghost = s(
+      "g",
+      { key: "ghost" },
+      E(120, 411, 40, 4.6, { fill: "url(#bmShadowG)" }, "shadow"),
+      P(BM_BODY, gh, "body"),
+      s("g", { key: "arms" }, PPA(BMF.ARM, gh)),
+      s("g", { key: "thumbs" }, PPA(BMF.THUMB, gh)),
+      s("g", { key: "hands" }, PPA(BMF.HAND, gh)),
+      s("g", { key: "feet" }, PP(FOOT, gh)),
+      !back && s("g", { key: "ears" }, PP("M 101.8,37.2 C 97.6,36.2 95.4,40.4 95.8,45.2 C 96.2,49.8 98.6,52.6 101.9,51.8", gh)),
+    ),
+    // the face of the figure (front)
+    face = s(
+      "g",
+      { key: "face" },
+      s("g", { key: "brow" }, PP("M 107.6,42.6 C 109.8,41 113.6,40.8 116.2,42.2", { fill: "none", stroke: "#7A5240", strokeWidth: 1.1, strokeLinecap: "round" })),
+      s("g", { key: "e1" }, EE(112, 46.8, 3.7, 3.1, { fill: "#FFFFFF", stroke: "#8A6A55", strokeWidth: 0.5 })),
+      s("g", { key: "e2" }, EE(112.2, 47.1, 2.3, 2.4, { fill: "url(#bmIrisG)" })),
+      s("g", { key: "e3" }, EE(112.2, 47.2, 1.1, 1.15, { fill: "#1E2836" })),
+      s("g", { key: "e4" }, EE(113.1, 46.1, 0.65, 0.65, { fill: "#FFFFFF" })),
+      s("g", { key: "lid" }, PP("M 108.3,46.2 C 109.7,43.7 114.3,43.7 115.7,46.2", { fill: "none", stroke: "#6E4C3C", strokeWidth: 0.75, strokeLinecap: "round" })),
+      P("M 120.8,46.8 C 120.6,49.4 119.2,51.6 117.8,52.6 C 118.8,53.8 121.4,53.8 122.4,52.8", { fill: "none", stroke: "#B9806A", strokeWidth: 0.85, strokeLinecap: "round", strokeLinejoin: "round" }, "nose"),
+      P("M 114.6,56.4 C 117,57.4 123,57.4 125.4,56.4 C 124,59.8 116,59.8 114.6,56.4 Z", { fill: "#B9443F", stroke: "#8E2F2B", strokeWidth: 0.55 }, "mouth"),
+      P("M 115.8,56.9 C 118,57.6 122,57.6 124.2,56.9 L 123.8,57.9 C 121.6,58.5 118.4,58.5 116.2,57.9 Z", { fill: "#FFFFFF" }, "teeth"),
+    ),
+    // ---- bones of the limbs, hands and feet (front and back alike) ----
+    limbs = [
+      RA("M 78.4,93 C 75.4,112 72,132 68.8,151.6", 3.4, "hum"),
+      s("g", { key: "hh" }, EA(80.4, 89.6, 3.9, 3.6, bone, "l"), EA(159.6, 89.6, 3.9, 3.6, bone, "r")),
+      s("g", { key: "elb" }, EA(68, 155.4, 3.4, 3, bone, "l"), EA(172, 155.4, 3.4, 3, bone, "r")),
+      RA("M 67.6,161 C 64.8,176 61.8,192 59,208 M 63.4,161.4 C 60.4,176.4 57.2,192 54.4,207", 1.9, "fore"),
+      s("g", { key: "carp" }, EA(56.2, 216.8, 4.6, 2.8, bone, "l"), EA(183.8, 216.8, 4.6, 2.8, bone, "r")),
+      RA(
+        "M 50.7,221 L 50.6,232.6 M 50.6,234.2 L 50.6,239.4 M 50.6,240.8 L 50.6,243.8 M 53.7,221.4 L 53.7,234.6 M 53.7,236.2 L 53.7,242 M 53.7,243.4 L 53.7,246.4 M 56.8,221.4 L 56.9,234.4 M 56.9,236 L 56.9,241.6 M 56.9,243 L 56.9,246 M 59.8,221 L 59.9,232.8 M 59.9,234.4 L 59.9,239.4 M 59.9,240.8 L 59.9,243.2",
+        0.95,
+        "fing",
+      ),
+      RA("M 51.4,222 L 48.3,228.4 M 47.7,229.8 L 45.4,235", 1.05, "thumb"),
+      s("g", { key: "fh" }, EE(99, 211.4, 4.4, 4.4, bone)),
+      R("M 99.4,214 C 100.6,240 102.4,268 104,293", 4.4, "fem"),
+      s("g", { key: "kn" }, PP("M 110.5,296 C 107,293 100.5,293 98,297 C 99,301.6 109,301.6 110.5,296 Z", bone)),
+      R("M 105.4,302 C 105.8,326 105.8,354 105,380.6", 3.4, "tib"),
+      R("M 98,303.6 C 97.2,330 97.2,358 97.6,381.4", 1.7, "fibu"),
+    ],
+    halfB = ["ribs", "scap", "spinao", "spina", "acro", "clavo", "clav", "pelv"],
+    // ---- the skeleton ----
+    skel = back
+      ? [
+          ...bmPick(BK, ["spine", "sacrum", "foram"]),
+          s("g", { key: "half" }, bmPick(BK, halfB)),
+          s("g", { key: "halfM", transform: BM_MIRROR }, bmPick(BK, halfB)),
+          ...limbs,
+          s("g", { key: "tal" }, EE(105, 389.8, 3.6, 2.4, bone)),
+          s("g", { key: "calc" }, PP("M 100.2,394 C 102.6,392.6 107.4,392.6 109.8,394 C 111,398 110.8,403 109.4,406.6 C 107,408.8 103,408.8 100.6,406.6 C 99.2,403 99,398 100.2,394 Z", bone)),
+          P(
+            "M 120,14.4 C 110.8,14.4 104.2,20.2 103.4,28 C 102.8,34.4 103.6,41 105.6,46.4 C 107.6,51 111.4,54 116,55 L 124,55 C 128.6,54 132.4,51 134.4,46.4 C 136.4,41 137.2,34.4 136.6,28 C 135.8,20.2 129.2,14.4 120,14.4 Z",
+            bone,
+            "cran",
+          ),
+          P("M 120,15.4 L 120,33.6 M 120,33.6 C 114,35.6 108.6,38.4 105,42.4 M 120,33.6 C 126,35.6 131.4,38.4 135,42.4", { fill: "none", stroke: BO, strokeWidth: 0.55 }, "sut"),
+          R("M 106.6,48.6 C 107.4,52.8 109,56.2 111.6,58.4", 1.6, "mand"),
+        ]
+      : [
+          ...bmPick(BK, ["spine", "sacrum"]),
+          s("g", { key: "pel" }, PP("M 84,190 C 86,184 92,182 97,185 C 99,191 101,200 106,208 C 104,213 99,214 94,212 C 89,208 85,201 84,195 Z", bone)),
+          R("M 106,208 C 110,210 114,211 118,212", 3, "pub"),
+          s("g", { key: "obt" }, EE(108.6, 213.6, 1.7, 1.4, dark)),
+          ...[88, 95, 102, 109, 116, 123, 130].map((y, t) => R(`M 117,${y} C 109,${y - 3} 98,${y - 1} 91.5,${y + 7 + t * 0.6}`, 1.9, "rib" + t)),
+          R("M 92.2,147.4 C 98.4,144.4 105.6,140.4 111.6,137 C 114.8,135.2 117.4,134.6 119,134.4", 1.4, "arch"),
+          R("M 90.6,150.4 C 89.8,154.4 89.8,158.4 90.6,161.6", 1.3, "fl"),
+          P("M 116.4,84.4 L 123.6,84.4 L 123.2,101 L 122.6,126 L 120,134 L 117.4,126 L 116.8,101 Z", bone, "stern"),
+          R("M 116.6,82 C 108,80.4 97,82 87,82.6", 2.6, "clav"),
+          s("g", { key: "acr" }, PP("M 86,88 C 82,86 79,88 79.5,92 C 82,95 85,94 86.5,91.5 Z", bone)),
+          ...limbs,
+          s("g", { key: "pat" }, EE(104, 301.2, 5.6, 6.2, bone), EE(102.4, 299, 2, 2.4, { fill: "#FFFFFF", opacity: 0.5 })),
+          s("g", { key: "tar" }, EE(104.6, 389.8, 5.6, 3.6, bone)),
+          R("M 99,394.4 L 98.2,407.2 M 102.2,394.8 L 101.8,408.6 M 105.4,394.8 L 105.4,408.8 M 108.4,394.6 L 108.8,408.4 M 111,394 L 111.6,406.4", 1.05, "toe"),
+          P(
+            "M 120,14.4 C 110.8,14.4 104.2,20.2 103.4,28 C 102.8,34.4 103.4,40.6 105,45.4 C 106,48.4 107.2,51.2 109,53.4 C 111,55.6 113.6,56.8 116.4,57.2 L 123.6,57.2 C 126.4,56.8 129,55.6 131,53.4 C 132.8,51.2 134,48.4 135,45.4 C 136.6,40.6 137.2,34.4 136.6,28 C 135.8,20.2 129.2,14.4 120,14.4 Z",
+            bone,
+            "cran",
+          ),
+          s("g", { key: "orb" }, EE(112.4, 45.8, 4.4, 3.9, dark)),
+          P("M 120,48.6 C 118.2,50.4 117.6,52.4 118.6,53.6 L 121.4,53.6 C 122.4,52.4 121.8,50.4 120,48.6 Z", dark, "nas"),
+          R("M 107.6,49 C 106,49.4 104.6,49.2 103.6,48.4", 1.1, "zyg"),
+          P(
+            "M 105.8,48.6 C 106.2,54 108.6,58.2 112.4,60.6 C 114.8,62 117.4,62.6 120,62.6 C 122.6,62.6 125.2,62 127.6,60.6 C 131.4,58.2 133.8,54 134.2,48.6 L 131.8,49.6 C 131.2,53.6 129.2,56.8 126.2,58.4 C 124.2,59.4 122.2,59.8 120,59.8 C 117.8,59.8 115.8,59.4 113.8,58.4 C 110.8,56.8 108.8,53.6 108.2,49.6 Z",
+            bone,
+            "mand",
+          ),
+          P("M 114.4,54.6 L 125.6,54.6 L 125.2,56.6 L 114.8,56.6 Z M 115.2,57.2 L 124.8,57.2 L 124.4,58.8 L 115.6,58.8 Z", { fill: "#FFFDF6", stroke: BO, strokeWidth: 0.4 }, "teeth"),
+          P("M 116.6,54.6 L 116.6,56.6 M 118.8,54.6 L 118.8,56.6 M 121.2,54.6 L 121.2,56.6 M 123.4,54.6 L 123.4,56.6 M 117.6,57.2 L 117.6,58.8 M 120,57.2 L 120,58.8 M 122.4,57.2 L 122.4,58.8", { stroke: BO, strokeWidth: 0.3 }, "teethl"),
+        ],
+    // ---- the muscles: the back's half on both sides; in front the limbs' muscles, with the trunk, neck and jaw ----
+    musc = back
+      ? [s("g", { key: "half" }, bmPick(BK, ["mL"])), s("g", { key: "halfM", transform: BM_MIRROR }, bmPick(BK, ["mL"]))]
+      : [
+          s(
+            "g",
+            { key: "trunk", clipPath: "url(#bmClipBody)" },
+            P("M 78,60 L 162,60 L 162,214 L 78,214 Z", { fill: "url(#bmMuscleG)" }, "tb"),
+            s("g", { key: "trap" }, PP("M 110.6,62.4 C 104.4,70 96,75.6 87.4,79 C 93,79.6 101,78.2 108.8,76.8 C 110,72 110.6,67 110.6,62.4 Z", musD)),
+            s("g", { key: "scm" }, PP("M 104.2,53 C 107,61 111.2,70.6 116.8,81.4 L 119.2,80.4 C 114,70.4 110,60.6 107.8,51.8 Z", musL)),
+            s("g", { key: "hyo" }, PP("M 117,68 L 119.4,68 L 119.4,83 L 117,83 Z", musD)),
+            s("g", { key: "obl" }, PP("M 88.6,120 C 93,126 99,131 107,134.6 L 108.6,135.2 L 108.6,198 C 102.4,201.2 96.4,203.6 90.2,205.6 C 87.6,192 87.4,176 88.8,162 C 89,150 88.2,134 88.6,120 Z", musD)),
+            s("g", { key: "oblf" }, PP("M 90,140 C 96,146 102,152 108,156 M 89.6,156 C 95.6,162 101.6,168 108,172 M 89.4,172 C 95.4,178 101.4,184 108,188", fib(0.5))),
+            s(
+              "g",
+              { key: "serr" },
+              PP("M 85.6,104 C 88,106.4 90.6,108.6 93.6,110 L 91.4,113.6 C 88.8,111.4 86.8,108.6 85.6,104 Z M 86.4,113 C 88.6,115.2 91.2,117.2 94.2,118.4 L 92,122 C 89.6,120 87.6,117.4 86.4,113 Z M 87,122 C 89.2,124 91.8,125.8 94.6,127 L 92.6,130.4 C 90.2,128.6 88.2,126 87,122 Z", musD),
+            ),
+            s(
+              "g",
+              { key: "rect" },
+              ...[
+                [116.6, 132.4, 109.6],
+                [134, 150, 109.6],
+                [151.6, 168, 109.8],
+                [169.6, 187, 110.4],
+                [188.6, 206, 111.2],
+              ].map(([a, b, x], k) =>
+                s("g", { key: k }, PP(`M ${x + 1.2},${a} L 118.6,${a} L 118.6,${b} L ${x + 1.2},${b} C ${x},${b} ${x},${b} ${x},${b - 1.2} L ${x},${a + 1.2} C ${x},${a} ${x},${a} ${x + 1.2},${a} Z`, musL)),
+              ),
+            ),
+            P("M 120,114 L 120,210", { stroke: TD, strokeWidth: 1.1 }, "alba"),
+            s("g", { key: "pec" }, PP("M 117.2,84.4 C 108.6,82.2 98,82.6 89.6,85 C 85.2,87.4 83.6,92.4 84.6,98.2 C 91,100.4 97.4,105.4 103,111.6 C 107.6,114.4 112.8,115 117.6,113.8 C 117.8,104 117.8,94 117.2,84.4 Z", musL)),
+            s("g", { key: "pecf" }, PP("M 115.6,89 C 106,90.4 96,92.4 87.4,93.6 M 115.8,96 C 106.4,97.6 97,98.4 88.2,97.2 M 115.6,104 C 108,104.6 100,103 91.8,99.6 M 115,110.6 C 109.6,110.4 104,108 98.8,104", fib())),
+            s("g", { key: "ing" }, PP("M 90.4,205.6 C 97,208.6 104.6,212 112.6,215.4", ten(0.9, 0.8))),
+          ),
+          ...bmPick(FR, ["arm", "leg"]),
+          s("g", { key: "pat" }, EE(104, 301.2, 5.6, 6.2, bone)),
+          face,
+        ],
+    // ---- vessels: arteries red, veins blue (front; the back mirrored) ----
+    vess = [
+      // veins
+      L("M 117.4,146 C 117.2,162 117.4,180 118.2,197", 2.3, VEN, "ivc"),
+      L("M 116,93.6 C 114,90 111.6,88 108.6,86.8", 1.6, VEN, "bcvL"),
+      L("M 116,93.6 C 120,91.4 126,89.2 131.4,86.8", 1.6, VEN, "bcvR"),
+      B("M 108.6,86.8 C 102.6,85.8 96,86.8 89.4,91", 1.3, VEN, "scv"),
+      B("M 108.6,86.8 C 109.6,80 110.2,72 110.2,64 C 110.2,59 109.6,55 108.4,51", 1.25, VEN, "ij"),
+      B("M 106.4,51.6 C 106.6,60 107.4,70 109,80", 0.6, VEN, "ej"),
+      BA("M 87.4,88.8 C 81,91.6 75.8,98.6 73.2,108 C 70.8,121 68.8,136 66.6,150 C 64,168 60.4,186 56.2,204 C 55.2,208 54.6,211 54.2,214", 0.75, VEN, "ceph"),
+      BA("M 86.6,96 C 83.4,108 80.6,122 78.4,136 C 76.6,148 74.6,160 72.4,172 C 70,186 66.6,200 62.4,214", 0.75, VEN, "bas"),
+      BA("M 66.4,156.4 C 68.8,155.4 71,154.4 73.4,152.8", 0.6, VEN, "medc"),
+      BA("M 54.2,214 C 55,218 57,220 59.4,219.6 C 61.4,219 62.2,216.4 62.4,214", 0.5, VEN, "dvn"),
+      B("M 118.2,197 C 114.4,202.6 111,207.6 107.6,212", 1.6, VEN, "civ"),
+      B("M 107.6,212 C 107,222 106.8,236 107,250 C 107.2,266 107.2,278 107.4,290", 1.2, VEN, "fv"),
+      B("M 107.8,220 C 111,234 113.6,254 114.4,274 C 114.8,290 114.6,304 113.8,318 C 113.2,334 112.6,352 112.2,366 C 112,374 111.6,380 110.8,388", 0.75, VEN, "gsv", back),
+      // arteries
+      L("M 122.2,91.2 C 120.6,88.6 118,86.6 115,85.6", 1.8, ART, "bct"),
+      L("M 115,85.6 C 114.6,84.4 114.6,83.2 114.6,82", 1.4, ART, "rcc0"),
+      L("M 127,90.6 C 126.6,87.6 126,84.6 125.4,82", 1.4, ART, "lcc0"),
+      L("M 132,91.6 C 132,89 131.2,87.4 130,86.4", 1.4, ART, "lsc0"),
+      B("M 114.6,82 C 113.8,74 113.2,66 112.6,58", 1.4, ART, "cca"),
+      B("M 112.6,58 C 110.8,54.6 108.8,51.6 106.8,49.6 C 105,44 104.6,37 105.6,30", 0.8, ART, "eca"),
+      B("M 112.6,58 C 113.4,52 113.8,46 113.2,40", 0.8, ART, "ica"),
+      B("M 109.6,53.4 C 111.6,55.8 113.6,57.4 116,58.4", 0.6, ART, "fac"),
+      L("M 115,85.6 C 112.6,85.4 111,85.8 110,86.2", 1.4, ART, "rsc0"),
+      B("M 110,86.2 C 104,84.8 97,85.6 88.2,90.8", 1.4, ART, "sca"),
+      BA("M 85.4,93 C 82.6,102 80,112 78.4,120 C 76.6,130 73.8,142 71,152 C 69.6,156 68.4,158 67.6,160", 1.1, ART, "brach"),
+      BA("M 67.6,160 C 63.6,172 59.4,188 56,202 C 55,206 54,210 53.4,213", 0.8, ART, "rad"),
+      BA("M 67.6,160 C 67,174 64.4,192 60.6,213", 0.8, ART, "uln"),
+      BA("M 53.4,213 C 53,218.6 54.4,222.6 57,223.6 C 59.2,222.4 60.4,218.6 60.6,213", 0.6, ART, "arch"),
+      BA("M 51.2,224 L 50.8,238 M 54,225 L 53.8,241 M 56.8,225 L 56.9,241 M 59.6,224 L 59.8,238", 0.4, ART, "dig"),
+      L("M 122.8,146 C 122.4,160 121.4,180 120,196", 2.6, ART, "aoA"),
+      L("M 122.6,151.6 L 127.4,150.6", 0.9, ART, "cel"),
+      L("M 122.2,158 C 124.4,164 125.2,172 124.6,182", 0.9, ART, "sma"),
+      L("M 122,167.6 C 116,169 109,171.6 102.6,174.6", 1, ART, "renL"),
+      L("M 122.2,166.6 C 128,167.6 134,169.6 139.6,172", 1, ART, "renR"),
+      L("M 121.4,184 C 123.8,188 125.6,192 126.4,196", 0.7, ART, "ima"),
+      B("M 120,196 C 116.6,201 113,206 109.6,210.6", 1.8, ART, "cia"),
+      B("M 109.6,210.6 C 111.6,213.6 113.6,215.4 116,216.2", 0.8, ART, "iia"),
+      B("M 109.6,210.6 C 107,215 105.4,221 104.8,228 C 104,246 104.2,266 105.4,288", 1.35, ART, "fa"),
+      B("M 104.8,232 C 101.6,240 99.6,250 99,262", 0.8, ART, "dfa"),
+      B("M 105.4,288 C 105.8,295 105.8,302 105.4,310", 1.15, ART, "pop", !back),
+      B("M 104.6,312 C 102.6,328 101.6,352 102.2,376 C 102.6,388 103.2,396 104,404", 0.85, ART, "ata", back),
+      B("M 106.2,312 C 107.6,330 108.6,354 109.4,380 C 109.8,386 110.2,390 110.6,394", 0.85, ART, "pta", !back),
+      // the heart and the great vessels of the organ figure
+      s("g", { key: "heart", opacity: back ? 0.75 : 1 }, bmPick(FR, ["vcs", "aoO", "ao", "aob", "heart", "pulm", "cor", "hs"])),
+    ],
+    // ---- nerves: brain, spinal cord, the nerves of the trunk and the limbs ----
+    nerv = [
+      L("M 120,39.6 C 120,60 120,120 120,182", 1.9, NER, "cord"),
+      L("M 120,182 L 118.4,207 M 120,182 L 120,209 M 120,182 L 121.6,207", 0.5, NER, "cauda"),
+      B("M 113.4,44.6 C 115,42 117,40.6 119.2,40.2", 0.6, NER, "opt"),
+      B("M 116.8,41.6 C 116.2,52 114.8,62 114.2,72 C 113.6,84 113.8,100 114.8,116 C 115.6,130 116.6,142 117.2,154", 0.6, NER, "vag"),
+      ...[96, 103, 110, 117, 124, 131, 138].map((y, t) => B(`M 119,${y} C 111,${y - 3} 99,${y - 1} 91.5,${y + 7 + t * 0.6}`, 0.45, NER, "ic" + t)),
+      B("M 120,62 C 112,68 100,78 89.4,89.4 M 120,68.4 C 112,73.4 101,80.6 89.8,90.2 M 120,75 C 113,79 103,84.6 90.4,90.8", 0.55, NER, "plex"),
+      BA("M 86.2,93.4 C 83,103 80.4,113 78.8,121 C 77,131 74.2,143 71.4,153 C 69.8,159 68.6,163 67.6,168 C 65.4,180 62.4,194 59.2,206 C 58,212 57.2,218 56.6,224 C 56.2,230 56,234 55.8,238", 0.75, NER, "med"),
+      BA("M 87.2,95.2 C 84.6,106 82.2,118 80.2,128 C 78.6,138 76.4,148 74.2,156 C 72.4,162 70.6,166 69.6,170 C 67.6,182 64.6,196 61.6,210 C 61,214 60.6,218 60.4,224", 0.65, NER, "uln"),
+      BA("M 85.6,92.6 C 80,99 75,108 71.6,120 C 69.4,130 67.4,140 65.4,150 C 64,156 62.6,160 61.6,164 C 60.2,176 58.2,188 55.8,200 C 54.6,206 53.4,212 52.4,218", 0.65, NER, "rad"),
+      B("M 119,186 C 115.4,193 111.6,200 108.6,207 C 107,212 106,218 105.8,226", 0.85, NER, "fem", back),
+      B("M 105.8,226 C 102.6,238 99.8,250 98.4,262 M 105.8,226 C 105,240 105.2,254 106,268", 0.45, NER, "femb", back),
+      B("M 105.8,226 C 109,244 112,264 113.2,284 C 114,302 113.6,322 113,340 C 112.4,356 111.6,372 110.6,388", 0.4, NER, "saph", back),
+      B("M 116.4,200 C 110.6,205 104.8,212 101.2,221 C 99.8,236 100,256 100.8,276 C 101.2,286 101.8,294 102.6,300", 1.2, NER, "isch", !back),
+      B("M 102.6,300 C 104.2,316 105.2,340 105.8,360 C 106.2,370 106.6,378 107.2,388", 0.75, NER, "tibn", !back),
+      B("M 102.6,300 C 100,304 97.8,308.4 97,314.4 C 96.8,320 97.6,326 98.8,332", 0.65, NER, "fibn"),
+      B("M 98.8,332 C 99.6,348 100.4,364 101.6,380 C 102.2,388 102.8,396 103.6,404", 0.5, NER, "fibb", back),
+    ],
+    head = back
+      ? bmPick(BK, ["skull", "cbl", "brL", "brR", "gyri", "glass"])
+      : [face, ...bmPick(FR, ["skull", "brL", "brR", "gyri", "glass"])];
+  return s(
+    "g",
+    { pointerEvents: "none", "data-sysart": sys },
+    ghost,
+    ...(sys === "knochen"
+      ? skel
+      : sys === "muskeln"
+        ? musc
+        : sys === "gefaesse"
+          ? [!back && face, s("g", { key: "vess", transform: back ? BM_MIRROR : void 0 }, vess)]
+          : [...head, s("g", { key: "nerv", transform: back ? BM_MIRROR : void 0 }, nerv)]),
+  );
+}
 // back view: muscles on the viewer's left half, skeleton under the skin on the right half (m: without the spine)
 function bmBack(m) {
   const s = React.createElement,
@@ -14326,7 +14597,25 @@ function BasicsMoveFig({ hl: h = [], accent: a = "#1C7ED6", pulse: p = !0 }) {
     s("g", { className: cls }, bfCurve([62, 96], [72, 60], [112, 50], [140, 70], dk, { w: 2.4 }), s("circle", { cx: 148, cy: 77, r: 5, fill: a, opacity: 0.45 })),
   );
 }
-function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOpen: io, lessons: ls, onBadge: ob, onLocked: ul }) {
+// the body systems of the map: which lessons belong to them (by their topic) and which have a figure of their own
+const BM_SYS = [
+    { id: "alle", label: _TC("sys", "Alle"), icon: "\u{1F9CD}" },
+    { id: "knochen", label: _TC("sys", "Knochen"), icon: "\u{1F9B4}", topics: ["knochen"] },
+    { id: "muskeln", label: _T("Muskeln"), icon: "\u{1F4AA}", topics: ["muskeln"] },
+    { id: "gefaesse", label: _T("Gef\xE4\xDFe"), icon: "\u{1FA78}", topics: ["gefaesse"] },
+    { id: "nerven", label: _TC("sys", "Nerven"), icon: "\u26A1", topics: ["nerven"] },
+    { id: "organe", label: _T("Organe"), icon: "\u{1FAC1}", topics: ["organe", "sinne"] },
+  ],
+  BM_SYS_ART = ["knochen", "muskeln", "gefaesse", "nerven"],
+  // the spots on a system's figure: the body parts, and the heart for the vessels, the brain for the nerves
+  BM_PART_SPOTS = ["schaedel", "mund", "nase", "ohr", "hals", "brustkorb", "becken", "schulter", "oberarm", "unterarm", "hand", "oberschenkel", "knie", "unterschenkel", "fuss", "nacken", "wirbelsaeule", "rueckenmuskeln", "gesaess"],
+  BM_SYS_SPOTS = { gefaesse: ["herz"], nerven: ["gehirn"] },
+  sysHas = (sy, l) => {
+    const S = BM_SYS.find((x) => x.id === sy);
+    return !S || !S.topics || S.topics.some((t) => topicsOf(l).has(t));
+  },
+  sysOf = (sy) => BM_SYS.find((x) => x.id === sy) || BM_SYS[0];
+function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOpen: io, lessons: ls, onBadge: ob, onLocked: ul, sys: sy = "alle", onSys: osy }) {
   const e = React.createElement,
     [t, a] = useState(BM_FULL),
     [n, i] = useState(null),
@@ -14341,7 +14630,9 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
     S = useRef(null);
   m.current = t;
   const BK = sd === "back",
-    OL = BK
+    // a body system with a figure of its own: of the spots only those of its body parts that have lessons of it
+    SYSV = BM_SYS_ART.includes(sy),
+    OL0 = BK
       ? ["gehirn", "ohr", "nacken", "brustkorb", "rueckenmuskeln", "niere", "becken", "schulter", "oberarm", "unterarm", "hand", "oberschenkel", "gesaess", "knie", "unterschenkel", "fuss", "wirbelsaeule"].map((v) => {
           const W = BM_BACK_EXTRA.find((E) => E.id === v);
           if (W) return { ...W, hit: W.back };
@@ -14349,6 +14640,14 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
           return { ...E, hit: BM_BACK_HITS[v] || E.hit };
         })
       : BM_ORGANS,
+    OK = useMemo(
+      () =>
+        SYSV
+          ? new Set(OL0.filter((v) => (BM_PART_SPOTS.includes(v.id) || (BM_SYS_SPOTS[sy] || []).includes(v.id)) && bmLessonsFor(v, ls || ALL_LESSONS).length > 0).map((v) => v.id))
+          : null,
+      [sy, BK, ls ? ls.length : -1],
+    ),
+    OL = OK ? OL0.filter((v) => OK.has(v.id)) : OL0,
     RG = BK ? { neuro: BM_REGIONS.neuro, kopf: BM_REGIONS.kopf, ruecken: BM_BACK_TORSO_W, arm: BM_REGIONS.arm, bein: BM_REGIONS.bein } : BM_REGIONS,
     BG = BK ? BM_BADGES_BACK : BM_BADGES,
     B = BM_FULL.w / t.w,
@@ -14499,6 +14798,41 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
   return e(
     "div",
     null,
+    // the body system: everything, or only bones, muscles, vessels, nerves or organs
+    osy &&
+      e(
+        "div",
+        { role: "tablist", "aria-label": _T("K\xF6rpersystem"), "data-sysbar": sy, style: { display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 4, margin: "2px 0 8px" } },
+        BM_SYS.map((x) => {
+          const on = sy === x.id;
+          return e(
+            "button",
+            {
+              key: x.id,
+              role: "tab",
+              "aria-selected": on ? "true" : "false",
+              "data-sysbtn": x.id,
+              onClick: () => (i(null), d(!1), osy(x.id)),
+              className: "ana-display",
+              style: {
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 1,
+                padding: "5px 1px 4px",
+                minWidth: 0,
+                borderRadius: 10,
+                border: `1.5px solid ${on ? C.ink : C.line}`,
+                background: on ? C.ink : C.card,
+                color: on ? C.paper : C.inkSoft,
+                cursor: "pointer",
+              },
+            },
+            e("span", { "aria-hidden": "true", style: { fontSize: 17, lineHeight: 1.15 } }, x.icon),
+            e("span", { style: { fontSize: 10.5, fontWeight: 700, lineHeight: 1.2, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, x.label),
+          );
+        }),
+      ),
     e(
       "div",
       {
@@ -14528,7 +14862,7 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
           },
         },
         e(BodyDefs, null),
-        e(BK ? BodyArtBack : BodyArt, null),
+        SYSV ? e(BodyArtSys, { sys: sy, back: BK }) : e(BK ? BodyArtBack : BodyArt, null),
         r &&
           RG[r] &&
           e("path", {
@@ -14574,8 +14908,9 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
           "g",
           { pointerEvents: "none", opacity: B > 1.6 ? 0 : 1 },
           BG.map(([v, W, E, N, Z]) => {
-            const T = A[v] || { total: 0, done: 0 },
-              K = r === v,
+            const T = A[v] || { total: 0, done: 0 };
+            if (sy !== "alle" && !T.total) return null;
+            const K = r === v,
               // a tap on the count shows the lessons it counts
               Q = () => (i(null), d(!1), ob ? ob(v) : o(v)),
               L = (REGIONS.find((R) => R.id === v) || {}).label || v;
@@ -14641,7 +14976,11 @@ function BodyMap({ progress: s, selected: r, onSelect: o, onOpenLesson: lo, isOp
           className: "ana-body",
           style: { textAlign: "center", fontSize: 11.5, color: C.inkSoft, padding: "2px 0 0" },
         },
-        B > 1.02 ? _T("{0}× · mit einem Finger verschieben", B.toFixed(1).replace(".", ",")) : _T("Zwei Finger, Doppeltippen oder + zum Zoomen \xB7 Organ oder Zahl antippen"),
+        B > 1.02
+          ? _T("{0}× · mit einem Finger verschieben", B.toFixed(1).replace(".", ","))
+          : SYSV
+            ? _T("Zwei Finger, Doppeltippen oder + zum Zoomen \xB7 K\xF6rperteil oder Zahl antippen")
+            : _T("Zwei Finger, Doppeltippen oder + zum Zoomen \xB7 Organ oder Zahl antippen"),
       ),
     ),
     I &&
@@ -16241,6 +16580,10 @@ function HomeScreen({
     [b, x] = useState(""),
     [S, B] = useState(null),
     os = s.secOpen || {},
+    // the body system chosen on the map (kept with the map's other settings) and its lessons
+    sy = BM_SYS.some((v) => v.id === os.sys) ? os.sys : "alle",
+    setSy = (v) => setSO && setSO({ ...os, sys: v }),
+    VLs = sy === "alle" ? VL : VL.filter((v) => sysHas(sy, v)),
     A = useRef({}),
     [jp, setJp] = useState(0),
     // the locked lesson a token would open (back from the shop with a token: asked again right away)
@@ -16250,12 +16593,16 @@ function HomeScreen({
     // challenges done since last shown: they pop up once; today's challenges are kept for the day
     [dfr] = useState(() => (dailyFresh(s) || { ids: [] }).ids),
     u = REGIONS.find((v) => v.id === S),
-    p = S ? VL.filter((v) => regionOf(v) === S) : [],
+    p = S ? VLs.filter((v) => regionOf(v) === S) : [],
     f = S
-      ? VU.map((v) => ({ ...v, lessons: v.lessons.filter((W) => regionOf({ ...W, unitId: v.id }) === S) })).filter(
+      ? VU.map((v) => ({ ...v, lessons: v.lessons.filter((W) => regionOf({ ...W, unitId: v.id }) === S && sysHas(sy, W)) })).filter(
           (v) => v.lessons.length,
         )
-      : levelUnits(UNITS_BY_REGION, lv),
+      : sy === "alle"
+        ? levelUnits(UNITS_BY_REGION, lv)
+        : levelUnits(UNITS_BY_REGION, lv)
+            .map((v) => ({ ...v, lessons: v.lessons.filter((W) => sysHas(sy, W)) }))
+            .filter((v) => v.lessons.length),
     k = (v) => v.lessons.filter((W) => s.best[W.id] != null).length,
     g = (v) => {
       if ((s.unlocked || {})[v]) return !0;
@@ -16847,13 +17194,13 @@ function HomeScreen({
               React.createElement("span", { className: "ana-body", style: { fontSize: 12, fontWeight: 600, letterSpacing: 0, marginRight: 6 } }, os.mapOff ? _T("K\xF6rperkarte zeigen") : _T("einklappen")),
               React.createElement("span", { style: { fontSize: 15, transform: os.mapOff ? "none" : "rotate(90deg)", transition: "transform .15s" } }, "\u203A"),
             ),
-            !os.mapOff && React.createElement(BodyMap, { progress: s, selected: S, onSelect: B, onOpenLesson: r, isOpen: g, lessons: VL, onBadge: toList, onLocked: setUk }),
+            !os.mapOff && React.createElement(BodyMap, { progress: s, selected: S, onSelect: B, onOpenLesson: r, isOpen: g, lessons: VLs, onBadge: toList, onLocked: setUk, sys: sy, onSys: setSy }),
             !os.mapOff &&
             React.createElement(
               "div",
               { style: { display: "flex", gap: 6, flexWrap: "wrap", paddingTop: 4 } },
-              REGIONS.filter((v) => v.id === "ruecken" && VL.some((Z) => regionOf(Z) === v.id)).map((v) => {
-                const W = VL.filter((Z) => regionOf(Z) === v.id),
+              REGIONS.filter((v) => v.id === "ruecken" && VLs.some((Z) => regionOf(Z) === v.id)).map((v) => {
+                const W = VLs.filter((Z) => regionOf(Z) === v.id),
                   E = W.filter((Z) => s.best[Z.id] != null).length,
                   N = S === v.id;
                 return React.createElement(
@@ -16892,6 +17239,7 @@ function HomeScreen({
                 u.icon,
                 " ",
                 u.label,
+                sy !== "alle" ? " \xB7 " + sysOf(sy).label : "",
                 React.createElement(
                   "span",
                   { className: "ana-body", style: { fontSize: 12.5, fontWeight: 400, color: C.inkSoft } },
@@ -16917,6 +17265,29 @@ function HomeScreen({
                   },
                 },
                 _T("ganzer K\xF6rper"),
+              ),
+            ),
+          !S &&
+            sy !== "alle" &&
+            React.createElement(
+              "div",
+              { "data-sysfilter": sy, style: { display: "flex", alignItems: "center", gap: 10, padding: "0 2px 10px" } },
+              React.createElement(
+                "div",
+                { className: "ana-display", style: { flex: 1, fontSize: 15.5, fontWeight: 700, color: C.ink } },
+                sysOf(sy).icon,
+                " ",
+                _T("Nur {0}", sysOf(sy).label),
+                React.createElement("span", { className: "ana-body", style: { fontSize: 12.5, fontWeight: 400, color: C.inkSoft } }, " \xB7 ", VLs.length, _T(" Lektionen")),
+              ),
+              React.createElement(
+                "button",
+                {
+                  onClick: () => setSy("alle"),
+                  className: "ana-body",
+                  style: { padding: "6px 12px", borderRadius: 999, border: `1.5px solid ${C.line}`, background: C.card, color: C.inkSoft, fontSize: 12.5, cursor: "pointer" },
+                },
+                _T("alle Systeme"),
               ),
             ),
           f.map((v, W) => {
@@ -17655,7 +18026,7 @@ const MM_WORDS = {
 // ---------- 3D body for the error book ----------
 const EB_ZOFF = new Set(["atem3d.glb", "auge3d.glb", "bauch3d.glb", "gefarm.glb", "gefbein.glb", "gefkopf.glb", "gefrumpf.glb", "gehirn3d.glb", "herz3d.glb", "maennl3d.glb"]),
   EB_LAYERS = [
-    { id: "bones", label: _T("Knochen"), icon: "\u{1F9B4}", files: ["skull.glb", "spine.glb", "thoraxb.glb", "vertebra.glb", "armb.glb", "handb.glb", "legb.glb", "footb.glb"], on: !0 },
+    { id: "bones", label: _TC("sys", "Knochen"), icon: "\u{1F9B4}", files: ["skull.glb", "spine.glb", "thoraxb.glb", "vertebra.glb", "armb.glb", "handb.glb", "legb.glb", "footb.glb"], on: !0 },
     { id: "organs", label: _T("Organe"), icon: "\u{1FAC0}", files: ["gehirn3d.glb", "auge3d.glb", "herz3d.glb", "atem3d.glb", "bauch3d.glb"], on: !0 },
     { id: "muscles", label: _T("Muskeln"), icon: "\u{1F4AA}", files: ["facem.glb", "neckm.glb", "shoulderm.glb", "upperarmm.glb", "forearmm.glb", "backm.glb", "abdm.glb", "diaphragm.glb", "pelvicm.glb", "thighf.glb", "thighb.glb", "calfm.glb", "footm.glb", "handm.glb"], on: !0 },
     { id: "vessels", label: _T("Gef\xE4\xDFe"), icon: "\u{1FA78}", files: ["gefrumpf.glb", "gefkopf.glb", "gefarm.glb", "gefbein.glb"], on: !1 },
