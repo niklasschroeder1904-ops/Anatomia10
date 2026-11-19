@@ -11925,6 +11925,52 @@ const STORAGE_KEY = "anatomia-v1",
   // short sounds for a right and a wrong answer, a run of right answers, a finished round and a new level: made with the
   // Web Audio API (nothing to load), off with the switch in the settings; on the iPhone they follow the mute switch
   SND = { on: !0, ctx: null },
+  // the phone's vibration, on or off in the settings
+  HAP = { on: !0 },
+  // the iPhone app (the Xcode project in ios/) plays vibration patterns: its message handler "haptic"
+  hapNative = () => {
+    try {
+      const w = typeof window < "u" && window.webkit && window.webkit.messageHandlers;
+      return (w && w.haptic) || null;
+    } catch {
+      return null;
+    }
+  },
+  // a pattern for each event. app: the steps for the iPhone app, [kind, delay in ms, strength 0..1, length in s]: a tap
+  // ("light", "medium", "heavy", "soft", "rigid"), the system's patterns ("success", "warning", "error") or a longer
+  // buzz ("buzz"). ms: on and off times for phones with vibration (Android). Safari on the iPhone has no vibration
+  // for pages: there only the tick of a switch under the finger, when Taler are collected (TickLayer)
+  HAP_SETS = {
+    // a right answer, a wrong one, 5/10/15 right in a row
+    ok: { app: [["success", 0]], ms: [18, 40, 22] },
+    bad: { app: [["error", 0]], ms: [60, 50, 60] },
+    combo: { app: [["light", 0], ["medium", 70], ["heavy", 140], ["success", 260]], ms: [20, 35, 28, 35, 40] },
+    // a round finished, a new level, the day's streak counted
+    win: { app: [["medium", 0], ["medium", 110], ["heavy", 220], ["success", 380]], ms: [30, 60, 30, 60, 70] },
+    level: { app: [["heavy", 0], ["heavy", 130], ["heavy", 260], ["buzz", 400, 0.9, 0.35]], ms: [40, 50, 40, 50, 40, 50, 140] },
+    streak: { app: [["soft", 0, 0.7], ["medium", 100], ["heavy", 200], ["heavy", 320]], ms: [25, 50, 40, 50, 60] },
+    // Taler collected: coins falling into the purse
+    coins: { app: [["rigid", 0, 0.7], ["rigid", 70, 0.85], ["rigid", 140, 1], ["success", 260]], ms: [32, 45, 42] },
+    // hearts used up
+    fail: { app: [["warning", 0], ["buzz", 180, 0.8, 0.45]], ms: [120, 80, 180] },
+    // a flash card known, or to come again
+    know: { app: [["light", 0, 0.8]], ms: [15] },
+    again: { app: [["soft", 0, 1], ["soft", 120, 0.6]], ms: [35, 60, 20] },
+    // bought in the shop (or a lesson opened with a token), a joker used
+    buy: { app: [["medium", 0], ["success", 140]], ms: [25, 50, 35] },
+    joker: { app: [["rigid", 0, 0.6], ["light", 90]], ms: [20, 40, 15] },
+  },
+  haptic = (k) => {
+    const H = HAP_SETS[k];
+    if (!H || !HAP.on) return;
+    // tests read what was played
+    typeof window < "u" && window.__anaTest && (window.__hap = [...(window.__hap || []), k]);
+    try {
+      const n = hapNative();
+      if (n) return void n.postMessage(H.app);
+      typeof navigator.vibrate == "function" && navigator.vibrate(H.ms);
+    } catch {}
+  },
   SND_SETS = {
     ok: [[659.25, 0, 0.11], [987.77, 0.09, 0.17]],
     bad: [[196, 0, 0.2, "triangle"], [155.56, 0.13, 0.27, "triangle"]],
@@ -11932,7 +11978,8 @@ const STORAGE_KEY = "anatomia-v1",
     win: [[523.25, 0, 0.12], [659.25, 0.11, 0.12], [783.99, 0.22, 0.12], [1046.5, 0.33, 0.32]],
     level: [[523.25, 0, 0.1], [659.25, 0.09, 0.1], [783.99, 0.18, 0.1], [1046.5, 0.27, 0.1], [1318.51, 0.36, 0.36]],
   },
-  sfx = (k) => {
+  sfx = (k, nh) => {
+    nh || haptic(k);
     if (!k || !SND.on || !SND_SETS[k]) return;
     // tests read what was played
     typeof window < "u" && window.__anaTest && (window.__sfx = [...(window.__sfx || []), k]);
@@ -15586,26 +15633,24 @@ const DAILY_TIER = [
   ["mittel", "#E8590C"],
   ["schwer", "#C2255C"],
 ];
-// a short buzz of the phone when Taler are collected. Android: two short pulses (TICK_BUZZ, from the tap).
+// the phone's buzz when Taler are collected (haptic "coins"; the iPhone app and Android, from the tap).
 // iPhone: Safari has no vibration for web pages; the light tick of the system comes when a switch
 // (<input type="checkbox" switch>) is flipped, and since iOS 26.5 only when the finger itself flips it (a switch flipped
 // from code no longer ticks). So a collect button carries TickLayer: a transparent label over the button holding a hidden
 // switch; the finger's tap on the label flips the switch (the tick), and the tap's click still reaches the button once
-const TICK_BUZZ = [32, 45, 42];
 function tick() {
-  try {
-    TICK_IOS || (typeof navigator.vibrate == "function" && navigator.vibrate(TICK_BUZZ));
-  } catch (e) {}
+  haptic("coins");
 }
+// Safari on the iPhone (not the iPhone app, which vibrates itself)
 const TICK_IOS = (() => {
   try {
-    return (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) && typeof navigator.vibrate != "function";
+    return !hapNative() && (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) && typeof navigator.vibrate != "function";
   } catch (e) {
     return !1;
   }
 })();
 function TickLayer() {
-  return TICK_IOS
+  return TICK_IOS && HAP.on
     ? React.createElement(
         "label",
         {
@@ -16505,6 +16550,106 @@ function LangCard() {
     ),
   );
 }
+// the progress to another device or into the iPhone app: all the app keeps on this device (the "ana:" keys) as one
+// file, and back
+const progressText = () => {
+    const d = {};
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("ana:"))
+        .forEach((k) => (d[k] = localStorage.getItem(k)));
+    } catch {}
+    return JSON.stringify({ app: "anatomia", v: 1, at: new Date().toISOString(), data: d });
+  },
+  // shared (iPhone app: its share sheet; else the browser's), else downloaded, else copied
+  exportProgress = async () => {
+    const txt = progressText(),
+      name = "anatomia-fortschritt-" + todayStr() + ".json";
+    try {
+      const w = window.webkit && window.webkit.messageHandlers;
+      if (w && w.share) return (w.share.postMessage({ name, text: txt }), "shared");
+    } catch {}
+    try {
+      const f = new File([txt], name, { type: "application/json" });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) return (await navigator.share({ files: [f], title: "Anatomia" }), "shared");
+    } catch (e) {
+      if (e && e.name === "AbortError") return "cancel";
+    }
+    try {
+      const a = document.createElement("a"),
+        u = URL.createObjectURL(new Blob([txt], { type: "application/json" }));
+      ((a.href = u), (a.download = name), document.body.appendChild(a), a.click());
+      setTimeout(() => (URL.revokeObjectURL(u), a.remove()), 2e3);
+      return "saved";
+    } catch {}
+    try {
+      return (await navigator.clipboard.writeText(txt), "copied");
+    } catch {}
+    return "fail";
+  },
+  // a saved file read back: null when it is not one
+  readProgress = (txt) => {
+    try {
+      const o = JSON.parse(txt),
+        m = o && o.app === "anatomia" && o.data && o.data["ana:" + STORAGE_KEY];
+      return typeof m == "string" && JSON.parse(m) ? o : null;
+    } catch {
+      return null;
+    }
+  },
+  loadProgressFile = (o) => {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith("ana:"))
+      .forEach((k) => localStorage.removeItem(k));
+    Object.entries(o.data).forEach(([k, v]) => k.startsWith("ana:") && typeof v == "string" && localStorage.setItem(k, v));
+  };
+function ProgressMove() {
+  const [msg, setMsg] = useState(null),
+    fr = useRef(null),
+    save = async () => {
+      const r = await exportProgress();
+      setMsg(
+        r === "saved"
+          ? _T("Die Sicherung ist heruntergeladen.")
+          : r === "copied"
+            ? _T("Die Sicherung ist in die Zwischenablage kopiert.")
+            : r === "fail"
+              ? _T("Sichern hat hier leider nicht geklappt.")
+              : null,
+      );
+    },
+    load = (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      ev.target.value = "";
+      if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => {
+        const o = readProgress(String(rd.result || ""));
+        if (!o) return setMsg(_T("Diese Datei ist keine Anatomia-Sicherung."));
+        if (!window.confirm(_T("Dein Fortschritt auf diesem Ger\xE4t wird durch die Sicherung ersetzt. Weiter?"))) return;
+        (loadProgressFile(o), location.reload());
+      };
+      rd.readAsText(f);
+    };
+  return React.createElement(
+    "div",
+    { "data-progress-move": "1", style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 16, padding: "12px 14px", marginBottom: 12 } },
+    React.createElement("div", { className: "ana-display", style: { fontSize: 15.5, fontWeight: 700, color: C.ink } }, _T("Fortschritt \xFCbertragen")),
+    React.createElement(
+      "div",
+      { className: "ana-body", style: { fontSize: 13.5, color: C.inkSoft, lineHeight: 1.45, margin: "3px 0 10px" } },
+      _T("F\xFCr die iPhone-App oder ein anderes Ger\xE4t: hier sichern (z. B. \u201EIn Dateien sichern\u201C) und dort mit \u201EFortschritt laden\u201C die Datei w\xE4hlen."),
+    ),
+    React.createElement(
+      "div",
+      { style: { display: "flex", gap: 8 } },
+      React.createElement(Btn, { ghost: !0, color: "#1C7ED6", onClick: save, "data-save": "1", style: { padding: "11px 8px", fontSize: 15 } }, _T("Fortschritt sichern")),
+      React.createElement(Btn, { ghost: !0, color: "#1C7ED6", onClick: () => fr.current && fr.current.click(), "data-load": "1", style: { padding: "11px 8px", fontSize: 15 } }, _T("Fortschritt laden")),
+    ),
+    React.createElement("input", { ref: fr, type: "file", accept: ".json,application/json,text/plain", onChange: load, style: { display: "none" }, "data-load-file": "1" }),
+    msg && React.createElement("div", { className: "ana-body", "data-move-msg": "1", style: { fontSize: 13, color: C.inkSoft, marginTop: 8 } }, msg),
+  );
+}
 function SettingsScreen({ progress: s, onExit: r, onSet: o, onDark: e, onReset: t }) {
   const a = (n, i, l) =>
     React.createElement(
@@ -16525,14 +16670,24 @@ function SettingsScreen({ progress: s, onExit: r, onSet: o, onDark: e, onReset: 
     React.createElement(LangCard, null),
     React.createElement(SectionLabel, null, _T("DARSTELLUNG")),
     a(_T("Dunkelmodus"), _T("Dunkler Hintergrund, angenehm am Abend."), React.createElement(Switch, { on: !!s.dark, onChange: e, label: _T("Dunkelmodus") })),
-    React.createElement(SectionLabel, null, _T("T\xD6NE")),
+    React.createElement(SectionLabel, null, _T("T\xD6NE & VIBRATION")),
     a(
       _T("T\xF6ne beim Lernen"),
       _T("Kurze T\xF6ne f\xFCr richtig und falsch, f\xFCr eine Serie und eine geschaffte Runde. Ist das iPhone stummgeschaltet, bleiben sie aus."),
-      React.createElement(Switch, { on: s.sound !== !1, onChange: (n) => (o({ sound: n }), n && ((SND.on = !0), sfx("ok"))), label: _T("T\xF6ne beim Lernen") }),
+      React.createElement(Switch, { on: s.sound !== !1, onChange: (n) => (o({ sound: n }), n && ((SND.on = !0), sfx("ok", !0))), label: _T("T\xF6ne beim Lernen") }),
+    ),
+    a(
+      _T("Vibration"),
+      hapNative()
+        ? _T("Eigene Vibrationen f\xFCr richtig und falsch, Serien, Taler, geschaffte Runden und neue Stufen.")
+        : TICK_IOS
+          ? _T("In Safari auf dem iPhone gibt es nur einen kurzen Tick beim Abholen der Taler \u2013 die Anatomia-App f\xFCrs iPhone vibriert bei allem.")
+          : _T("Eigene Vibrationen f\xFCr richtig und falsch, Serien, Taler, geschaffte Runden und neue Stufen."),
+      React.createElement(Switch, { on: s.vibration !== !1, onChange: (n) => (o({ vibration: n }), n && ((HAP.on = !0), haptic("ok"))), label: _T("Vibration") }),
     ),
     React.createElement(VoiceCard, { progress: s, onVoice: o }),
     React.createElement(SectionLabel, null, _T("FORTSCHRITT")),
+    React.createElement(ProgressMove, null),
     React.createElement(Btn, { ghost: !0, color: C.bad, onClick: t, "data-reset": "1" }, _T("\u21BA App zur\xFCcksetzen")),
     React.createElement(
       "div",
@@ -19167,7 +19322,7 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
     lean = fly ? 1 : Math.min(1, Math.abs(dx) / Math.max(1, far())),
     side = fly || Math.sign(dx),
     f = (D) => {
-      n && n(u, D);
+      (haptic(D ? "know" : "again"), n && n(u, D));
       const v = D ? y : [...y, u];
       if ((D && S((W) => W + 1), d + 1 < p)) {
         (b(v), c(d + 1), h(!1));
@@ -20663,7 +20818,7 @@ function QuizScreen({
         ),
       M.kind === "point" && React.createElement(PointImage, { q: M, color: r.color, done: I, onResult: (E) => v(E) }),
       M.kind === "type" &&
-        React.createElement(TypeAnswer, { q: M, color: r.color, dark: r.dark, done: I, right: F, letters: ltr, onLetter: uLt, onResult: (E, N) => v(E, N) }),
+        React.createElement(TypeAnswer, { q: M, color: r.color, dark: r.dark, done: I, right: F, letters: ltr, onLetter: uLt && (() => (haptic("joker"), uLt())), onResult: (E, N) => v(E, N) }),
       // several right answers to tick; once answered, the structure in the picture below the answers
       M.kind === "multi" && React.createElement(MultiAnswer, { q: M, color: r.color, dark: r.dark, done: I, onResult: (E) => v(E) }),
       M.kind === "multi" && I && React.createElement(AnswerPicture, { q: M, color: r.color, chosen: null }),
@@ -20676,7 +20831,7 @@ function QuizScreen({
           {
             onClick: () => {
               const E = M.options.map((N, Z) => (N.correct ? -1 : Z)).filter((N) => N >= 0);
-              (S(shuffle(E).slice(0, 2)), c && c());
+              (S(shuffle(E).slice(0, 2)), haptic("joker"), c && c());
             },
             className: "ana-body",
             style: {
@@ -20990,7 +21145,7 @@ function ResultScreen({
     ok = !!lvn || (c && r >= 0.5);
   useEffect(() => {
     (dl && dSeen && dSeen(), sg && sSeen && sSeen(), lvn && lSeen && lSeen());
-    sfx(lvn ? "level" : ok ? "win" : "");
+    (sfx(lvn ? "level" : ok ? "win" : "", !0), haptic(lvn ? "level" : sg ? "streak" : ok ? "win" : ""));
   }, []);
   return React.createElement(
     "div",
@@ -21142,7 +21297,7 @@ function FailScreen({ color: s, dark: r, onLearn: lr, onRetry: o, onHome: e, xpG
   // a new XP level reached with this round: shown here once
   const [lvn] = useState(lvl);
   useEffect(() => {
-    lvn && lSeen && (lSeen(), sfx("level"));
+    (lvn && lSeen && lSeen(), lvn ? sfx("level") : haptic("fail"));
   }, []);
   return React.createElement(
     "div",
@@ -22902,6 +23057,7 @@ function AnatomiaApp() {
     };
   // the sounds follow their switch in the settings
   SND.on = !!s && s.sound !== !1;
+  HAP.on = !!s && s.vibration !== !1;
   if (!s)
     return React.createElement(
       "div",
@@ -22995,6 +23151,7 @@ function AnatomiaApp() {
         });
     },
     m = (u) => {
+      (s.coins || 0) >= u.price && (u.boost || !(s.owned || []).includes(u.id)) && haptic("buy");
       r((p) => {
         if (u.boost) {
           if ((p.coins || 0) < u.price) return p;
@@ -23024,7 +23181,8 @@ function AnatomiaApp() {
     // a token opens a locked lesson for good, and the lesson starts
     unlockLesson = (u) => {
       (s.tokens || 0) > 0 &&
-        (r((p) => {
+        (haptic("buy"),
+        r((p) => {
           const f = { ...p, tokens: Math.max(0, (p.tokens || 0) - 1), unlocked: { ...(p.unlocked || {}), [u]: 1 } };
           return (saveProgress(f), f);
         }),
@@ -31217,7 +31375,8 @@ Object.assign(FIGURES, {
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(AnatomiaApp));
 </script>
 <script>
-if ("serviceWorker" in navigator && location.protocol !== "file:") {
+// the service worker only for the web app (http/https); the iPhone app serves its files itself (anatomia://)
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
   const hadController = !!navigator.serviceWorker.controller;
   let reloaded = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !reloaded) { reloaded = true; location.reload(); } });

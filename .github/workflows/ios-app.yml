@@ -1,0 +1,90 @@
+name: iPhone-App prüfen
+# Builds the iPhone app (ios/) on a Mac at GitHub for the iPhone simulator, without signing, and starts it there twice
+# (English, then German): a check that the Swift code compiles and the app shows the web app with its vibration and
+# share bridges, its dialogs, and progress kept between starts. The screenshots are kept with the run ("Artifacts").
+on:
+  push:
+    branches: [main]
+    paths: ["ios/**", ".github/workflows/ios-app.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-app
+  cancel-in-progress: true
+
+jobs:
+  app:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode-Version
+        run: xcodebuild -version
+
+      # only for this check, never in the app: once loaded, the page tries the app's bridges and a confirm() and shows
+      # what it found in a yellow box (start number, both bridges, language, a translated word)
+      - name: Prüfskript in die Seite (nur für diesen Test)
+        run: |
+          cat >> index.html <<'EOF'
+          <script>
+          addEventListener("load", function () {
+            setTimeout(function () {
+              var h = window.webkit && window.webkit.messageHandlers, n;
+              try { n = Number(localStorage.getItem("ana:ci-start") || 0) + 1; localStorage.setItem("ana:ci-start", String(n)); } catch (e) { n = "Fehler " + e; }
+              var d = document.createElement("div");
+              d.style.cssText = "position:fixed;left:10px;right:10px;top:30%;z-index:2147483647;background:#ffe14d;color:#111;font:600 16px -apple-system,sans-serif;padding:12px;border-radius:12px;text-align:center;line-height:1.4";
+              d.textContent = "CI · Start " + n + " · haptic " + !!(h && h.haptic) + " · share " + !!(h && h.share) + " · " + navigator.language + " · " + (typeof _T == "function" ? _T("Einstellungen") : "?");
+              document.body.appendChild(d);
+              try { h.haptic.postMessage(HAP_SETS.level.app); h.haptic.postMessage(HAP_SETS.fail.app); h.haptic.postMessage(HAP_SETS.coins.app); } catch (e) { d.textContent += " · haptic Fehler " + e; }
+              setTimeout(function () { try { h.share.postMessage({ name: "ci-test.json", text: "{\"ci\":1}" }); } catch (e) { d.textContent += " · share Fehler " + e; } }, 1500);
+              setTimeout(function () { var r = confirm("CI: confirm() aus der Seite"); d.textContent += " · confirm " + r; }, 5000);
+            }, 12000);
+          });
+          </script>
+          EOF
+
+      - name: App bauen (Simulator, ohne Signatur)
+        run: |
+          xcodebuild -project ios/Anatomia.xcodeproj -target Anatomia -configuration Debug -sdk iphonesimulator \
+            SYMROOT="$PWD/build" CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 || { grep -E ': (error|warning):' build.log; tail -n 60 build.log; exit 1; }
+          grep -E ': (error|warning):' build.log || echo "keine Fehler, keine Warnungen"
+          tail -n 2 build.log
+
+      - name: Im Simulator starten
+        run: |
+          APP=build/Debug-iphonesimulator/Anatomia.app
+          for f in index.html i18n-en.js i18n-es.js names-en.js names-es.js; do test -f "$APP/Web/$f" || { echo "fehlt in der App: $f"; exit 1; }; done
+          echo "Web-Ordner: $(ls "$APP/Web" | wc -l) Dateien, App $(du -sh "$APP" | cut -f1)"
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          ios = sorted((k for k in d if ".iOS-" in k), key=lambda k: [int(x) for x in k.split(".iOS-")[1].split("-")])
+          print(next(x["udid"] for k in reversed(ios) for x in d[k] if x["name"].startswith("iPhone")))')
+          xcrun simctl list devices | grep "$UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b > /dev/null
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p shots
+          shoot() { for t in 10 20 30 40; do sleep 10; xcrun simctl io "$UDID" screenshot "shots/$1-${t}s.png" > /dev/null 2>&1 || echo "kein Foto bei ${t}s"; done; }
+          xcrun simctl launch "$UDID" de.anatomia.app
+          shoot 1-englisch
+          xcrun simctl terminate "$UDID" de.anatomia.app || echo "App war schon beendet"
+          sleep 3
+          xcrun simctl launch "$UDID" de.anatomia.app -AppleLanguages "(de)" -AppleLocale de_DE
+          shoot 2-deutsch
+          xcrun simctl spawn "$UDID" launchctl list | grep -i anatomia || echo "App läuft nicht mehr"
+          ls shots
+
+      - name: Bildschirmfotos aufheben
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iphone-simulator
+          path: |
+            shots/
+            build.log
+          retention-days: 14

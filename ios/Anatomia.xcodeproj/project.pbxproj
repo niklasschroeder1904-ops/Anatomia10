@@ -140,7 +140,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Copies the Anatomia web app (index.html, images, 3D models) from the\n# repository root into the app bundle as the folder \"Web\".\nset -e\nSRC=\"${PROJECT_DIR}/..\"\nDST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Web\"\nmkdir -p \"${DST}\"\nrsync -a --delete --include='*.html' --include='*.jpg' --include='*.jpeg' --include='*.png' --include='*.glb' --include='*.webmanifest' --exclude='*' \"${SRC}/\" \"${DST}/\"\necho \"Copied web app to ${DST}\"\n";
+			shellScript = "# Copies the Anatomia web app (index.html, translations, images, 3D models) from the\n# repository root into the app bundle as the folder \"Web\".\nset -e\nSRC=\"${PROJECT_DIR}/..\"\nDST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Web\"\nmkdir -p \"${DST}\"\nrsync -a --delete --include='*.html' --include='*.js' --include='*.jpg' --include='*.jpeg' --include='*.png' --include='*.glb' --include='*.webmanifest' --exclude='*' \"${SRC}/\" \"${DST}/\"\necho \"Copied web app to ${DST}\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
