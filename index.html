@@ -12076,7 +12076,7 @@ const DAILY_POOL = [
     const lf = dailyOpen(o);
     return { day: r, ids: dailyPick(r, s), n: {}, done: [], seen: [], got: [], left: lf, leftDay: lf ? (dailyOpen({ ...o, left: 0 }) ? o.day : o.leftDay) : null };
   },
-  dailyVal = (s, r, o) => (o.m === "xp" ? (s.log || {})[r.day] || 0 : o.m === "regions" ? (r.n.regions || []).length : o.m === "run" ? r.n.best || 0 : r.n[o.m] || 0),
+  dailyVal = (s, r, o) => (o.m === "xp" ? dayXp(s, r.day) : o.m === "regions" ? (r.n.regions || []).length : o.m === "run" ? r.n.best || 0 : r.n[o.m] || 0),
   // counts what just happened (lessons: 1, correct: 1, hit: right or wrong for the row, region: "arm", ...) and marks the
   // challenges it completes as done; their Taler wait to be collected (dailyClaim)
   dailyBump = (s, r = {}) => {
@@ -20194,7 +20194,8 @@ function QuizScreen({
     },
     W = () => {
       if (o && !F && y === 0) {
-        n();
+        // the right first answers so far, the questions, the structures answered wrong, the bonus for runs
+        n(B, s.length, wr.current, bn.current);
         return;
       }
       m + 1 < qs.length ? (h(m + 1), p(null), k(null), w(""), S([]), setCb(null)) : a(B, s.length, wr.current, bn.current);
@@ -20765,7 +20766,12 @@ function ResultScreen({
 }
 // hearts used up in a lesson: learn its cards again from the first (then on to the questions), or go straight back to
 // the questions
-function FailScreen({ color: s, dark: r, onLearn: lr, onRetry: o, onHome: e }) {
+function FailScreen({ color: s, dark: r, onLearn: lr, onRetry: o, onHome: e, xpGain: xg = 0, right: rt = 0, boosted: bst, bonus: bo = 0, level: lvl, onLevelSeen: lSeen }) {
+  // a new XP level reached with this round: shown here once
+  const [lvn] = useState(lvl);
+  useEffect(() => {
+    lvn && lSeen && (lSeen(), sfx("level"));
+  }, []);
   return React.createElement(
     "div",
     {
@@ -20785,6 +20791,29 @@ function FailScreen({ color: s, dark: r, onLearn: lr, onRetry: o, onHome: e }) {
       React.createElement(Heart, { size: 92, color: "#C3CBD9", strokeWidth: 1.6 }),
     ),
     React.createElement("div", { className: "ana-display", style: { fontSize: 23, fontWeight: 700, color: C.ink } }, _T("Herzen aufgebraucht")),
+    // the XP the right answers brought; the daily streak counts only rounds that were finished
+    xg > 0 &&
+      React.createElement(
+        "div",
+        { "data-failxp": xg, style: { margin: "10px 0 10px" } },
+        React.createElement(
+          "div",
+          { className: "ana-display ana-pop", style: { fontSize: 21, fontWeight: 700, color: "#C29204" } },
+          "+",
+          xg,
+          _T(" XP"),
+          bst ? React.createElement("span", { style: { fontSize: 14, marginLeft: 6 } }, "\u{1F680} \xD72") : null,
+        ),
+        React.createElement(
+          "div",
+          { className: "ana-body", style: { fontSize: 13.5, color: C.inkSoft, marginTop: 2 } },
+          rt === 1 ? _T("f\xFCr 1 richtige Antwort") : _T("f\xFCr {0} richtige Antworten", rt),
+          bo > 0 ? " \xB7 " : "",
+          bo > 0 ? React.createElement("span", { style: { color: C.okText, fontWeight: 700 } }, _T("\u2705 davon "), bo, _T(" XP Serien-Bonus")) : null,
+        ),
+        React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: "#9AA3B2", marginTop: 2 } }, _T("Z\xE4hlt nicht f\xFCr deine Tagesserie.")),
+      ),
+    lvn && React.createElement("div", { style: { marginTop: 12 } }, React.createElement(LevelBanner, { n: lvn })),
     React.createElement(
       "div",
       { className: "ana-body", style: { fontSize: 15, color: C.inkSoft, margin: "6px 0 22px", maxWidth: 300 } },
@@ -21770,13 +21799,17 @@ function StreakScreen({ progress: s, onExit: r }) {
         React.createElement("b", null, calLong(sel)),
         " \xB7 ",
         selSt === "on"
-          ? _T("gelernt · {0} XP", L[sel])
+          ? _T("gelernt · {0} XP", dayXp(s, sel))
           : selSt === "ice"
             ? _T("Serien-Schutz hat die Serie gerettet")
             : selSt === "today"
-              ? _T("heute noch nicht gelernt")
+              ? dayXp(s, sel) > 0
+                ? _T("f\xFCr die Serie noch nicht gez\xE4hlt \xB7 {0} XP", dayXp(s, sel))
+                : _T("heute noch nicht gelernt")
               : selSt === "off"
-                ? _T("nicht gelernt")
+                ? dayXp(s, sel) > 0
+                  ? _T("nicht f\xFCr die Serie gez\xE4hlt \xB7 {0} XP", dayXp(s, sel))
+                  : _T("nicht gelernt")
                 : selSt === "future"
                   ? _T("noch nicht da")
                   : _T("keine Aufzeichnung"),
@@ -21805,7 +21838,7 @@ function StreakScreen({ progress: s, onExit: r }) {
 // the XP on the menu: how many XP on each day
 function XpScreen({ progress: s, onExit: r }) {
   const t = todayStr(),
-    L = s.log || {},
+    L = xpDays(s),
     keys = Object.keys(L).sort(),
     [span, setSpan] = useState(14),
     [sel, setSel] = useState(t),
@@ -21989,7 +22022,7 @@ function StatsScreen({ progress: s, onExit: r, onReset: rs, onPractice: op }) {
       for (let W = 13; W >= 0; W--) {
         const E = new Date(Date.now() - W * 864e5),
           N = `${E.getFullYear()}-${String(E.getMonth() + 1).padStart(2, "0")}-${String(E.getDate()).padStart(2, "0")}`;
-        v.push({ day: N, label: [_T("So"), _T("Mo"), _T("Di"), _T("Mi"), _T("Do"), _T("Fr"), _T("Sa")][E.getDay()], xp: (s.log || {})[N] || 0 });
+        v.push({ day: N, label: [_T("So"), _T("Mo"), _T("Di"), _T("Mi"), _T("Do"), _T("Fr"), _T("Sa")][E.getDay()], xp: dayXp(s, N) });
       }
       return v;
     })(),
@@ -22183,10 +22216,28 @@ function StatsScreen({ progress: s, onExit: r, onReset: rs, onPractice: op }) {
       ),
   );
 }
+// the XP of a day, and of all days on record: rounds that counted for the streak (log) and those that did not (xlog)
+function dayXp(s, d) {
+  return ((s.log || {})[d] || 0) + ((s.xlog || {})[d] || 0);
+}
+function xpDays(s) {
+  const m = { ...(s.log || {}) };
+  Object.keys(s.xlog || {}).forEach((d) => (m[d] = (m[d] || 0) + s.xlog[d]));
+  return m;
+}
 const withMeta = (s, r) => {
   const o = { ...r, bestStreak: Math.max(r.bestStreak || 0, r.streak || 0) },
     e = (r.xp || 0) - ((s && s.xp) || 0),
     t = todayStr();
+  // XP of a round that does not count for the streak (a lesson whose hearts ran out) on a day the streak has not
+  // counted yet: kept apart (xlog), so that the day is not marked in the streak's calendar
+  if (e > 0 && r.lastDay !== t) {
+    const a = { ...(r.xlog || {}) };
+    a[t] = (a[t] || 0) + e;
+    const n = Object.keys(a).sort();
+    (n.length > 400 && n.slice(0, n.length - 400).forEach((i) => delete a[i]), (o.xlog = a));
+    return o;
+  }
   // XP of each day (XP page); a round that counts for the streak marks its day even without XP (calendar of the flame)
   if (e > 0 || (r.lastDay === t && (r.log || {})[t] == null)) {
     const a = { ...(r.log || {}) };
@@ -22923,13 +22974,19 @@ function AnatomiaApp() {
       onConfuse: confuse,
       onExit: () => e({ name: "learn", lessonId: u.id }),
       onFinish: (f, k, wr, bo) => S(u.id, f, k, wr, bo),
-      onFail: () => (
-        r((f) => {
-          const k = { ...f, lastLesson: u.id };
-          return (saveProgress(k), k);
-        }),
-        e({ name: "fail", lessonId: u.id })
-      ),
+      // hearts used up: the right answers still bring their XP (as in a finished lesson, without the bonus for all
+      // right), but the lesson is not passed: no Taler, no stars, no day of the streak
+      onFail: (ok = 0, tot = 0, wr, bo = 0) => {
+        const bx = xm(),
+          w = (ok * 10 + bo) * bx;
+        w > 0
+          ? t({ ...s, xp: s.xp + w, lastLesson: u.id }, {})
+          : r((f) => {
+              const k = { ...f, lastLesson: u.id };
+              return (saveProgress(k), k);
+            });
+        e({ name: "fail", lessonId: u.id, xpGain: w, right: ok, total: tot, boosted: bx > 1, bonus: bo * bx });
+      },
     });
   } else if (o.name === "test") {
     const u = UNITS.find((p) => p.id === o.unitId);
@@ -23062,7 +23119,19 @@ function AnatomiaApp() {
     });
   else if (o.name === "fail") {
     const u = findLesson(o.lessonId);
-    A = React.createElement(FailScreen, { color: u.color, dark: u.dark, onLearn: () => i(u.id), onRetry: () => l(u.id), onHome: () => e({ name: "home" }) });
+    A = React.createElement(FailScreen, {
+      color: u.color,
+      dark: u.dark,
+      onLearn: () => i(u.id),
+      onRetry: () => l(u.id),
+      onHome: () => e({ name: "home" }),
+      xpGain: o.xpGain || 0,
+      right: o.right || 0,
+      boosted: !!o.boosted,
+      bonus: o.bonus || 0,
+      level: s.levelNote,
+      onLevelSeen: levelShown,
+    });
   } else if (o.name === "result") {
     // after a lesson: straight on to the next lesson of the menu; after the last lesson of a topic to its test (unless
     // passed already); after a passed test on to the next topic
