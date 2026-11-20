@@ -12074,7 +12074,7 @@ const DAILY_POOL = [
     { id: "m-correct", tier: 1, m: "correct", goal: 50, icon: "\u2705", text: _T("50 Fragen richtig beantworten") },
     { id: "m-run", tier: 1, m: "run", goal: 10, icon: "\u2705", text: _T("10 Fragen hintereinander richtig") },
     { id: "m-regions", tier: 1, m: "regions", goal: 2, icon: "\u{1F9ED}", text: _T("Lektionen aus 2 verschiedenen Regionen") },
-    { id: "m-cases", tier: 1, m: "cases", goal: 3, icon: "\u{1FA7A}", text: _T("3 klinische F\xE4lle richtig l\xF6sen") },
+    { id: "m-cases", tier: 1, m: "cases", goal: 5, icon: "\u{1FA7A}", text: _T("5 klinische F\xE4lle richtig l\xF6sen") },
     { id: "m-conf", tier: 1, m: "conf", goal: 10, icon: "\u{1F500}", text: _T("10 Verwechslungen \xFCben"), ok: (s) => confPairs(s).length >= 3 },
     { id: "h-perfect", tier: 2, m: "perfect", goal: 1, icon: "\u2B50", text: _T("Eine Lektion ganz ohne Fehler") },
     { id: "h-lessons", tier: 2, m: "lessons", goal: 5, icon: "\u{1F3C3}", text: _T("5 Lektionen abschlie\xDFen") },
@@ -18737,7 +18737,7 @@ function ErrorBookScreen({ progress: s, onExit: r, onTrain: o, onOpenLesson: e, 
         ),
   );
 }
-function VignetteScreen({ cases: s, onExit: r, onFinish: o, onAnswer: e }) {
+function VignetteScreen({ cases: s, onExit: r, onFinish: o, onAnswer: e, onCase: oc }) {
   const [t, a] = useState(0),
     [n, i] = useState(null),
     [l, d] = useState(0),
@@ -18745,7 +18745,12 @@ function VignetteScreen({ cases: s, onExit: r, onFinish: o, onAnswer: e }) {
     m = n != null,
     h = m && c.options[n].correct,
     y = (x) => {
-      m || (i(x), sfx(c.options[x].correct ? "ok" : "bad"), c.options[x].correct && d((S) => S + 1), e && c.ref && e(c.ref.lessonId, c.ref.itemId, c.options[x].correct));
+      m ||
+        (i(x),
+        sfx(c.options[x].correct ? "ok" : "bad"),
+        c.options[x].correct && d((S) => S + 1),
+        e && c.ref && e(c.ref.lessonId, c.ref.itemId, c.options[x].correct),
+        oc && oc(c.options[x].correct));
     },
     b = () => {
       t + 1 < s.length ? (a(t + 1), i(null)) : o(l, s.length);
@@ -23613,10 +23618,18 @@ function AnatomiaApp() {
       cases: o.cases,
       onExit: () => e({ name: "home" }),
       onAnswer: y,
+      // a case solved counts for the day's challenge at once, also when the round is left before its end
+      onCase: (ok) =>
+        ok &&
+        r((g) => {
+          const M = dailyBump(g, { cases: 1 });
+          return (saveProgress(M), M);
+        }),
       onFinish: (u, p) => {
         const f = n(s),
           bx = xm();
-        t({ ...s, xp: s.xp + u * 12 * bx, coins: (s.coins || 0) + u * 5, ...f }, { cases: u });
+        // the cases were counted for the challenge one by one (onCase)
+        t({ ...s, xp: s.xp + u * 12 * bx, coins: (s.coins || 0) + u * 5, ...f });
         e({ name: "result", kind: "cases", pct: u / p, xpGain: u * 12 * bx, boosted: bx > 1, color: "#0B7285", dark: "#075661" });
       },
     });
