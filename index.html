@@ -5066,7 +5066,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 // the languages before anything else: the app's (as chosen, else as the phone, else English) and the learning language;
 // the translation files they need are loaded here, ahead of the app
 (function () {
-  var L = ["de", "en", "es"], s = {};
+  var L = ["de", "en", "es", "sv"], s = {};
   try { s = JSON.parse(localStorage.getItem("ana:lang") || "null") || {}; } catch (e) {}
   var ui = L.indexOf(s.ui) >= 0 ? s.ui : null;
   if (!ui) {
@@ -5079,11 +5079,11 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
   document.documentElement.lang = ui;
   var need = [];
   if (ui !== "de") need.push(ui);
-  if ((term === "en" || term === "es") && need.indexOf(term) < 0) need.push(term);
+  if (term !== "la" && term !== "de" && need.indexOf(term) < 0) need.push(term);
   for (var j = 0; j < need.length; j++) document.write('<script src="./i18n-' + need[j] + '.js"><\/script><script src="./names-' + need[j] + '.js"><\/script>');
   // the names in the other languages come a little later: a typed answer counts only in the app's and the learning
   // language, and they tell such a name from a typo
-  ["en", "es"].forEach(function (l) {
+  ["en", "es", "sv"].forEach(function (l) {
     if (need.indexOf(l) >= 0) return;
     var e = document.createElement("script");
     e.src = "./names-" + l + ".js";
@@ -5093,10 +5093,10 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 })();
 </script>
 <script>
-// ---------- languages: the app in German, English or Spanish (as the phone, or as chosen in the settings). The terms are
+// ---------- languages: the app in German, English, Spanish or Swedish (as the phone, or as chosen in the settings). The terms are
 // learnt in the learning language (Latin, or one of the others), with their names in the app's language beside them. The
 // loader in the page head picked both and loaded the translation files (window.ANATOMIA_LANG, window.ANATOMIA_I18N) ----------
-const LANGS = ["de", "en", "es"],
+const LANGS = ["de", "en", "es", "sv"],
   LANG_SET = (() => {
     let v = null;
     try {
@@ -5134,7 +5134,7 @@ const LANGS = ["de", "en", "es"],
   // a text whose translation depends on where it stands ("aus": labels off, a design off): key "where|text"
   _TC = (c, s, ...a) => (UI_LANG === "de" ? _T(s, ...a) : I18N_T[c + "|" + s] != null ? _T(c + "|" + s, ...a) : _T(s, ...a)),
   // numbers and dates as written in the app's language
-  UI_LOCALE = { de: "de-DE", en: "en-US", es: "es-ES" }[UI_LANG] || "de-DE",
+  UI_LOCALE = { de: "de-DE", en: "en-US", es: "es-ES", sv: "sv-SE" }[UI_LANG] || "de-DE",
   fmtDay = (d) => {
     if (UI_LANG === "de") return String(d || "").split("-").reverse().join(".");
     try {
@@ -5144,11 +5144,11 @@ const LANGS = ["de", "en", "es"],
     }
   },
   // the names of the languages in the app's language
-  LANG_NAME_DE = { la: "Latein", de: "Deutsch", en: "Englisch", es: "Spanisch" },
+  LANG_NAME_DE = { la: "Latein", de: "Deutsch", en: "Englisch", es: "Spanisch", sv: "Schwedisch" },
   langName = (l) => _T(LANG_NAME_DE[l] || l),
-  LANG_OWN = { de: "Deutsch", en: "English", es: "Espa\xF1ol" },
+  LANG_OWN = { de: "Deutsch", en: "English", es: "Espa\xF1ol", sv: "Svenska" },
   // what the voice reads: the term to learn (Latin is read in the app's language) and its name
-  VOICE_LANG = { de: "de-DE", en: "en-US", es: "es-ES" },
+  VOICE_LANG = { de: "de-DE", en: "en-US", es: "es-ES", sv: "sv-SE" },
   termVoice = () => VOICE_LANG[TERM_LANG] || VOICE_LANG[UI_LANG],
   // a new language: saved, and the app starts anew in it (back on the settings page)
   setLang = (o) => {
@@ -5208,7 +5208,7 @@ const LANGS = ["de", "en", "es"],
   // German wording in the Latin name: a concept without a Latin term ("Anatomische Grundstellung", "Trendelenburg-Zeichen")
   GERM_RE = /[\xE4\xF6\xFC\xDF]|\b(der|die|das|des|dem|den|zum|zur|vom|beim)\b|[a-z](ung|ungen|ische|ischer|isches|ischen|heit|keit|lich|liche|licher|chen|zeichen)\b/i,
   // "the Latin name" - in the learning language
-  LANG_NAME_WORD = { la: "lateinische Name", de: "deutsche Name", en: "englische Name", es: "spanische Name" },
+  LANG_NAME_WORD = { la: "lateinische Name", de: "deutsche Name", en: "englische Name", es: "spanische Name", sv: "schwedische Name" },
   termNameWord = () => _T(LANG_NAME_WORD[TERM_LANG]),
   // the line under a question to type: the learning language and the app's
   typeSub = () =>
@@ -10612,7 +10612,7 @@ const ABBR_FULL = [
       };
     okLatin(r) || add(latGerman(r) ? "de" : "la", orLa(r));
     ANS_LANGS.includes("de") || (add("de", orDe(r)), (r.alt || []).forEach((x) => add("de", x)));
-    for (const l of ["en", "es"]) ANS_LANGS.includes(l) || (nameKnown(l, orLa(r), orDe(r)) && add(l, nameIn(l, orLa(r), orDe(r))));
+    for (const l of LANGS) l === "de" || ANS_LANGS.includes(l) || (nameKnown(l, orLa(r), orDe(r)) && add(l, nameIn(l, orLa(r), orDe(r))));
     return out;
   },
   // the typed answer is this card's name in a language that does not count: its language (else null). d: how near it
@@ -16121,7 +16121,7 @@ function VoiceCard({ progress: s, onVoice: sv }) {
       } catch {}
     };
   }, []);
-  const vLang = { "de-DE": "de", "en-US": "en", "es-ES": "es" }[termVoice()] || "de",
+  const vLang = { "de-DE": "de", "en-US": "en", "es-ES": "es", "sv-SE": "sv" }[termVoice()] || "de",
     ap = appleTouch(),
     pad = ap && (/iPad/.test(navigator.userAgent) || navigator.platform === "MacIntel"),
     cur = findVoice(vl, s.voiceUri) || vl[0] || null,
@@ -16190,7 +16190,7 @@ function VoiceCard({ progress: s, onVoice: sv }) {
         React.createElement(
           "button",
           {
-            onClick: () => speakTerm({ de: "Kopfwender", en: "Sternocleidomastoid", es: "M\xFAsculo esternocleidomastoideo" }[TERM_LANG] || "Musculus sternocleidomastoideus"),
+            onClick: () => speakTerm({ de: "Kopfwender", en: "Sternocleidomastoid", es: "M\xFAsculo esternocleidomastoideo", sv: "Nickmuskeln" }[TERM_LANG] || "Musculus sternocleidomastoideus"),
             "aria-label": _T("Probe h\xF6ren"),
             className: "ana-body",
             style: {
@@ -16476,7 +16476,7 @@ function Switch({ on: s, onChange: r, label: o }) {
 // the languages: of the app (automatic: as the phone) and of the terms learnt beside it. A change starts the app anew in it
 function LangCard() {
   const cur = LANGS.includes(LANG_SET.ui) ? LANG_SET.ui : null,
-    ex = { la: "Os coxae", de: "H\xFCftbein", en: "Hip bone", es: "Hueso coxal" },
+    ex = { la: "Os coxae", de: "H\xFCftbein", en: "Hip bone", es: "Hueso coxal", sv: "H\xF6ftbenet" },
     row = (k, on, title, sub, go) =>
       React.createElement(
         "button",

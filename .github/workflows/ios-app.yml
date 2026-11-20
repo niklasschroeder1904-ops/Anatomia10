@@ -57,7 +57,7 @@ jobs:
       - name: Im Simulator starten
         run: |
           APP=build/Debug-iphonesimulator/Anatomia.app
-          for f in index.html i18n-en.js i18n-es.js names-en.js names-es.js; do test -f "$APP/Web/$f" || { echo "fehlt in der App: $f"; exit 1; }; done
+          for f in index.html i18n-en.js i18n-es.js i18n-sv.js names-en.js names-es.js names-sv.js; do test -f "$APP/Web/$f" || { echo "fehlt in der App: $f"; exit 1; }; done
           echo "Web-Ordner: $(ls "$APP/Web" | wc -l) Dateien, App $(du -sh "$APP" | cut -f1)"
           UDID=$(xcrun simctl list devices available -j | python3 -c '
           import json, sys
@@ -76,6 +76,14 @@ jobs:
           sleep 3
           xcrun simctl launch "$UDID" de.anatomia.app -AppleLanguages "(de)" -AppleLocale de_DE
           shoot 2-deutsch
+          xcrun simctl terminate "$UDID" de.anatomia.app || echo "App war schon beendet"
+          sleep 3
+          xcrun simctl launch "$UDID" de.anatomia.app -AppleLanguages "(sv)" -AppleLocale sv_SE
+          shoot 3-schwedisch
+          xcrun simctl terminate "$UDID" de.anatomia.app || echo "App war schon beendet"
+          sleep 3
+          xcrun simctl launch "$UDID" de.anatomia.app -AppleLanguages "(es)" -AppleLocale es_ES
+          shoot 4-spanisch
           xcrun simctl spawn "$UDID" launchctl list | grep -i anatomia || echo "App läuft nicht mehr"
           ls shots
 

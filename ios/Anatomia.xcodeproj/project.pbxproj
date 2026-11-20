@@ -16,6 +16,7 @@
 		A10000000000000000000201 /* AnatomiaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnatomiaApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000202 /* WebAppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebAppView.swift; sourceTree = "<group>"; };
 		A10000000000000000000203 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A10000000000000000000205 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A10000000000000000000204 /* Anatomia.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Anatomia.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -44,6 +45,7 @@
 				A10000000000000000000201 /* AnatomiaApp.swift */,
 				A10000000000000000000202 /* WebAppView.swift */,
 				A10000000000000000000203 /* Assets.xcassets */,
+				A10000000000000000000205 /* Info.plist */,
 			);
 			path = Anatomia;
 			sourceTree = "<group>";
@@ -99,6 +101,8 @@
 			knownRegions = (
 				en,
 				de,
+				es,
+				sv,
 				Base,
 			);
 			mainGroup = A10000000000000000000401;
@@ -219,6 +223,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Anatomia/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Anatomia;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -253,6 +258,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Anatomia/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Anatomia;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

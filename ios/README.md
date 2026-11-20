@@ -95,7 +95,7 @@ An/Aus-Zeiten (`ms`).
 ## Prüfung bei GitHub
 
 Bei jeder Änderung im Ordner `ios/` baut GitHub die App auf einem Mac und startet sie
-zweimal im iPhone-Simulator (Englisch, dann Deutsch): GitHub → **Actions** →
+viermal im iPhone-Simulator (Englisch, Deutsch, Schwedisch, Spanisch): GitHub → **Actions** →
 „iPhone-App prüfen“. Die Bildschirmfotos liegen dort unter „Artifacts“. Ein grüner Haken
 heißt: Der Swift-Code lässt sich bauen, und die App zeigt die Web-App.
 
@@ -108,3 +108,6 @@ heißt: Der Swift-Code lässt sich bauen, und die App zeigt die Web-App.
   - `Coordinator`: zeigt `alert()`/`confirm()` der Seite als iOS-Dialoge (sonst würde z. B.
     „Prüfung abbrechen?“ nie gefragt).
 - Build-Phase „Copy web app“: kopiert `*.html`, `*.js`, Bilder und `*.glb` aus dem Hauptordner.
+- `Anatomia/Info.plist`: nennt die Sprachen der Web-App (Deutsch, Englisch, Spanisch,
+  Schwedisch). Nur dann meldet die Web-Ansicht der App die Sprache des iPhones, und die App
+  startet von selbst in dieser Sprache. Den Rest der Info.plist erzeugt Xcode.
