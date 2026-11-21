@@ -5063,7 +5063,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 
 </script>
 <script>
-// the languages before anything else: the app's (as chosen, else as the phone, else English) and the learning language;
+// the languages before anything else: the app's (as chosen, else as the phone, else English) and the two of the terms;
 // the translation files they need are loaded here, ahead of the app
 (function () {
   var L = ["de", "en", "es", "sv"], s = {};
@@ -5074,15 +5074,29 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     for (var i = 0; i < ls.length && !ui; i++) { var k = String(ls[i] || "").toLowerCase().slice(0, 2); if (L.indexOf(k) >= 0) ui = k; }
     ui = ui || "en";
   }
-  var term = (s.term === "la" || L.indexOf(s.term) >= 0) && s.term !== ui ? s.term : "la";
-  window.ANATOMIA_LANG = { ui: ui, term: term };
+  // the two languages of the terms: chosen freely in the settings (name set: any two of Latin and the four), else as
+  // before the learning language with the app's language beside it
+  var T = ["la"].concat(L), term, name;
+  if (T.indexOf(s.name) >= 0) {
+    term = T.indexOf(s.term) >= 0 ? s.term : "la";
+    name = s.name !== term ? s.name : term !== ui ? ui : term !== "la" ? "la" : "de";
+  } else {
+    term = T.indexOf(s.term) >= 0 && s.term !== ui ? s.term : "la";
+    name = ui;
+  }
+  window.ANATOMIA_LANG = { ui: ui, term: term, name: name };
   document.documentElement.lang = ui;
   var need = [];
   if (ui !== "de") need.push(ui);
   if (term !== "la" && term !== "de" && need.indexOf(term) < 0) need.push(term);
   for (var j = 0; j < need.length; j++) document.write('<script src="./i18n-' + need[j] + '.js"><\/script><script src="./names-' + need[j] + '.js"><\/script>');
-  // the names in the other languages come a little later: a typed answer counts only in the app's and the learning
-  // language, and they tell such a name from a typo
+  // the second language of the terms needs only its names
+  if (name !== "la" && name !== "de" && need.indexOf(name) < 0) {
+    document.write('<script src="./names-' + name + '.js"><\/script>');
+    need.push(name);
+  }
+  // the names in the other languages come a little later: a typed answer counts only in the two languages of the
+  // terms, and they tell such a name from a typo
   ["en", "es", "sv"].forEach(function (l) {
     if (need.indexOf(l) >= 0) return;
     var e = document.createElement("script");
@@ -5094,8 +5108,9 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 </script>
 <script>
 // ---------- languages: the app in German, English, Spanish or Swedish (as the phone, or as chosen in the settings). The terms are
-// learnt in the learning language (Latin, or one of the others), with their names in the app's language beside them. The
-// loader in the page head picked both and loaded the translation files (window.ANATOMIA_LANG, window.ANATOMIA_I18N) ----------
+// learnt in two languages: the learning language (Latin, or one of the others) and a second one beside it - the app's
+// language, unless both were chosen freely in the settings (the app in Spanish, the terms in Latin and German). The
+// loader in the page head picked them and loaded the translation files (window.ANATOMIA_LANG, window.ANATOMIA_I18N) ----------
 const LANGS = ["de", "en", "es", "sv"],
   LANG_SET = (() => {
     let v = null;
@@ -5116,9 +5131,17 @@ const LANGS = ["de", "en", "es", "sv"],
     return "en";
   },
   UI_LANG = (typeof window < "u" && window.ANATOMIA_LANG && LANGS.includes(window.ANATOMIA_LANG.ui) && window.ANATOMIA_LANG.ui) || (LANGS.includes(LANG_SET.ui) ? LANG_SET.ui : deviceLang()),
-  TERM_LANG = (() => {
-    const t = typeof window < "u" && window.ANATOMIA_LANG ? window.ANATOMIA_LANG.term : LANG_SET.term;
-    return ["la", ...LANGS].includes(t) && t !== UI_LANG ? t : "la";
+  TERM_LANGS = ["la", ...LANGS],
+  // the term (learning language) and its name beside it (NAME_LANG): as the loader picked them - any two chosen in the
+  // settings (ana:lang name set), else the learning language with the app's language beside it
+  [TERM_LANG, NAME_LANG] = (() => {
+    const A = typeof window < "u" && window.ANATOMIA_LANG;
+    if (A && TERM_LANGS.includes(A.term) && TERM_LANGS.includes(A.name) && A.term !== A.name) return [A.term, A.name];
+    if (TERM_LANGS.includes(LANG_SET.name)) {
+      const t = TERM_LANGS.includes(LANG_SET.term) ? LANG_SET.term : "la";
+      return [t, LANG_SET.name !== t ? LANG_SET.name : t !== UI_LANG ? UI_LANG : t !== "la" ? "la" : "de"];
+    }
+    return [TERM_LANGS.includes(LANG_SET.term) && LANG_SET.term !== UI_LANG ? LANG_SET.term : "la", UI_LANG];
   })(),
   I18N = (typeof window < "u" && window.ANATOMIA_I18N) || {},
   I18N_T = (I18N[UI_LANG] || {}).t || {},
@@ -5198,8 +5221,8 @@ const LANGS = ["de", "en", "es", "sv"],
       return x;
     }
   },
-  // the app in German with Latin terms: the word rules below work exactly as they always did
-  LANG_STD = UI_LANG === "de" && TERM_LANG === "la",
+  // the app in German with Latin and German terms: the word rules below work exactly as they always did
+  LANG_STD = UI_LANG === "de" && TERM_LANG === "la" && NAME_LANG === "de",
   // the letters of a word in names (in other languages accented ones too: "m\xFAsculo", "c\xEDstica")
   WORD_RE = LANG_STD ? /[a-z\xE4\xF6\xFC\xDF]+/g : /[a-z\xDF-\xF6\xF8-\xFF]+/g,
   // the Latin and the German a card or label came with (its shown names may be in other languages)
@@ -5210,11 +5233,14 @@ const LANGS = ["de", "en", "es", "sv"],
   // "the Latin name" - in the learning language
   LANG_NAME_WORD = { la: "lateinische Name", de: "deutsche Name", en: "englische Name", es: "spanische Name", sv: "schwedische Name" },
   termNameWord = () => _T(LANG_NAME_WORD[TERM_LANG]),
-  // the line under a question to type: the learning language and the app's
+  // the line under a question to type: the two term languages (the fixed text says Latin and the app's language)
   typeSub = () =>
-    TERM_LANG === "la"
+    TERM_LANG === "la" && NAME_LANG === UI_LANG
       ? _T("Lateinisch oder deutsch eintippen \u2014 kleine Tippfehler sind erlaubt.")
-      : _T("Auf {0} oder {1} eintippen \u2014 kleine Tippfehler sind erlaubt.", langName(TERM_LANG), langName(UI_LANG)),
+      : _T("Auf {0} oder {1} eintippen \u2014 kleine Tippfehler sind erlaubt.", langName(TERM_LANG), langName(NAME_LANG)),
+  // the name in the second term language is asked (the fixed texts say the app's language)
+  nameAsk = () => (NAME_LANG === UI_LANG ? _T("Gesucht ist der deutsche Begriff.") : _T("Gesucht ist der Begriff auf {0}.", langName(NAME_LANG))),
+  nameWhat = (w) => (NAME_LANG === UI_LANG ? _T("{0} (deutsch)", w) : _T("{0} (auf {1})", w, langName(NAME_LANG))),
   // a lesson title, its "\xB7 Teil n" kept apart
   titleIn = (t) => {
     const m = /^(.*?)\s*\xB7\s*Teil\s+(\d+)\s*$/.exec(t || "");
@@ -6847,11 +6873,12 @@ const levelOf = (s) => s.level || (BASIC_LESSONS.has(s.id) ? 1 : 2),
   UNITS.forEach((s) => s.lessons.forEach((r) => ((P[r.id] || []).length || M[r.id]) && (delete r.figure, delete r.model)));
 })();
 // the lessons, pictures and labels in the app's language: each card's term in the learning language and its name in the
-// app's language (by Latin|German from the translation files), its explanation by the German text; titles and captions as
-// texts. Latin and German stay with each card and label (lat, deO, factDe; titleDe): what the app works out from the
-// names (similar names, keyed tables, title parts) keeps using them. Nothing to do in German with Latin
+// second term language (by Latin|German from the translation files), its explanation in the app's language by the German
+// text; titles and captions as texts. Latin and German stay with each card and label (lat, deO, factDe; titleDe): what
+// the app works out from the names (similar names, keyed tables, title parts) keeps using them. Nothing to do in German
+// with Latin and German
 (() => {
-  if (UI_LANG === "de" && TERM_LANG === "la") return;
+  if (UI_LANG === "de" && TERM_LANG === "la" && NAME_LANG === "de") return;
   const W = typeof window < "u" ? window : {},
     termOf = (lat, deO) =>
       GERM_RE.test((lat || "").replace(/\s*\([^()]*\)/g, ""))
@@ -6863,7 +6890,7 @@ const levelOf = (s) => s.level || (BASIC_LESSONS.has(s.id) ? 1 : 2),
       if (!i || i.lat != null) return;
       ((i.lat = i.la), (i.deO = i.de), (i.factDe = i.fact));
       ((i.la = termOf(i.lat, i.deO)),
-        (i.de = nameIn(UI_LANG, i.lat, i.deO)),
+        (i.de = nameIn(NAME_LANG, i.lat, i.deO)),
         (i.fact = factIn(UI_LANG, i.factDe)));
     };
   UNITS.forEach((u) => {
@@ -6891,7 +6918,7 @@ const levelOf = (s) => s.level || (BASIC_LESSONS.has(s.id) ? 1 : 2),
       ((l.lat = l.la), (l.deO = l.de));
       l.la === l.de && !LANGS.some((x) => nameKnown(x, l.lat, l.deO))
         ? (l.la = l.de = _T(l.deO))
-        : ((l.la = termOf(l.lat, l.deO)), (l.de = nameIn(UI_LANG, l.lat, l.deO)));
+        : ((l.la = termOf(l.lat, l.deO)), (l.de = nameIn(NAME_LANG, l.lat, l.deO)));
     }),
   );
 })();
@@ -8418,7 +8445,7 @@ function ModeSwitch({ mode: s, setMode: r, color: o, dark: e = !1 }) {
     { style: { display: "inline-flex", borderRadius: 999, padding: 2, background: e ? "rgba(255,255,255,0.12)" : C.mute } },
     [
       ["la", langName(TERM_LANG)],
-      ["de", langName(UI_LANG)],
+      ["de", langName(NAME_LANG)],
       ["off", _T("aus")],
     ].map(([a, n]) =>
       React.createElement(
@@ -10329,7 +10356,7 @@ const itemByLabel = (s, r) => {
       : {
           ...i,
           pair: o,
-          sub: [contrastSub(e.la, t.la), f === "de" ? _T("Gesucht ist der deutsche Begriff.") : null].filter(Boolean).join(" "),
+          sub: [contrastSub(e.la, t.la), f === "de" ? nameAsk() : null].filter(Boolean).join(" "),
           options: shuffle([
             { label: e[f], correct: !0 },
             { label: t[f], correct: !1 },
@@ -10386,7 +10413,7 @@ function makeQuestion(s, r, o) {
               : r.term
                 ? _T("Was ist im Bild markiert?")
                 : _T("Welche Struktur ist im Bild markiert?"),
-        sub: c ? _T("Gesucht ist der deutsche Begriff.") : void 0,
+        sub: c ? nameAsk() : void 0,
         showFig: !1,
         mark: i,
         plates: l,
@@ -10415,7 +10442,7 @@ function makeQuestion(s, r, o) {
           highlight: h3,
           lang: c ? "de" : "la",
           prompt: _T("Welche Struktur ist im 3D-Modell markiert?"),
-          sub: c ? _T("Gesucht ist der deutsche Begriff.") : _T("Modell mit dem Finger drehen."),
+          sub: c ? nameAsk() : _T("Modell mit dem Finger drehen."),
           showFig: !1,
           options: optionsOf([{ label: m(s), correct: !0 }, ...D3.map((h) => ({ label: m(h), correct: !1 }))], !0, c ? "de" : "la"),
         };
@@ -10428,7 +10455,7 @@ function makeQuestion(s, r, o) {
     return {
       ...n,
       prompt: K ? _T("Welches {0} ist markiert?", K) : r.term ? _T("Was ist markiert?") : _T("Welche Struktur ist markiert?"),
-      sub: i ? _T("Gesucht ist der deutsche Begriff.") : void 0,
+      sub: i ? nameAsk() : void 0,
       showFig: !0,
       options: optionsOf([{ label: l(s), correct: !0 }, ...pickD(aF, s, l, 3, sK).map((d) => ({ label: l(d), correct: !1 }))], !0, i ? "de" : "la"),
     };
@@ -10468,7 +10495,7 @@ function makeQuestion(s, r, o) {
     return {
       ...n,
       prompt: P,
-      sub: i ? _T("{0} (deutsch)", whatQ(r)) : whatQ(r),
+      sub: i ? nameWhat(whatQ(r)) : whatQ(r),
       // asked by its definition (so a question that lists what the definition says can leave it out)
       byFact: !0,
       showFig: !1,
@@ -10591,10 +10618,10 @@ const ABBR_FULL = [
           .replace(/(.)\1+/g, "$1"),
       )
       .join(" "),
-  // the languages a typed name counts in: the app's and the learning language (app in English, Latin learnt: the
-  // English and the Latin name, not the German or the Spanish one). Latin wording that is German ("Anatomische
-  // Grundstellung") counts as German
-  ANS_LANGS = [TERM_LANG, UI_LANG],
+  // the languages a typed name counts in: the two term languages (app in English, Latin learnt: the English and the
+  // Latin name, not the German or the Spanish one). Latin wording that is German ("Anatomische Grundstellung") counts
+  // as German
+  ANS_LANGS = [TERM_LANG, NAME_LANG],
   latGerman = (r) => GERM_RE.test(bareLabel(orLa(r))),
   okLatin = (r) => ANS_LANGS.includes(latGerman(r) ? "de" : "la"),
   // the names of a card that count: the two it is shown with, its Latin, its German ones (also "Kompakta" for
@@ -10622,10 +10649,12 @@ const ABBR_FULL = [
       of = normAnswer(s, 1);
     if (!o) return null;
     let b = null;
+    // names alike once "Hueso"/"bone" are left off ("Hueso parietal", "Parietal bone"): the one written as typed
     for (const x of otherNames(r)) {
-      const k = Math.min(levenshtein(o, x.n), levenshtein(of, x.f)),
+      const kf = levenshtein(of, x.f),
+        k = Math.min(levenshtein(o, x.n), kf),
         lim = d == null ? (x.n.length > 14 ? 3 : x.n.length > 8 ? 2 : 1) : d - 1;
-      k <= lim && (!b || k < b.k) && (b = { l: x.l, k });
+      k <= lim && (!b || k < b.k || (k === b.k && kf < b.kf)) && (b = { l: x.l, k, kf });
     }
     return b ? b.l : null;
   },
@@ -11352,7 +11381,7 @@ function makeMultiQuestion(s) {
     // eight answers at most: all the right ones and as many wrong ones as fit, two at least
     m = shuffle(d).slice(0, Math.max(2, 8 - l.length)),
     nm = (h, l) => nameIn(l, h, MULTI_DE[h] || ""),
-    ch = (h, y) => ({ label: nm(h, TERM_LANG), de: TERM_LANG === "la" && UI_LANG === "de" ? MULTI_DE[h] || "" : nm(h, UI_LANG), correct: y });
+    ch = (h, y) => ({ label: nm(h, TERM_LANG), de: nm(h, NAME_LANG), correct: y });
   try {
     ((o[s.id] = [a.k, ...e.filter((h) => h !== a.k)].slice(0, Math.max(1, r.length - 1))), localStorage.setItem(MULTI_RECENT, JSON.stringify(o)));
   } catch {}
@@ -11445,7 +11474,7 @@ const PAIR_GONAD_A = {
     const P = pairParts(s);
     if (!P) return null;
     const k = Math.random() < 0.5 ? 0 : 1,
-      mk = (it, q, id) => ({ id, la: nameIn(TERM_LANG, q[0], q[1]), de: nameIn(UI_LANG, q[0], q[1]), fact: factIn(UI_LANG, q[2]), lat: q[0], deO: q[1], factDe: q[2], hl: it.hl || [], __part: !0 }),
+      mk = (it, q, id) => ({ id, la: nameIn(TERM_LANG, q[0], q[1]), de: nameIn(NAME_LANG, q[0], q[1]), fact: factIn(UI_LANG, q[2]), lat: q[0], deO: q[1], factDe: q[2], hl: it.hl || [], __part: !0 }),
       me = mk(s, P.parts[k], s.id),
       items = [me];
     P.syn || items.push(mk(s, P.parts[1 - k], s.id + "~" + (1 - k)));
@@ -15195,9 +15224,9 @@ function FigureAtlasScreen({ onExit: s, onOpen: r, initCat: o = null, initQ: e =
           React.createElement(
             InfoMore,
             { k: "figatlas", label: _T("Mehr zum Bildatlas"), style: { margin: "0 2px 12px" }, lead: _T("{0} beschriftete Abbildungen zum Nachschlagen.", t.figures.length) },
-            TERM_LANG === "la" && UI_LANG === "de"
+            TERM_LANG === "la" && NAME_LANG === UI_LANG
               ? _T("Mit lateinischer und deutscher Beschriftung. Zum Lernen umschalten oder die Beschriftung ausblenden und sich abfragen lassen.")
-              : _T("Mit Beschriftung auf {0} und {1}. Zum Lernen umschalten oder die Beschriftung ausblenden und sich abfragen lassen.", langName(TERM_LANG), langName(UI_LANG)),
+              : _T("Mit Beschriftung auf {0} und {1}. Zum Lernen umschalten oder die Beschriftung ausblenden und sich abfragen lassen.", langName(TERM_LANG), langName(NAME_LANG)),
           ),
           React.createElement(
             "div",
@@ -16473,7 +16502,8 @@ function Switch({ on: s, onChange: r, label: o }) {
   );
 }
 // settings: look, sounds, the voice for the names, reset and the credits (all of it used to stand at the bottom of the menu)
-// the languages: of the app (automatic: as the phone) and of the terms learnt beside it. A change starts the app anew in it
+// the languages: of the app (automatic: as the phone) and the two of the terms (any two, also others than the app's: the app
+// in Spanish, the terms in Latin and German). A change starts the app anew in it
 function LangCard() {
   const cur = LANGS.includes(LANG_SET.ui) ? LANG_SET.ui : null,
     ex = { la: "Os coxae", de: "H\xFCftbein", en: "Hip bone", es: "Hueso coxal", sv: "H\xF6ftbenet" },
@@ -16529,6 +16559,42 @@ function LangCard() {
           },
           on && React.createElement(Check, { size: 14, color: "#fff", strokeWidth: 3 }),
         ),
+      ),
+    // a row of language buttons under a small heading (a language of the terms; picking the one of the other row swaps them)
+    chips = (k, label, list, isOn, go) =>
+      React.createElement(
+        "div",
+        { style: { marginBottom: 10 } },
+        React.createElement("div", { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: C.inkSoft, margin: "0 2px 6px" } }, label),
+        React.createElement(
+          "div",
+          { role: "radiogroup", "aria-label": label, style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+          list.map((l) =>
+            React.createElement(
+              "button",
+              {
+                key: l,
+                type: "button",
+                role: "radio",
+                "aria-checked": isOn(l) ? "true" : "false",
+                "data-term-opt": k + "-" + l,
+                onClick: () => isOn(l) || go(l),
+                className: "ana-body",
+                style: {
+                  border: `1.5px solid ${isOn(l) ? C.gold : C.line}`,
+                  background: isOn(l) ? C.goldBg : C.card,
+                  color: C.ink,
+                  borderRadius: 999,
+                  padding: "7px 14px",
+                  fontSize: 14.5,
+                  fontWeight: 700,
+                  cursor: isOn(l) ? "default" : "pointer",
+                },
+              },
+              capFirst(langName(l)),
+            ),
+          ),
+        ),
       );
   return React.createElement(
     React.Fragment,
@@ -16540,12 +16606,23 @@ function LangCard() {
       row("auto", !cur, _T("Wie am Handy"), LANG_OWN[deviceLang()], () => setLang({ ui: null })),
       LANGS.map((l) => row(l, cur === l, LANG_OWN[l], null, () => setLang({ ui: l }))),
     ),
-    React.createElement(SectionLabel, null, _T("BEGRIFFE LERNEN")),
+    React.createElement(SectionLabel, null, _T("BEGRIFFSSPRACHEN")),
     React.createElement(
       "div",
-      { role: "radiogroup", "aria-label": _T("Begriffe lernen") },
-      ["la", ...LANGS.filter((l) => l !== UI_LANG)].map((l) =>
-        row("t-" + l, TERM_LANG === l, ((x) => x.charAt(0).toUpperCase() + x.slice(1))(_T("{0} und {1}", langName(l), langName(UI_LANG))), `${ex[l]} — ${ex[UI_LANG]}`, () => setLang({ term: l })),
+      { "data-term-langs": TERM_LANG + "-" + NAME_LANG },
+      React.createElement(
+        "div",
+        { className: "ana-body", style: { fontSize: 13.5, color: C.inkSoft, lineHeight: 1.4, margin: "0 2px 10px" } },
+        _T("Die Begriffe lernst du in zwei Sprachen: groß in der Hauptsprache, klein darunter in der zweiten. Erklärungen und alles andere bleiben in der Sprache der App."),
+      ),
+      chips("t", _T("Hauptsprache"), TERM_LANGS, (l) => l === TERM_LANG, (l) => setLang({ term: l, name: l === NAME_LANG ? TERM_LANG : NAME_LANG })),
+      chips("n", _T("Zweite Sprache"), TERM_LANGS.filter((l) => l !== TERM_LANG), (l) => l === NAME_LANG, (l) => setLang({ term: TERM_LANG, name: l })),
+      // what a card then shows
+      React.createElement(
+        "div",
+        { "data-term-preview": "", style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 14, padding: "10px 12px", marginTop: 2 } },
+        React.createElement("div", { className: "ana-display", style: { fontSize: 18, fontWeight: 700, color: C.ink } }, ex[TERM_LANG]),
+        React.createElement("div", { className: "ana-display", style: { fontSize: 14.5, fontWeight: 700, color: C.inkSoft, marginTop: 1 } }, ex[NAME_LANG]),
       ),
     ),
   );
@@ -20964,7 +21041,7 @@ function QuizScreen({
                 ? React.createElement(
                     "div",
                     { className: "ana-body", "data-wrong-lang": wl, style: { fontSize: 13.5, fontWeight: 700, color: C.badText, marginTop: 4, lineHeight: 1.35 } },
-                    _T("Das ist der {0} \u2013 hier z\xE4hlen nur {1} und {2}.", _T(LANG_NAME_WORD[wl]), langName(TERM_LANG), langName(UI_LANG)),
+                    _T("Das ist der {0} \u2013 hier z\xE4hlen nur {1} und {2}.", _T(LANG_NAME_WORD[wl]), langName(TERM_LANG), langName(NAME_LANG)),
                   )
                 : null;
             })(),
