@@ -78,7 +78,7 @@ struct WebAppView: UIViewRepresentable {
             switch lang {
             case "de": return "Abbrechen"
             case "es": return "Cancelar"
-            case "sv": return "Avbryt"
+            case "sv", "nb", "no", "nn": return "Avbryt"
             default: return "Cancel"
             }
         }

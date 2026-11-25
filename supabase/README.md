@@ -41,7 +41,7 @@ Karteikarte gilt die Wiederholung, die früher fällig ist. Ein neues Gerät ohn
 
 Bestätigungs- und Passwort-Mails gehen über ein eigenes Gmail-Konto der App (SMTP mit
 App-Passwort, in Supabase unter Authentication → Emails → SMTP eingetragen). Die Texte stehen
-in der Auth-Einstellung des Projekts, in vier Sprachen: Die App gibt beim Registrieren die
+in der Auth-Einstellung des Projekts, in fünf Sprachen: Die App gibt beim Registrieren die
 Sprache mit (`lang` in den Nutzerdaten), die Vorlagen wählen danach (`{{ if eq .Data.lang "en" }}`).
 Neue Konten müssen ihre E-Mail-Adresse bestätigen. Ein Link aus der Mail öffnet die App:
 bestätigt → Konto-Seite mit Begrüßung; Passwort vergessen → Formular für ein neues Passwort;

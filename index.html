@@ -5066,15 +5066,15 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 // the languages before anything else: the app's (as chosen, else as the phone, else English) and the two of the terms;
 // the translation files they need are loaded here, ahead of the app
 (function () {
-  var L = ["de", "en", "es", "sv"], s = {};
+  var L = ["de", "en", "es", "sv", "nb"], s = {};
   try { s = JSON.parse(localStorage.getItem("ana:lang") || "null") || {}; } catch (e) {}
   var ui = L.indexOf(s.ui) >= 0 ? s.ui : null;
   if (!ui) {
     var ls = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""];
-    for (var i = 0; i < ls.length && !ui; i++) { var k = String(ls[i] || "").toLowerCase().slice(0, 2); if (L.indexOf(k) >= 0) ui = k; }
+    for (var i = 0; i < ls.length && !ui; i++) { var k = String(ls[i] || "").toLowerCase().slice(0, 2); if (k === "no" || k === "nn") k = "nb"; if (L.indexOf(k) >= 0) ui = k; }
     ui = ui || "en";
   }
-  // the two languages of the terms: chosen freely in the settings (name set: any two of Latin and the four), else as
+  // the two languages of the terms: chosen freely in the settings (name set: any two of Latin and the five), else as
   // before the learning language with the app's language beside it
   var T = ["la"].concat(L), term, name;
   if (T.indexOf(s.name) >= 0) {
@@ -5097,7 +5097,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
   }
   // the names in the other languages come a little later: a typed answer counts only in the two languages of the
   // terms, and they tell such a name from a typo
-  ["en", "es", "sv"].forEach(function (l) {
+  ["en", "es", "sv", "nb"].forEach(function (l) {
     if (need.indexOf(l) >= 0) return;
     var e = document.createElement("script");
     e.src = "./names-" + l + ".js";
@@ -5107,11 +5107,11 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 })();
 </script>
 <script>
-// ---------- languages: the app in German, English, Spanish or Swedish (as the phone, or as chosen in the settings). The terms are
+// ---------- languages: the app in German, English, Spanish, Swedish or Norwegian (as the phone, or as chosen in the settings). The terms are
 // learnt in two languages: the learning language (Latin, or one of the others) and a second one beside it - the app's
 // language, unless both were chosen freely in the settings (the app in Spanish, the terms in Latin and German). The
 // loader in the page head picked them and loaded the translation files (window.ANATOMIA_LANG, window.ANATOMIA_I18N) ----------
-const LANGS = ["de", "en", "es", "sv"],
+const LANGS = ["de", "en", "es", "sv", "nb"],
   LANG_SET = (() => {
     let v = null;
     try {
@@ -5124,7 +5124,8 @@ const LANGS = ["de", "en", "es", "sv"],
     try {
       const a = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""];
       for (const l of a) {
-        const k = String(l || "").toLowerCase().slice(0, 2);
+        const k0 = String(l || "").toLowerCase().slice(0, 2),
+          k = k0 === "no" || k0 === "nn" ? "nb" : k0;
         if (LANGS.includes(k)) return k;
       }
     } catch {}
@@ -5157,7 +5158,7 @@ const LANGS = ["de", "en", "es", "sv"],
   // a text whose translation depends on where it stands ("aus": labels off, a design off): key "where|text"
   _TC = (c, s, ...a) => (UI_LANG === "de" ? _T(s, ...a) : I18N_T[c + "|" + s] != null ? _T(c + "|" + s, ...a) : _T(s, ...a)),
   // numbers and dates as written in the app's language
-  UI_LOCALE = { de: "de-DE", en: "en-US", es: "es-ES", sv: "sv-SE" }[UI_LANG] || "de-DE",
+  UI_LOCALE = { de: "de-DE", en: "en-US", es: "es-ES", sv: "sv-SE", nb: "nb-NO" }[UI_LANG] || "de-DE",
   fmtDay = (d) => {
     if (UI_LANG === "de") return String(d || "").split("-").reverse().join(".");
     try {
@@ -5167,11 +5168,11 @@ const LANGS = ["de", "en", "es", "sv"],
     }
   },
   // the names of the languages in the app's language
-  LANG_NAME_DE = { la: "Latein", de: "Deutsch", en: "Englisch", es: "Spanisch", sv: "Schwedisch" },
+  LANG_NAME_DE = { la: "Latein", de: "Deutsch", en: "Englisch", es: "Spanisch", sv: "Schwedisch", nb: "Norwegisch" },
   langName = (l) => _T(LANG_NAME_DE[l] || l),
-  LANG_OWN = { de: "Deutsch", en: "English", es: "Espa\xF1ol", sv: "Svenska" },
+  LANG_OWN = { de: "Deutsch", en: "English", es: "Espa\xF1ol", sv: "Svenska", nb: "Norsk" },
   // what the voice reads: the term to learn (Latin is read in the app's language) and its name
-  VOICE_LANG = { de: "de-DE", en: "en-US", es: "es-ES", sv: "sv-SE" },
+  VOICE_LANG = { de: "de-DE", en: "en-US", es: "es-ES", sv: "sv-SE", nb: "nb-NO" },
   termVoice = () => VOICE_LANG[TERM_LANG] || VOICE_LANG[UI_LANG],
   // a new language: saved, and the app starts anew in it (back on the settings page)
   setLang = (o) => {
@@ -5216,7 +5217,13 @@ const LANGS = ["de", "en", "es", "sv"],
   // accents off, for comparing typed answers ("m\xFAsculo" as "musculo"; \xE4 as a, as before)
   foldAcc = (x) => {
     try {
-      return x.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return x
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\xF8/g, "o")
+        .replace(/\xD8/g, "O")
+        .replace(/\xE6/g, "ae")
+        .replace(/\xC6/g, "AE");
     } catch {
       return x;
     }
@@ -5231,7 +5238,7 @@ const LANGS = ["de", "en", "es", "sv"],
   // German wording in the Latin name: a concept without a Latin term ("Anatomische Grundstellung", "Trendelenburg-Zeichen")
   GERM_RE = /[\xE4\xF6\xFC\xDF]|\b(der|die|das|des|dem|den|zum|zur|vom|beim)\b|[a-z](ung|ungen|ische|ischer|isches|ischen|heit|keit|lich|liche|licher|chen|zeichen)\b/i,
   // "the Latin name" - in the learning language
-  LANG_NAME_WORD = { la: "lateinische Name", de: "deutsche Name", en: "englische Name", es: "spanische Name", sv: "schwedische Name" },
+  LANG_NAME_WORD = { la: "lateinische Name", de: "deutsche Name", en: "englische Name", es: "spanische Name", sv: "schwedische Name", nb: "norwegische Name" },
   termNameWord = () => _T(LANG_NAME_WORD[TERM_LANG]),
   // the line under a question to type: the two term languages (the fixed text says Latin and the app's language)
   typeSub = () =>
@@ -16607,7 +16614,7 @@ function VoiceCard({ progress: s, onVoice: sv }) {
       } catch {}
     };
   }, []);
-  const vLang = { "de-DE": "de", "en-US": "en", "es-ES": "es", "sv-SE": "sv" }[termVoice()] || "de",
+  const vLang = { "de-DE": "de", "en-US": "en", "es-ES": "es", "sv-SE": "sv", "nb-NO": "nb" }[termVoice()] || "de",
     ap = appleTouch(),
     pad = ap && (/iPad/.test(navigator.userAgent) || navigator.platform === "MacIntel"),
     cur = findVoice(vl, s.voiceUri) || vl[0] || null,
@@ -16676,7 +16683,7 @@ function VoiceCard({ progress: s, onVoice: sv }) {
         React.createElement(
           "button",
           {
-            onClick: () => speakTerm({ de: "Kopfwender", en: "Sternocleidomastoid", es: "M\xFAsculo esternocleidomastoideo", sv: "Nickmuskeln" }[TERM_LANG] || "Musculus sternocleidomastoideus"),
+            onClick: () => speakTerm({ de: "Kopfwender", en: "Sternocleidomastoid", es: "M\xFAsculo esternocleidomastoideo", sv: "Nickmuskeln", nb: "Kopfnikkeren" }[TERM_LANG] || "Musculus sternocleidomastoideus"),
             "aria-label": _T("Probe h\xF6ren"),
             className: "ana-body",
             style: {
@@ -16963,7 +16970,7 @@ function Switch({ on: s, onChange: r, label: o }) {
 // in Spanish, the terms in Latin and German). A change starts the app anew in it
 function LangCard() {
   const cur = LANGS.includes(LANG_SET.ui) ? LANG_SET.ui : null,
-    ex = { la: "Os coxae", de: "H\xFCftbein", en: "Hip bone", es: "Hueso coxal", sv: "H\xF6ftbenet" },
+    ex = { la: "Os coxae", de: "H\xFCftbein", en: "Hip bone", es: "Hueso coxal", sv: "H\xF6ftbenet", nb: "Hoftebeinet" },
     row = (k, on, title, sub, go) =>
       React.createElement(
         "button",
@@ -21453,12 +21460,13 @@ const LA_ABBR = [
     if (!speechOk()) return [];
     try {
       const l = r.slice(0, 2).toLowerCase(),
+        ls = l === "nb" ? ["nb", "no", "nn"] : [l],
         q = (n) =>
           [0, 4, 6][voiceQ(n)] +
           (/anna|helena|petra|markus|yannick|martin|google|katja|hedda|conrad|amala|killian|seraphina|florian/i.test(n.name || "") ? 1 : 0) +
           ((n.lang || "").replace("_", "-").toLowerCase() === r.toLowerCase() ? 0.5 : 0);
       const seen = new Set(),
-        all = (window.speechSynthesis.getVoices() || []).filter((n) => (n.lang || "").toLowerCase().startsWith(l)),
+        all = (window.speechSynthesis.getVoices() || []).filter((n) => ls.some((x) => (n.lang || "").toLowerCase().startsWith(x))),
         real = all.filter((n) => !isNovelty(n));
       return (real.length ? real : all)
         .map((n, i) => ({ n, s: q(n), i }))
