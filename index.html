@@ -12353,7 +12353,7 @@ const cloudLoad = () =>
         cloudSet({ user: u, recovery: ev === "PASSWORD_RECOVERY" || (CLOUD.recovery && !!u) });
         // (calls to the library from inside this callback wait for each other: after it)
         u && u.id !== was && setTimeout(() => (cloudProfile(), cloudSync()), 0);
-        u || cloudSet({ profile: null, board: null, status: "off" });
+        u || cloudSet({ profile: null, board: null, global: null, status: "off" });
       });
       return c;
     })().catch((e) => ((CLOUD.started = null), Promise.reject(e)))),
@@ -12361,7 +12361,7 @@ const cloudLoad = () =>
     if (!CLOUD.user) return;
     try {
       const c = await cloudClient(),
-        { data: d } = await c.from("profiles").select("name,friend_code").eq("id", CLOUD.user.id).maybeSingle();
+        { data: d } = await c.from("profiles").select("name,friend_code,public").eq("id", CLOUD.user.id).maybeSingle();
       d && cloudSet({ profile: d });
     } catch {}
   },
@@ -12409,7 +12409,7 @@ const cloudLoad = () =>
       await cloudSync();
     } catch {}
     const c = await cloudClient();
-    (await c.auth.signOut({ scope: "local" }), cloudSet({ user: null, profile: null, board: null, status: "off" }));
+    (await c.auth.signOut({ scope: "local" }), cloudSet({ user: null, profile: null, board: null, global: null, status: "off" }));
   },
   cloudForgot = async (email) => {
     const c = await cloudClient(),
@@ -12424,7 +12424,7 @@ const cloudLoad = () =>
   },
   cloudRename = async (name) => {
     const c = await cloudClient(),
-      { data: d, error: e } = await c.from("profiles").update({ name }).eq("id", CLOUD.user.id).select("name,friend_code").single();
+      { data: d, error: e } = await c.from("profiles").update({ name }).eq("id", CLOUD.user.id).select("name,friend_code,public").single();
     if (e) throw e;
     cloudSet({ profile: d, boardAt: 0 });
   },
@@ -12436,7 +12436,7 @@ const cloudLoad = () =>
     try {
       localStorage.removeItem(CLOUD_META);
     } catch {}
-    (await c.auth.signOut({ scope: "local" }), cloudSet({ user: null, profile: null, board: null, status: "off" }));
+    (await c.auth.signOut({ scope: "local" }), cloudSet({ user: null, profile: null, board: null, global: null, status: "off" }));
   },
   // a date as the app writes it (2026-11-25), and this week's Monday
   ymdOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
@@ -12453,6 +12453,23 @@ const cloudLoad = () =>
       { data: d, error: e } = await c.rpc("leaderboard", { week_start: weekStartStr(), today: todayStr() });
     if (e) throw e;
     return (cloudSet({ board: d || [], boardAt: Date.now() }), d || []);
+  },
+  // the leaderboard of everyone (period "week" or "all"): how many, my place, the first 50
+  cloudGlobal = async (period, force) => {
+    if (!CLOUD.user) return null;
+    const h = CLOUD.global && CLOUD.global[period];
+    if (!force && h && Date.now() - h.at < 6e4) return h;
+    await cloudSync();
+    const c = await cloudClient(),
+      { data: d, error: e } = await c.rpc("global_board", { period, lim: 50 });
+    if (e) throw e;
+    return (cloudSet({ global: { ...(CLOUD.global || {}), [period]: { ...(d || {}), at: Date.now() } } }), CLOUD.global[period]);
+  },
+  cloudShow = async (on) => {
+    const c = await cloudClient(),
+      { data: d, error: e } = await c.from("profiles").update({ public: on }).eq("id", CLOUD.user.id).select("name,friend_code,public").single();
+    if (e) throw e;
+    cloudSet({ profile: d, global: null });
   },
   cloudAddFriend = async (code) => {
     const c = await cloudClient(),
@@ -17112,6 +17129,7 @@ function ProgressMove() {
 }
 // ---- the account and the friends on screen ----
 const CLOUD_BLUE = "#1C7ED6",
+  fmtN = (n) => Number(n || 0).toLocaleString(UI_LOCALE),
   CLOUD_MEDAL = ["\u{1F947}", "\u{1F948}", "\u{1F949}"],
   // the friend code as it is shown: ABCD-EFGH
   codeShow = (c) => (c ? `${c.slice(0, 4)}-${c.slice(4)}` : ""),
@@ -17392,6 +17410,21 @@ function AccountScreen({ onExit: r, onFriends: fr, onPrivacy: pv }) {
       React.createElement("div", { className: "ana-display", style: { fontSize: 24, fontWeight: 700, letterSpacing: 2, color: C.ink, margin: "2px 0 10px" } }, codeShow(code) || "…"),
       React.createElement(Btn, { ghost: !0, color: CLOUD_BLUE, onClick: fr, "data-open-friends": "1", style: { padding: "11px 8px", fontSize: 15 } }, _T("Freunde & Rangliste")),
     ),
+    React.createElement(SectionLabel, null, _T("RANGLISTE")),
+    cloudBox(
+      { "data-public": cl.profile && cl.profile.public === !1 ? "off" : "on", style: { display: "flex", alignItems: "center", gap: 12 } },
+      React.createElement(
+        "div",
+        { style: { flex: 1, minWidth: 0 } },
+        React.createElement("div", { className: "ana-display", style: { fontSize: 15, fontWeight: 700, color: C.ink } }, _T("In der weltweiten Rangliste zeigen")),
+        React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.35, marginTop: 1 } }, _T("Alle sehen dann deinen Spitznamen, deine XP und deine Serie. Deinen eigenen Platz siehst du immer.")),
+      ),
+      React.createElement(Switch, {
+        on: !(cl.profile && cl.profile.public === !1),
+        onChange: (n) => !busy && cl.profile && run(() => cloudShow(n)),
+        label: _T("In der weltweiten Rangliste zeigen"),
+      }),
+    ),
     React.createElement(SectionLabel, null, _T("SPITZNAME")),
     cloudBox(
       null,
@@ -17453,11 +17486,19 @@ function AccountScreen({ onExit: r, onFriends: fr, onPrivacy: pv }) {
     privacy,
   );
 }
-// friends and the leaderboard: this week or all time; add a friend by code, invite with your own
+// friends and the leaderboards: of your friends or of everyone, this week or all time; add a friend by code,
+// invite with your own
 function FriendsScreen({ onExit: r, onAccount: ac }) {
   const cl = useCloud(),
     u = cl.user,
     [week, setWeek] = useState(!0),
+    [world, setWorld] = useState(() => {
+      try {
+        return localStorage.getItem("anatomia-board") === "world";
+      } catch {
+        return !1;
+      }
+    }),
     [code, setCode] = useState(() => cloudInvite()),
     [busy, setBusy] = useState(!1),
     [bad, setBad] = useState(null),
@@ -17468,7 +17509,7 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
       if (!CLOUD.user) return;
       setLoading(!0);
       try {
-        await cloudBoard(force);
+        await (world ? cloudGlobal(week ? "week" : "all", force) : cloudBoard(force));
       } catch (e) {
         setBad(cloudErr(e));
       } finally {
@@ -17479,9 +17520,10 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
     cloudStart()
       .then(() => load(!1))
       .catch(() => {});
-  }, [u && u.id]);
+  }, [u && u.id, world, week]);
   const my = cl.profile && cl.profile.friend_code,
     list = boardSort(cl.board, week),
+    g = world && cl.global && cl.global[week ? "week" : "all"],
     add = async () => {
       const c = code.replace(/[^A-Za-z0-9]/g, "");
       if (c.length !== 8) return setBad(_T("Ein Freundescode hat 8 Zeichen."));
@@ -17522,7 +17564,27 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
         setBusy(!1);
       }
     },
-    title = React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, _T("Freunde & Rangliste"));
+    title = React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, _T("Freunde & Rangliste")),
+    // a two-way switch (friends / everyone, this week / all time)
+    seg = (k, opts, set, attr) =>
+      React.createElement(
+        "div",
+        { style: { display: "flex", gap: 4, background: C.mute, borderRadius: 13, padding: 3, marginBottom: 10 } },
+        opts.map(([v, t, a]) =>
+          React.createElement(
+            "button",
+            {
+              key: t,
+              onClick: () => set(v),
+              [attr]: a,
+              "aria-pressed": k === v ? "true" : "false",
+              className: "ana-display",
+              style: { flex: 1, padding: "9px 8px", borderRadius: 11, border: "none", cursor: "pointer", fontSize: 14.5, fontWeight: 700, background: k === v ? C.card : "transparent", color: k === v ? C.ink : C.inkSoft, boxShadow: k === v ? "0 1px 4px rgba(0,0,0,0.12)" : "none" },
+            },
+            t,
+          ),
+        ),
+      );
   if (!u)
     return React.createElement(
       "div",
@@ -17542,20 +17604,19 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
         React.createElement(Btn, { color: CLOUD_BLUE, dark: "#1864AB", onClick: ac, "data-friends-login": "1" }, _T("Anmelden oder registrieren")),
       ),
     );
-  const row = (f, i) => {
-    const v = week ? f.week_xp : f.xp,
-      on = open === f.id && !f.me;
-    return React.createElement(
+  // one line of a leaderboard: place (a medal for the first three), name, XP, streak
+  const line = (f, place, v, last, onTap, on) =>
+    React.createElement(
       "div",
-      { key: f.id, "data-board-row": f.me ? "me" : "friend", style: { borderBottom: i < list.length - 1 ? `1px solid ${C.line}` : "none" } },
+      { key: f.id || `${place}-${f.name}`, "data-board-row": f.me ? "me" : "friend", style: { borderBottom: last ? "none" : `1px solid ${C.line}` } },
       React.createElement(
         "button",
         {
-          onClick: () => f.me || setOpen(on ? null : f.id),
+          onClick: onTap,
           className: "ana-body",
-          style: { display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "10px 4px", background: f.me ? C.blueBg : "none", border: "none", borderRadius: 10, cursor: f.me ? "default" : "pointer", color: C.ink },
+          style: { display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "10px 4px", background: f.me ? C.blueBg : "none", border: "none", borderRadius: 10, cursor: onTap ? "pointer" : "default", color: C.ink },
         },
-        React.createElement("span", { className: "ana-display", style: { width: 30, textAlign: "center", fontSize: i < 3 && v > 0 ? 20 : 15, fontWeight: 700, color: C.inkSoft } }, i < 3 && v > 0 ? CLOUD_MEDAL[i] : i + 1),
+        React.createElement("span", { className: "ana-display", style: { minWidth: 30, textAlign: "center", fontSize: place <= 3 && v > 0 ? 20 : 15, fontWeight: 700, color: C.inkSoft } }, place <= 3 && v > 0 ? CLOUD_MEDAL[place - 1] : place),
         React.createElement(
           "span",
           { style: { flex: 1, minWidth: 0 } },
@@ -17563,7 +17624,7 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
           f.me && React.createElement("span", { style: { fontSize: 13, color: C.inkSoft } }, " \xB7 ", _T("du")),
           f.streak > 0 && React.createElement("span", { style: { display: "block", fontSize: 12.5, color: C.inkSoft } }, "\u{1F525} ", f.streak === 1 ? _T("1 Tag Serie") : _T("{0} Tage Serie", f.streak)),
         ),
-        React.createElement("span", { className: "ana-display", "data-board-xp": v, style: { fontSize: 16, fontWeight: 700, color: C.ink } }, `${v} XP`),
+        React.createElement("span", { className: "ana-display", "data-board-xp": v, style: { fontSize: 16, fontWeight: 700, color: C.ink, whiteSpace: "nowrap" } }, `${fmtN(v)} XP`),
       ),
       on &&
         React.createElement(
@@ -17576,7 +17637,9 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
           ),
         ),
     );
-  };
+  const top = (g && g.top) || [],
+    meIn = top.some((x) => x.me),
+    hidden = cl.profile && cl.profile.public === !1;
   return React.createElement(
     "div",
     { style: { minHeight: PAGE_H, paddingBottom: 30 } },
@@ -17592,84 +17655,143 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
       },
       title,
     ),
-    React.createElement(
-      "div",
-      { style: { display: "flex", gap: 4, background: C.mute, borderRadius: 13, padding: 3, marginBottom: 12 } },
+    seg(
+      world,
       [
-        [!0, _T("Diese Woche")],
-        [!1, _T("Gesamt")],
-      ].map(([k, t]) =>
-        React.createElement(
-          "button",
-          {
-            key: t,
-            onClick: () => setWeek(k),
-            "data-board-tab": k ? "week" : "all",
-            "aria-pressed": week === k ? "true" : "false",
-            className: "ana-display",
-            style: { flex: 1, padding: "9px 8px", borderRadius: 11, border: "none", cursor: "pointer", fontSize: 14.5, fontWeight: 700, background: week === k ? C.card : "transparent", color: week === k ? C.ink : C.inkSoft, boxShadow: week === k ? "0 1px 4px rgba(0,0,0,0.12)" : "none" },
-          },
-          t,
+        [!1, _T("Freunde"), "friends"],
+        [!0, _T("Weltweit"), "world"],
+      ],
+      (v) => {
+        (setWorld(v), setOpen(null));
+        try {
+          localStorage.setItem("anatomia-board", v ? "world" : "friends");
+        } catch {}
+      },
+      "data-board-scope",
+    ),
+    seg(
+      week,
+      [
+        [!0, _T("Diese Woche"), "week"],
+        [!1, _T("Gesamt"), "all"],
+      ],
+      setWeek,
+      "data-board-tab",
+    ),
+    world
+      ? React.createElement(
+          React.Fragment,
+          null,
+          cloudBox(
+            { "data-world-me": g && g.me ? g.me.rank : "", style: { textAlign: "center", padding: "14px 14px" } },
+            g && g.me
+              ? React.createElement(
+                  React.Fragment,
+                  null,
+                  React.createElement("div", { className: "ana-body", style: { fontSize: 13.5, color: C.inkSoft } }, week ? _T("Dein Platz diese Woche") : _T("Dein Platz insgesamt")),
+                  React.createElement("div", { className: "ana-display", style: { fontSize: 30, fontWeight: 700, color: CLOUD_BLUE, margin: "2px 0" } }, _T("Platz {0}", fmtN(g.me.rank))),
+                  React.createElement("div", { className: "ana-body", style: { fontSize: 14, color: C.ink } }, _T("von {0} \xB7 {1} XP", fmtN(g.total), fmtN(g.me.value))),
+                )
+              : React.createElement(
+                  "div",
+                  { className: "ana-body", style: { fontSize: 14, color: C.inkSoft, lineHeight: 1.45 } },
+                  g ? (week ? _T("Diese Woche noch keine XP: Lern eine Runde, dann bist du dabei.") : _T("Sammle XP, dann erscheinst du hier.")) : loading ? _T("wird geladen …") : _T("Die Rangliste ist gerade nicht erreichbar."),
+                ),
+          ),
+          cloudBox(
+            { "data-world": top.length, style: { padding: "6px 8px" } },
+            top.length
+              ? [
+                  ...top.map((f, i) => line(f, f.rank, f.value, i === top.length - 1 && meIn, null, !1)),
+                  !meIn &&
+                    g.me &&
+                    React.createElement("div", { key: "gap", className: "ana-display", style: { textAlign: "center", color: C.inkSoft, padding: "2px 0", borderBottom: `1px solid ${C.line}` } }, "⋮"),
+                  !meIn && g.me && line({ ...g.me, name: (cl.profile && cl.profile.name) || "", me: !0 }, g.me.rank, g.me.value, !0, null, !1),
+                ]
+              : React.createElement(
+                  "div",
+                  { className: "ana-body", style: { padding: "14px 6px", color: C.inkSoft, fontSize: 14 } },
+                  loading ? _T("wird geladen …") : week ? _T("Diese Woche hat noch niemand XP gesammelt.") : _T("Noch niemand in der Rangliste."),
+                ),
+          ),
+          React.createElement(
+            "div",
+            { className: "ana-body", "data-world-note": hidden ? "hidden" : "shown", style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.45, margin: "-4px 4px 12px" } },
+            hidden
+              ? _T("Du bist ausgeblendet: Deinen Platz siehst nur du. Einblenden kannst du dich in deinem Konto.")
+              : _T("Hier sehen alle Spitznamen, XP und Serie. In deinem Konto kannst du dich ausblenden."),
+            week ? " " + _T("Die Woche beginnt am Montag.") : "",
+          ),
+          React.createElement(CloudMsg, { good, bad }),
+        )
+      : React.createElement(
+          React.Fragment,
+          null,
+          cloudBox(
+            { "data-board": list.length, style: { padding: "6px 8px" } },
+            list.length
+              ? list.map((f, i) => line(f, i + 1, week ? f.week_xp : f.xp, i === list.length - 1, f.me ? null : () => setOpen(open === f.id ? null : f.id), open === f.id && !f.me))
+              : React.createElement("div", { className: "ana-body", style: { padding: "14px 6px", color: C.inkSoft, fontSize: 14 } }, loading ? _T("wird geladen …") : _T("Die Rangliste ist gerade nicht erreichbar.")),
+            list.length === 1 &&
+              React.createElement("div", { className: "ana-body", style: { padding: "8px 6px 6px", color: C.inkSoft, fontSize: 13.5, lineHeight: 1.45 } }, _T("Noch keine Freunde hier. Lade jemanden mit deinem Code ein!")),
+          ),
+          week &&
+            list.length > 0 &&
+            React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, margin: "-4px 4px 12px" } }, _T("Die Woche beginnt am Montag.")),
+          React.createElement(CloudMsg, { good, bad }),
+          React.createElement(SectionLabel, null, _T("FREUND HINZUF\xDCGEN")),
+          cloudBox(
+            null,
+            React.createElement(CloudField, {
+              label: _T("Code deines Freundes"),
+              value: code,
+              onChange: (e) => setCode(e.target.value.toUpperCase().slice(0, 9)),
+              placeholder: "ABCD-EFGH",
+              autoCapitalize: "characters",
+              autoComplete: "off",
+              "data-friend-code": "1",
+              style: { letterSpacing: 2, fontWeight: 700 },
+            }),
+            React.createElement(Btn, { color: CLOUD_BLUE, dark: "#1864AB", disabled: busy || !code.trim(), onClick: add, "data-add-friend": "1" }, _T("Hinzuf\xFCgen")),
+          ),
+          React.createElement(SectionLabel, null, _T("DEIN CODE")),
+          cloudBox(
+            { "data-my-code": my || "" },
+            React.createElement("div", { className: "ana-display", style: { fontSize: 24, fontWeight: 700, letterSpacing: 2, color: C.ink, marginBottom: 4 } }, codeShow(my) || "…"),
+            React.createElement("div", { className: "ana-body", style: { fontSize: 13, color: C.inkSoft, lineHeight: 1.45, marginBottom: 10 } }, _T("Wer deinen Code eingibt, ist sofort mit dir befreundet.")),
+            React.createElement(Btn, { ghost: !0, color: CLOUD_BLUE, disabled: !my, onClick: invite, "data-invite": "1", style: { padding: "11px 8px", fontSize: 15 } }, _T("Freunde einladen")),
+          ),
         ),
-      ),
-    ),
-    cloudBox(
-      { "data-board": list.length, style: { padding: "6px 8px" } },
-      list.length
-        ? list.map(row)
-        : React.createElement("div", { className: "ana-body", style: { padding: "14px 6px", color: C.inkSoft, fontSize: 14 } }, loading ? _T("wird geladen …") : _T("Die Rangliste ist gerade nicht erreichbar.")),
-      list.length === 1 &&
-        React.createElement("div", { className: "ana-body", style: { padding: "8px 6px 6px", color: C.inkSoft, fontSize: 13.5, lineHeight: 1.45 } }, _T("Noch keine Freunde hier. Lade jemanden mit deinem Code ein!")),
-    ),
-    week &&
-      list.length > 0 &&
-      React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, margin: "-4px 4px 12px" } }, _T("Die Woche beginnt am Montag.")),
-    React.createElement(CloudMsg, { good, bad }),
-    React.createElement(SectionLabel, null, _T("FREUND HINZUF\xDCGEN")),
-    cloudBox(
-      null,
-      React.createElement(CloudField, {
-        label: _T("Code deines Freundes"),
-        value: code,
-        onChange: (e) => setCode(e.target.value.toUpperCase().slice(0, 9)),
-        placeholder: "ABCD-EFGH",
-        autoCapitalize: "characters",
-        autoComplete: "off",
-        "data-friend-code": "1",
-        style: { letterSpacing: 2, fontWeight: 700 },
-      }),
-      React.createElement(Btn, { color: CLOUD_BLUE, dark: "#1864AB", disabled: busy || !code.trim(), onClick: add, "data-add-friend": "1" }, _T("Hinzuf\xFCgen")),
-    ),
-    React.createElement(SectionLabel, null, _T("DEIN CODE")),
-    cloudBox(
-      { "data-my-code": my || "" },
-      React.createElement("div", { className: "ana-display", style: { fontSize: 24, fontWeight: 700, letterSpacing: 2, color: C.ink, marginBottom: 4 } }, codeShow(my) || "…"),
-      React.createElement("div", { className: "ana-body", style: { fontSize: 13, color: C.inkSoft, lineHeight: 1.45, marginBottom: 10 } }, _T("Wer deinen Code eingibt, ist sofort mit dir befreundet.")),
-      React.createElement(Btn, { ghost: !0, color: CLOUD_BLUE, disabled: !my, onClick: invite, "data-invite": "1", style: { padding: "11px 8px", fontSize: 15 } }, _T("Freunde einladen")),
-    ),
   );
 }
-// the friends on the menu: your place this week, or an invitation to compare yourself
+// the leaderboards on the menu: your place among everyone (all time), your friends this week
 function FriendsHomeCard({ onOpen: op }) {
   const cl = useCloud(),
     u = cl.user,
-    b = u && cl.board ? boardSort(cl.board, !0) : null;
+    b = u && cl.board ? boardSort(cl.board, !0) : null,
+    g = u && cl.global && cl.global.all;
   useEffect(() => {
-    u && CLOUD.ready && cloudBoard(!1).catch(() => {});
+    u && CLOUD.ready && (cloudBoard(!1).catch(() => {}), cloudGlobal("all", !1).catch(() => {}));
   }, [u && u.id]);
   const i = b ? b.findIndex((x) => x.me) : -1,
-    me = i >= 0 ? b[i] : null,
-    line = !u ? _T("Mit Freunden vergleichen") : b && b.length > 1 ? _T("Platz {0} von {1} diese Woche", i + 1, b.length) : _T("Rangliste"),
+    fr = b && b.length > 1,
+    top3 = fr
+      ? b
+          .slice(0, 3)
+          .map((x, k) => `${x.week_xp > 0 ? CLOUD_MEDAL[k] : k + 1 + "."} ${x.name}`)
+          .join("  ")
+      : "",
+    line = !u ? _T("Mit Freunden vergleichen") : g && g.me ? _T("Weltweit Platz {0} von {1}", fmtN(g.me.rank), fmtN(g.total)) : fr ? _T("Platz {0} von {1} diese Woche", i + 1, b.length) : _T("Rangliste"),
     sub = !u
       ? _T("Konto anlegen, Freunde einladen und Wochen-XP vergleichen")
-      : !b
+      : !b && !g
         ? syncLine(cl)
-        : b.length > 1
-          ? b
-              .slice(0, 3)
-              .map((x, k) => `${x.week_xp > 0 ? CLOUD_MEDAL[k] : k + 1 + "."} ${x.name}`)
-              .join("   ")
-          : _T("Lade Freunde mit deinem Code ein");
+        : fr
+          ? g && g.me
+            ? _T("Freunde diese Woche: {0}", top3)
+            : top3
+          : _T("Lade Freunde mit deinem Code ein"),
+    val = g && g.me ? g.me.value : b && i >= 0 ? b[i].week_xp : null;
   return React.createElement(
     "button",
     {
@@ -17685,7 +17807,7 @@ function FriendsHomeCard({ onOpen: op }) {
       React.createElement("span", { className: "ana-display", style: { display: "block", fontSize: 16.5, fontWeight: 700 } }, line),
       React.createElement("span", { style: { display: "block", fontSize: 12.5, color: C.inkSoft, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, sub),
     ),
-    me && React.createElement("span", { className: "ana-display", style: { fontSize: 15, fontWeight: 700, color: CLOUD_BLUE, whiteSpace: "nowrap" } }, `${me.week_xp} XP`),
+    val != null && React.createElement("span", { className: "ana-display", style: { fontSize: 15, fontWeight: 700, color: CLOUD_BLUE, whiteSpace: "nowrap" } }, `${fmtN(val)} XP`),
     React.createElement("span", { className: "ana-display", style: { fontSize: 22, color: CLOUD_BLUE } }, "›"),
   );
 }
@@ -17740,7 +17862,7 @@ function PrivacyScreen({ onExit: r }) {
     h(_T("Wof\xFCr")),
     p(_T("Damit du dich anmelden kannst, dein Fortschritt auf all deinen Ger\xE4ten gleich ist und du dich mit Freunden vergleichen kannst. Keine Werbung, kein Verkauf von Daten, keine Analyse deines Verhaltens.")),
     h(_T("Wer was sieht")),
-    p(_T("Deine Freunde sehen nur deinen Spitznamen, deine XP (gesamt und diese Woche) und deine Serie. Deine E-Mail-Adresse und deinen Lernfortschritt im Einzelnen sieht niemand au\xDFer dir.")),
+    p(_T("Deine Freunde sehen deinen Spitznamen, deine XP (gesamt und diese Woche) und deine Serie. In der weltweiten Rangliste sehen das alle Nutzer \u2013 ausblenden kannst du dich in deinem Konto. Deine E-Mail-Adresse und deinen Lernfortschritt im Einzelnen sieht niemand au\xDFer dir.")),
     h(_T("Wo die Daten liegen")),
     p(_T("Bei Supabase, einem Anbieter f\xFCr Datenbanken, auf Servern in Frankfurt am Main (EU). Supabase verarbeitet die Daten nur f\xFCr diese App.")),
     h(_T("L\xF6schen")),

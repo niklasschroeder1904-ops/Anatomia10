@@ -18,9 +18,13 @@ Supabase-Projekt („Anatomia“, Region Frankfurt, kostenloser Tarif).
 | `profiles` | Spitzname, Freundescode | nur man selbst (Freunde sehen den Namen über die Rangliste) |
 | `progress` | der ganze Lernfortschritt als JSON, mit Revision | nur man selbst |
 | `friends` | Freundschaften (in beide Richtungen) | nur man selbst |
+| `stats` | XP gesamt, XP der Woche, Serie – bei jedem Abgleich aus dem Fortschritt berechnet | niemand direkt, nur über die Ranglisten |
 
 Funktionen: `add_friend(code)`, `remove_friend(id)`, `leaderboard(week_start, today)`
-(Spitzname, XP gesamt, XP der Woche, Serie von mir und meinen Freunden), `delete_account()`.
+(Spitzname, XP gesamt, XP der Woche, Serie von mir und meinen Freunden),
+`global_board(period, lim)` (weltweite Rangliste: wie viele dabei sind, mein Platz, die ersten 50;
+Woche ab Montag nach deutscher Zeit), `delete_account()`. Wer `profiles.public` ausschaltet, steht
+nicht in der Liste der anderen, sieht aber den eigenen Platz.
 
 ## Abgleich
 

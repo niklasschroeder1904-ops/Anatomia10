@@ -160,3 +160,85 @@ end $$;
 revoke execute on function public.num(text), public.progress_stamp(), public.new_friend_code(), public.handle_new_user() from public, anon, authenticated;
 revoke execute on function public.add_friend(text), public.remove_friend(uuid), public.leaderboard(date, date), public.delete_account() from public, anon;
 grant execute on function public.add_friend(text), public.remove_friend(uuid), public.leaderboard(date, date), public.delete_account() to authenticated;
+
+-- ---- 2. the global leaderboard: everyone who shows their nickname, by XP in all or this week ----
+
+-- shown in the global leaderboard (each account can switch it off)
+alter table public.profiles add column if not exists public boolean not null default true;
+grant update (name, public) on public.profiles to authenticated;
+
+-- the numbers of each account for the leaderboard, worked out from its progress at each write
+create table if not exists public.stats (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  xp bigint not null default 0,
+  week_start date,
+  week_xp bigint not null default 0,
+  streak bigint not null default 0,
+  last_day text,
+  updated_at timestamptz not null default now()
+);
+alter table public.stats enable row level security;
+revoke all on public.stats from anon, authenticated;
+create index if not exists stats_xp on public.stats (xp desc);
+create index if not exists stats_week on public.stats (week_start, week_xp desc);
+
+-- today in German time: the global leaderboard's weeks run from Monday
+create or replace function public.berlin_today() returns date
+language sql stable set search_path = '' as $$
+  select (now() at time zone 'Europe/Berlin')::date;
+$$;
+
+-- an account's numbers from its progress: XP in all, XP of this week (log and xlog), the streak with its last day;
+-- values nobody reaches by learning count as nothing
+create or replace function public.stats_put(uid uuid, d jsonb) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  ws date := date_trunc('week', public.berlin_today())::date;
+  a text := to_char(ws, 'YYYY-MM-DD'); z text := to_char(ws + 6, 'YYYY-MM-DD');
+  x bigint := public.num(d ->> 'xp'); w bigint;
+begin
+  w := coalesce((select sum(public.num(l.value)) from jsonb_each_text(case when jsonb_typeof(d -> 'log') = 'object' then d -> 'log' else '{}'::jsonb end) l where l.key between a and z), 0)
+     + coalesce((select sum(public.num(l.value)) from jsonb_each_text(case when jsonb_typeof(d -> 'xlog') = 'object' then d -> 'xlog' else '{}'::jsonb end) l where l.key between a and z), 0);
+  if x > 10000000 then x := 0; end if;
+  if w > 100000 then w := 0; end if;
+  insert into public.stats (user_id, xp, week_start, week_xp, streak, last_day, updated_at)
+  values (uid, x, ws, w, public.num(d ->> 'streak'), left(coalesce(d ->> 'lastDay', ''), 10), now())
+  on conflict (user_id) do update set xp = excluded.xp, week_start = excluded.week_start, week_xp = excluded.week_xp,
+    streak = excluded.streak, last_day = excluded.last_day, updated_at = now();
+end $$;
+create or replace function public.progress_stats() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  perform public.stats_put(new.user_id, new.data);
+  return new;
+end $$;
+drop trigger if exists progress_stats on public.progress;
+create trigger progress_stats after insert or update on public.progress
+  for each row execute function public.progress_stats();
+-- the accounts that have progress already
+select public.stats_put(user_id, data) from public.progress;
+
+-- the global leaderboard (period 'week' or 'all'): how many are on it, my place, the first lim (up to 100).
+-- On it: everyone shown with XP above 0; I always see my own place, also when I am not shown to others.
+create or replace function public.global_board(period text, lim integer default 50) returns json
+language sql stable security definer set search_path = '' as $$
+  with cur as (select date_trunc('week', public.berlin_today())::date ws, public.berlin_today() td),
+  v as (
+    select s.user_id, p.name, p.public,
+           case when period = 'week' then case when s.week_start = (select ws from cur) then s.week_xp else 0 end else s.xp end val,
+           case when s.last_day >= to_char((select td from cur) - 1, 'YYYY-MM-DD') then s.streak else 0 end streak
+      from public.stats s join public.profiles p on p.id = s.user_id
+  ),
+  shown as (select * from v where val > 0 and (public or user_id = auth.uid())),
+  ranked as (select user_id, name, val, streak, rank() over (order by val desc) rk from shown)
+  select json_build_object(
+    'total', (select count(*) from shown),
+    'me', (select json_build_object('rank', rk, 'value', val, 'streak', streak) from ranked where user_id = auth.uid()),
+    'top', coalesce((select json_agg(json_build_object('rank', t.rk, 'name', t.name, 'value', t.val, 'streak', t.streak, 'me', t.user_id = auth.uid()) order by t.rk, t.name)
+                       from (select * from ranked order by rk, name limit greatest(1, least(coalesce(lim, 50), 100))) t), '[]'::json))
+  where auth.uid() is not null;
+$$;
+
+revoke execute on function public.berlin_today(), public.stats_put(uuid, jsonb), public.progress_stats() from public, anon, authenticated;
+revoke execute on function public.global_board(text, integer) from public, anon;
+grant execute on function public.global_board(text, integer) to authenticated;
