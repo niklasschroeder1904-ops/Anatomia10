@@ -65,7 +65,7 @@ ${row("Fall Nr.", c.case?.no)}${row("Fall", c.case?.text)}${row("Frage zum Fall"
 ${row("Eselsbrücken", Array.isArray(c.mnemonics) ? c.mnemonics.join(", ") : "")}
 </table>
 ${opts ? `<div style="margin-bottom:14px"><b>Antworten:</b>${opts}</div>` : ""}
-${pics.map((p) => `<div style="margin-bottom:10px"><img src="${esc(p)}" alt="" style="max-width:100%;border:1px solid #E3E8F0;border-radius:8px"><div style="font-size:12px;color:#5B6B80">${esc(p)}</div></div>`).join("")}
+${pics.map((p) => `<div style="margin-bottom:10px"><img src="${esc(p)}" alt="" style="max-width:100%;max-height:480px;border:1px solid #E3E8F0;border-radius:8px"><div style="font-size:12px;color:#5B6B80">${esc(p)}</div></div>`).join("")}
 ${c.screen ? `<details open><summary style="font-weight:700;margin:6px 0">So stand es auf dem Bildschirm</summary><pre style="white-space:pre-wrap;font-family:inherit;background:#F4F6FB;border-radius:8px;padding:10px;font-size:13px">${esc(c.screen)}</pre></details>` : ""}
 <table style="border-collapse:collapse;font-size:13px;color:#5B6B80;margin-top:12px">
 ${row("Bildschirm", c.route)}${row("App-Sprache", r.lang)}${row("Begriffe", c.terms)}${row("Konto", c.nick ? c.nick : "ohne Konto")}${row("Version", c.version)}${row("Gerät", c.device)}
