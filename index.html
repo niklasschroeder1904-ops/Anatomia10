@@ -12263,35 +12263,413 @@ const SPLIT_CARDS = [["gl-lage/superficialis", "gl-lage/profundus"]],
     const r = { ...s };
     return (SPLIT_CARDS.forEach(([o, e]) => r[o] && !r[e] && (r[e] = { ...r[o] })), r);
   };
+// a saved progress made fit for this version of the app: also one that comes from another device through the account
+function fixProgress(o) {
+  const m = { ...DEFAULT_STATE, ...o };
+  // the recorded voices are gone: what was saved about them goes too
+  (delete m.voice, delete m.recVoice, delete m.voiceV);
+  // titles come with the XP levels now: the ones bought in the shop are paid back once (the menu says so)
+  const tr = (m.owned || []).filter((v) => OLD_TITLES[v] != null);
+  if (tr.length) {
+    const c = tr.reduce((a, v) => a + OLD_TITLES[v], 0);
+    ((m.coins = (m.coins || 0) + c), (m.owned = m.owned.filter((v) => OLD_TITLES[v] == null)), (m.titleRefund = (m.titleRefund || 0) + c));
+  }
+  m.title = null;
+  (o.splitV || 0) < SPLIT_V && ((m.srs = splitCards(m.srs)), (m.errors = splitCards(m.errors)), (m.splitV = SPLIT_V));
+  // the days missed since the last visit: Serien-Schutz used, or the streak lost (kept at once)
+  return settleStreak(migrateCurriculum(m));
+}
 async function loadProgress() {
   try {
     const s = await window.storage.get(STORAGE_KEY);
     if (s && s.value) {
-      const o = JSON.parse(s.value),
-        m = { ...DEFAULT_STATE, ...o };
-      // the recorded voices are gone: what was saved about them goes too
-      (delete m.voice, delete m.recVoice, delete m.voiceV);
-      // titles come with the XP levels now: the ones bought in the shop are paid back once (the menu says so)
-      const tr = (m.owned || []).filter((v) => OLD_TITLES[v] != null);
-      if (tr.length) {
-        const c = tr.reduce((a, v) => a + OLD_TITLES[v], 0);
-        ((m.coins = (m.coins || 0) + c), (m.owned = m.owned.filter((v) => OLD_TITLES[v] == null)), (m.titleRefund = (m.titleRefund || 0) + c));
-      }
-      m.title = null;
-      (o.splitV || 0) < SPLIT_V && ((m.srs = splitCards(m.srs)), (m.errors = splitCards(m.errors)), (m.splitV = SPLIT_V));
-      // the days missed since the last visit: Serien-Schutz used, or the streak lost (kept at once)
-      const mg = migrateCurriculum(m),
-        st = settleStreak(mg);
-      return (st !== mg && saveProgress(st), st);
+      const st = fixProgress(JSON.parse(s.value));
+      return (saveProgress(st, !0), st);
     }
   } catch {}
   return { ...DEFAULT_STATE, curV: (CURRICULUM && CURRICULUM.version) || 0 };
 }
-async function saveProgress(s) {
+// quiet: a progress that came from the account (nothing new to send back)
+async function saveProgress(s, quiet) {
   try {
     await window.storage.set(STORAGE_KEY, JSON.stringify(s));
   } catch {}
+  quiet || cloudDirty();
 }
+// ---- the online account (Supabase): signing in, the progress kept with the account and brought together between
+// devices, friends and their leaderboard. The library (supabase.js) is loaded only when an account is used ----
+const CLOUD_URL = "https://avyswbycrbwbnqbdutho.supabase.co",
+  // the project's public key, meant for apps: what an account may read and change is decided by the database's rules
+  CLOUD_KEY = "sb_publishable__IsEpl42cr7mzWWAOy_Akw_OzeUOF_X",
+  // where e-mail links lead (the app's address on the web, also from the iPhone app)
+  CLOUD_SITE = "https://niklasschroeder1904-ops.github.io/Anatomia10/",
+  // the session and the progress last agreed with the account: no "ana:" keys, so they stay out of a backup file
+  CLOUD_AUTH = "anatomia-auth",
+  CLOUD_META = "anatomia-sync",
+  // user: the signed-in account; status: off | sync | ok | offline | error; ask: the question when this device and the
+  // account both have progress; board: the leaderboard of me and my friends
+  CLOUD = { user: null, profile: null, status: "off", at: 0, ask: null, board: null, boardAt: 0, ready: !1, recovery: !1, ls: new Set() },
+  cloudSet = (o) => (Object.assign(CLOUD, o), CLOUD.ls.forEach((f) => f())),
+  useCloud = () => {
+    const [, f] = useState(0);
+    useEffect(() => {
+      const g = () => f((x) => x + 1);
+      return (CLOUD.ls.add(g), () => CLOUD.ls.delete(g));
+    }, []);
+    return CLOUD;
+  },
+  cloudHas = () => {
+    try {
+      return !!localStorage.getItem(CLOUD_AUTH) || /[#&?](access_token|error_description|code)=/.test(location.href);
+    } catch {
+      return !1;
+    }
+  };
+let cloudLib = null,
+  cloudC = null;
+const cloudLoad = () =>
+    cloudLib ||
+    (cloudLib = new Promise((ok, no) => {
+      if (window.supabase && window.supabase.createClient) return ok(window.supabase);
+      const e = document.createElement("script");
+      ((e.src = "./supabase.js"),
+        (e.onload = () => (window.supabase && window.supabase.createClient ? ok(window.supabase) : no(new Error("lib")))),
+        (e.onerror = () => ((cloudLib = null), e.remove(), no(new Error("offline")))),
+        document.head.appendChild(e));
+    })),
+  cloudClient = async () =>
+    cloudC ||
+    (cloudC = (await cloudLoad()).createClient(CLOUD_URL, CLOUD_KEY, {
+      auth: { storageKey: CLOUD_AUTH, persistSession: !0, autoRefreshToken: !0, detectSessionInUrl: !0 },
+    })),
+  // the account's state follows the session; a new sign-in brings the profile and the progress
+  cloudStart = () =>
+    CLOUD.started ||
+    (CLOUD.started = (async () => {
+      const c = await cloudClient();
+      c.auth.onAuthStateChange((ev, se) => {
+        const u = (se && se.user) || null,
+          was = CLOUD.user && CLOUD.user.id;
+        cloudSet({ user: u, recovery: ev === "PASSWORD_RECOVERY" || (CLOUD.recovery && !!u) });
+        // (calls to the library from inside this callback wait for each other: after it)
+        u && u.id !== was && setTimeout(() => (cloudProfile(), cloudSync()), 0);
+        u || cloudSet({ profile: null, board: null, status: "off" });
+      });
+      return c;
+    })().catch((e) => ((CLOUD.started = null), Promise.reject(e)))),
+  cloudProfile = async () => {
+    if (!CLOUD.user) return;
+    try {
+      const c = await cloudClient(),
+        { data: d } = await c.from("profiles").select("name,friend_code").eq("id", CLOUD.user.id).maybeSingle();
+      d && cloudSet({ profile: d });
+    } catch {}
+  },
+  // what an error of the account means, in words
+  cloudErr = (e) => {
+    const k = String((e && (e.code || e.error_code)) || ""),
+      m = String((e && e.message) || e || "");
+    return /invalid_credentials|invalid login/i.test(k + m)
+      ? _T("E-Mail oder Passwort stimmt nicht.")
+      : /user_already_exists|already registered/i.test(k + m)
+        ? _T("Zu dieser E-Mail gibt es schon ein Konto. Melde dich an.")
+        : /weak_password|at least/i.test(k + m)
+          ? _T("Das Passwort braucht mindestens 8 Zeichen.")
+          : /email_address_invalid|invalid format|validate email/i.test(k + m)
+            ? _T("Bitte eine g\xFCltige E-Mail-Adresse eingeben.")
+            : /rate_limit|rate limit|429/i.test(k + m)
+              ? _T("Gerade zu viele Versuche. Bitte warte kurz.")
+              : /email_not_confirmed|not confirmed/i.test(k + m)
+                ? _T("Bitte best\xE4tige zuerst deine E-Mail-Adresse (Link in der Mail).")
+                : /fetch|network|offline|load failed/i.test(k + m) || navigator.onLine === !1
+                  ? _T("Keine Verbindung. Bitte pr\xFCfe dein Internet.")
+                  : _T("Das hat nicht geklappt. Bitte versuche es noch einmal.");
+  },
+  cloudSignUp = async (email, pw, nick) => {
+    const c = await cloudClient(),
+      { data: d, error: e } = await c.auth.signUp({ email, password: pw, options: { data: { nickname: nick }, emailRedirectTo: CLOUD_SITE } });
+    if (e) throw e;
+    // an address that already has an account comes back without a session (the service does not tell more)
+    if (!d.session && d.user && !(d.user.identities || []).length) throw { code: "user_already_exists" };
+    return d;
+  },
+  cloudSignIn = async (email, pw) => {
+    const c = await cloudClient(),
+      { error: e } = await c.auth.signInWithPassword({ email, password: pw });
+    if (e) throw e;
+  },
+  // signing out: what was learnt here goes to the account first; the progress stays on this device
+  cloudSignOut = async () => {
+    try {
+      await cloudSync();
+    } catch {}
+    const c = await cloudClient();
+    (await c.auth.signOut({ scope: "local" }), cloudSet({ user: null, profile: null, board: null, status: "off" }));
+  },
+  cloudForgot = async (email) => {
+    const c = await cloudClient(),
+      { error: e } = await c.auth.resetPasswordForEmail(email, { redirectTo: CLOUD_SITE });
+    if (e) throw e;
+  },
+  cloudNewPw = async (pw) => {
+    const c = await cloudClient(),
+      { error: e } = await c.auth.updateUser({ password: pw });
+    if (e) throw e;
+    cloudSet({ recovery: !1 });
+  },
+  cloudRename = async (name) => {
+    const c = await cloudClient(),
+      { data: d, error: e } = await c.from("profiles").update({ name }).eq("id", CLOUD.user.id).select("name,friend_code").single();
+    if (e) throw e;
+    cloudSet({ profile: d, boardAt: 0 });
+  },
+  // deleting the account: profile, progress and friends go with it; the progress on this device stays
+  cloudDelete = async () => {
+    const c = await cloudClient(),
+      { error: e } = await c.rpc("delete_account");
+    if (e) throw e;
+    try {
+      localStorage.removeItem(CLOUD_META);
+    } catch {}
+    (await c.auth.signOut({ scope: "local" }), cloudSet({ user: null, profile: null, board: null, status: "off" }));
+  },
+  // a date as the app writes it (2026-11-25), and this week's Monday
+  ymdOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+  weekStartStr = () => {
+    const d = new Date();
+    return (d.setDate(d.getDate() - ((d.getDay() + 6) % 7)), ymdOf(d));
+  },
+  // the leaderboard of me and my friends (my own progress sent first, so that it is up to date)
+  cloudBoard = async (force) => {
+    if (!CLOUD.user) return null;
+    if (!force && CLOUD.board && Date.now() - CLOUD.boardAt < 6e4) return CLOUD.board;
+    await cloudSync();
+    const c = await cloudClient(),
+      { data: d, error: e } = await c.rpc("leaderboard", { week_start: weekStartStr(), today: todayStr() });
+    if (e) throw e;
+    return (cloudSet({ board: d || [], boardAt: Date.now() }), d || []);
+  },
+  cloudAddFriend = async (code) => {
+    const c = await cloudClient(),
+      { data: d, error: e } = await c.rpc("add_friend", { code });
+    if (e) throw e;
+    return ((CLOUD.boardAt = 0), d || {});
+  },
+  cloudDropFriend = async (id) => {
+    const c = await cloudClient(),
+      { error: e } = await c.rpc("remove_friend", { friend: id });
+    if (e) throw e;
+    CLOUD.boardAt = 0;
+  };
+// ---- bringing the progress of this device and the account's together ----
+// What belongs to the device stays on it; numbers that count up and down (XP, Taler, jokers) add the changes of both
+// sides, best marks keep the better one, lists (bought things, days) keep what either side added and lose what
+// either side removed, a card's review keeps the one due sooner, the streak goes with the side that learnt last.
+const SYNC_LOCAL = ["voiceUri", "vibration", "sound", "dark", "autoSay", "streakNote", "levelNote", "titleRefund"],
+  isObj = (v) => !!v && typeof v == "object" && !Array.isArray(v),
+  syEq = (a, b) => {
+    if (a === b || (a == null && b == null)) return !0;
+    if (a == null || b == null || typeof a != "object" || typeof b != "object" || Array.isArray(a) !== Array.isArray(b)) return !1;
+    if (Array.isArray(a)) return a.length === b.length && a.every((v, i) => syEq(v, b[i]));
+    const ka = Object.keys(a).filter((k) => a[k] != null),
+      kb = Object.keys(b).filter((k) => b[k] != null);
+    return ka.length === kb.length && ka.every((k) => syEq(a[k], b[k]));
+  },
+  // one value: b as both had it, l on this device, r in the account; f when both changed it
+  sy3 = (b, l, r, f, k) => (syEq(l, b) ? r : syEq(r, b) || syEq(l, r) ? l : f ? f(b, l, r, k) : l),
+  syN = (v) => (typeof v == "number" && isFinite(v) ? v : 0),
+  sySum = (b, l, r) => Math.max(0, syN(r) + syN(l) - syN(b)),
+  syMax = (b, l, r) => Math.max(syN(l), syN(r)),
+  sySet = (b, l, r) => {
+    const K = (v) => JSON.stringify(v),
+      A = (v) => (Array.isArray(v) ? v : []),
+      B = new Set(A(b).map(K)),
+      L = new Set(A(l).map(K)),
+      o = A(r).filter((v) => !(B.has(K(v)) && !L.has(K(v)))),
+      O = new Set(o.map(K));
+    return (A(l).forEach((v) => B.has(K(v)) || O.has(K(v)) || (O.add(K(v)), o.push(v))), o);
+  },
+  syAuto = (b, l, r, k) =>
+    typeof l == "number" && typeof r == "number"
+      ? sySum(b, l, r)
+      : Array.isArray(l) && Array.isArray(r)
+        ? sySet(b, l, r)
+        : isObj(l) && isObj(r)
+          ? syMap(syAuto)(b, l, r)
+          : l,
+  syMap = (f) => (b, l, r) => {
+    const B = isObj(b) ? b : {},
+      L = isObj(l) ? l : {},
+      R = isObj(r) ? r : {},
+      o = {};
+    return (
+      new Set([...Object.keys(B), ...Object.keys(L), ...Object.keys(R)]).forEach((k) => {
+        const v = sy3(B[k], L[k], R[k], f, k);
+        v != null && (o[k] = v);
+      }),
+      o
+    );
+  },
+  // a card's review: the one due sooner (a mistake on either device brings it back soon), the mistakes of both
+  sySrs = (b, l, r) => {
+    if (!isObj(l) || !isObj(r)) return isObj(l) ? l : r;
+    const p = syN(l.due) < syN(r.due) || (syN(l.due) === syN(r.due) && syN(l.box) > syN(r.box)) ? l : r;
+    return { ...p, wrong: Math.max(0, syN(r.wrong) + syN(l.wrong) - syN(b && b.wrong)) };
+  },
+  // a structure in the error book (or a mixed-up pair): kept while either device still has it, counts of both
+  syErr = (b, l, r) =>
+    !isObj(l) || !isObj(r) ? (isObj(l) ? l : r) : { ...r, ...l, n: Math.max(1, syN(r.n) + syN(l.n) - syN(b && b.n)), last: Math.max(syN(l.last), syN(r.last)) },
+  // right answers and all answers of a region
+  syPair = (b, l, r) => [0, 1].map((i) => Math.max(0, syN((r || [])[i]) + syN((l || [])[i]) - syN((b || [])[i]))),
+  // the day's challenges: the later day's; on the same day the steps of both
+  syDaily = (b, l, r) => {
+    if (!isObj(l) || !isObj(r)) return isObj(l) ? l : r;
+    if (l.day !== r.day) return String(l.day || "") > String(r.day || "") ? l : r;
+    const B = isObj(b) && b.day === l.day ? b : {};
+    return {
+      ...r,
+      n: syMap((x, y, z, k) => (k === "best" ? syMax(x, y, z) : syAuto(x, y, z)))(B.n, l.n, r.n),
+      done: sySet(B.done, l.done, r.done),
+      seen: sySet(B.seen, l.seen, r.seen),
+      got: sySet(B.got, l.got, r.got),
+    };
+  },
+  SYNC_RULE = {
+    xp: sySum,
+    coins: sySum,
+    jokers: sySum,
+    letters: sySum,
+    freezes: sySum,
+    tokens: sySum,
+    bestStreak: syMax,
+    curV: syMax,
+    splitV: syMax,
+    streakGift: syMax,
+    log: syMap(sySum),
+    xlog: syMap(sySum),
+    best: syMap(syMax),
+    tests: syMap(syMax),
+    unlocked: syMap(syMax),
+    srs: syMap(sySrs),
+    errors: syMap(syErr),
+    conf: syMap(syErr),
+    ans: syMap(syPair),
+    owned: sySet,
+    claimed: sySet,
+    iced: (b, l, r) => sySet(b, l, r).sort().slice(-120),
+    exams: (b, l, r) => sySet(b, l, r).sort((x, y) => String((x && x.date) || "").localeCompare(String((y && y.date) || ""))).slice(-30),
+    daily: syDaily,
+  },
+  // the progress as it goes to the account (without what belongs to the device)
+  syncPick = (s) => {
+    const o = { ...(s || {}) };
+    return (SYNC_LOCAL.forEach((k) => delete o[k]), o);
+  },
+  syncMerge = (b, l, r) => {
+    const B = isObj(b) ? b : {},
+      L = isObj(l) ? l : {},
+      R = isObj(r) ? r : {},
+      o = {},
+      pair = (k1, k2) => [(x) => [x[k1], x[k2]], [k1, k2]];
+    new Set([...Object.keys(B), ...Object.keys(L), ...Object.keys(R)]).forEach((k) => {
+      if (SYNC_LOCAL.includes(k) || ["streak", "lastDay", "xpBoost", "xpBoostUntil"].includes(k)) return;
+      const v = sy3(B[k], L[k], R[k], SYNC_RULE[k] || syAuto, k);
+      v != null && (o[k] = v);
+    });
+    // the streak with its last day: from the side that learnt last (on the same day the longer one); a bought XP boost:
+    // the one that runs longer
+    [
+      [pair("streak", "lastDay"), (x, y) => (String(x.lastDay || "") !== String(y.lastDay || "") ? String(x.lastDay || "") > String(y.lastDay || "") : syN(x.streak) >= syN(y.streak))],
+      [pair("xpBoost", "xpBoostUntil"), (x, y) => syN(x.xpBoostUntil) >= syN(y.xpBoostUntil)],
+    ].forEach(([[get, ks], first]) => {
+      const w = syEq(get(L), get(B)) ? R : syEq(get(R), get(B)) ? L : first(L, R) ? L : R;
+      ks.forEach((k) => (w[k] != null ? (o[k] = w[k]) : delete o[k]));
+    });
+    return (SYNC_LOCAL.forEach((k) => (L[k] != null ? (o[k] = L[k]) : delete o[k])), o);
+  },
+  // a device that has learnt nothing yet takes the account's progress without asking
+  syFresh = (s) => !s || (!(syN(s.xp) > 0) && !Object.keys(s.best || {}).length && !Object.keys(s.srs || {}).length);
+let syncT = 0;
+const cloudMeta = () => {
+    try {
+      const m = JSON.parse(localStorage.getItem(CLOUD_META) || "null");
+      return isObj(m) ? m : {};
+    } catch {
+      return {};
+    }
+  },
+  cloudMetaSet = (m) => {
+    try {
+      localStorage.setItem(CLOUD_META, JSON.stringify(m));
+    } catch {}
+  },
+  cloudLocal = () => {
+    try {
+      const v = localStorage.getItem("ana:" + STORAGE_KEY);
+      return v ? JSON.parse(v) : null;
+    } catch {
+      return null;
+    }
+  },
+  // a progress worked out from the latest one in the app (f), kept and shown
+  cloudApply = (f) =>
+    new Promise((ok) => {
+      const run = (p) => {
+        const m = fixProgress(f(p || cloudLocal() || { ...DEFAULT_STATE }));
+        return (saveProgress(m, !0), ok(m), m);
+      };
+      CLOUD.apply ? CLOUD.apply(run) : run(null);
+    }),
+  // the question when this device and the account both have progress: "merge" or "take" (the account's)
+  cloudAsk = (here, there) =>
+    new Promise((ok) => cloudSet({ ask: { here: syN(here && here.xp), there: syN(there && there.xp), done: (how) => (cloudSet({ ask: null }), ok(how)) } })),
+  cloudDevice = () => {
+    const u = navigator.userAgent || "";
+    return /iPad/.test(u) ? "iPad" : /iPhone/.test(u) ? "iPhone" : /Android/.test(u) ? "Android" : /Mac/.test(u) ? "Mac" : /Windows/.test(u) ? "Windows" : "Web";
+  },
+  // a change was saved: sent to the account a little later (many answers in a row go together)
+  cloudDirty = () => {
+    CLOUD.user && CLOUD.ready && (clearTimeout(syncT), (syncT = setTimeout(() => cloudSync(), 12e3)));
+  },
+  cloudSync = async () => {
+    if (!CLOUD.user || !CLOUD.ready) return;
+    if (CLOUD.busy) return void (CLOUD.again = !0);
+    (clearTimeout(syncT), (CLOUD.busy = !0), cloudSet({ status: "sync" }));
+    try {
+      const c = await cloudClient(),
+        uid = CLOUD.user.id,
+        meta = cloudMeta(),
+        mine = meta.uid === uid && isObj(meta.base),
+        { data: row, error: e1 } = await c.from("progress").select("rev,data").eq("user_id", uid).maybeSingle();
+      if (e1) throw e1;
+      const put = async (up, rev) => {
+        const q = rev
+            ? c.from("progress").update({ data: up, device: cloudDevice() }).eq("user_id", uid).eq("rev", rev)
+            : c.from("progress").insert({ user_id: uid, data: up, device: cloudDevice() }),
+          { data: d, error: e } = await q.select("rev");
+        // written by another device in between: once more (it is merged then)
+        if (e && e.code !== "23505") throw e;
+        e || !d || !d.length ? (CLOUD.again = (CLOUD.tries = (CLOUD.tries || 0) + 1) < 4) : (cloudMetaSet({ uid, rev: d[0].rev, base: up }), (CLOUD.tries = 0));
+      };
+      if (row && !(mine && row.rev === meta.rev)) {
+        // the account's progress changed elsewhere, or this device meets the account for the first time
+        let how = "merge";
+        mine || (how = syFresh(cloudLocal()) ? "take" : await cloudAsk(cloudLocal(), row.data));
+        const R = isObj(row.data) ? row.data : {},
+          m = await cloudApply((p) => (how === "take" ? { ...syncPick(R), ...Object.fromEntries(SYNC_LOCAL.filter((k) => p && p[k] != null).map((k) => [k, p[k]])) } : syncMerge(mine ? meta.base : {}, p, R))),
+          up = syncPick(m);
+        syEq(up, R) ? cloudMetaSet({ uid, rev: row.rev, base: up }) : await put(up, row.rev);
+      } else {
+        const up = syncPick(cloudLocal() || {});
+        row ? syEq(up, meta.base) || (await put(up, meta.rev)) : await put(up, 0);
+      }
+      cloudSet({ status: "ok", at: Date.now() });
+    } catch (e) {
+      cloudSet({ status: navigator.onLine === !1 || /fetch|network|offline/i.test(String((e && e.message) || "")) ? "offline" : "error" });
+    } finally {
+      ((CLOUD.busy = !1), CLOUD.again && ((CLOUD.again = !1), setTimeout(cloudSync, 600)));
+    }
+  };
 function Btn({ children: s, color: r = C.good, dark: o = C.goodDark, onClick: e, disabled: t, ghost: a, style: n, ...rest }) {
   return React.createElement(
     "button",
@@ -16727,7 +17105,625 @@ function ProgressMove() {
     msg && React.createElement("div", { className: "ana-body", "data-move-msg": "1", style: { fontSize: 13, color: C.inkSoft, marginTop: 8 } }, msg),
   );
 }
-function SettingsScreen({ progress: s, onExit: r, onSet: o, onDark: e, onReset: t }) {
+// ---- the account and the friends on screen ----
+const CLOUD_BLUE = "#1C7ED6",
+  CLOUD_MEDAL = ["\u{1F947}", "\u{1F948}", "\u{1F949}"],
+  // the friend code as it is shown: ABCD-EFGH
+  codeShow = (c) => (c ? `${c.slice(0, 4)}-${c.slice(4)}` : ""),
+  // how the progress stands with the account, in a few words
+  syncLine = (cl) =>
+    cl.status === "sync"
+      ? _T("wird abgeglichen …")
+      : cl.status === "ok"
+        ? _T("abgeglichen um {0}", new Date(cl.at).toLocaleTimeString(UI_LOCALE, { hour: "2-digit", minute: "2-digit" }))
+        : cl.status === "offline"
+          ? _T("offline – wird sp\xE4ter abgeglichen")
+          : cl.status === "error"
+            ? _T("Abgleich gerade nicht m\xF6glich")
+            : _T("angemeldet"),
+  // a code from an invitation link (?freund=ABCDEFGH) waits until it is added
+  CLOUD_INVITE = "anatomia-invite",
+  cloudInvite = () => {
+    try {
+      return localStorage.getItem(CLOUD_INVITE) || "";
+    } catch {
+      return "";
+    }
+  },
+  cloudInviteSet = (v) => {
+    try {
+      v ? localStorage.setItem(CLOUD_INVITE, v) : localStorage.removeItem(CLOUD_INVITE);
+    } catch {}
+  },
+  // the leaderboard in order: this week's XP (then all XP), or all XP
+  boardSort = (b, week) => [...(b || [])].sort((x, y) => (week ? y.week_xp - x.week_xp : 0) || y.xp - x.xp || String(x.name).localeCompare(String(y.name)));
+function CloudField({ label: l, hint: h, ...p }) {
+  return React.createElement(
+    "label",
+    { style: { display: "block", marginBottom: 10 } },
+    React.createElement("span", { className: "ana-display", style: { display: "block", fontSize: 12.5, fontWeight: 700, color: C.inkSoft, marginBottom: 4 } }, l),
+    React.createElement("input", {
+      ...p,
+      className: "ana-body",
+      style: { width: "100%", boxSizing: "border-box", padding: "12px 14px", fontSize: 16, borderRadius: 12, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, ...(p.style || {}) },
+    }),
+    h && React.createElement("span", { className: "ana-body", style: { display: "block", fontSize: 12, color: C.inkSoft, marginTop: 3 } }, h),
+  );
+}
+// a message under a form: green when something worked, red when not
+function CloudMsg({ good: g, bad: b }) {
+  const t = b || g;
+  return t
+    ? React.createElement(
+        "div",
+        { className: "ana-body", role: "status", "data-cloud-msg": b ? "bad" : "good", style: { background: b ? C.badBg : C.okBg, color: b ? C.badText : C.okText, borderRadius: 12, padding: "10px 12px", fontSize: 14, lineHeight: 1.4, margin: "4px 0 12px" } },
+        t,
+      )
+    : null;
+}
+const cloudBox = (p, ...k) =>
+  React.createElement("div", { ...(p || {}), style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 16, padding: "12px 14px", marginBottom: 12, ...((p && p.style) || {}) } }, ...k);
+// the account in the settings: signed out an invitation, signed in who it is and how the progress stands
+function AccountCard({ onOpen: op }) {
+  const cl = useCloud(),
+    u = cl.user,
+    nm = (cl.profile && cl.profile.name) || "";
+  return React.createElement(
+    "button",
+    {
+      onClick: op,
+      "data-account-card": u ? "in" : "out",
+      className: "ana-body",
+      style: { display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 16, padding: "12px 14px", marginBottom: 12, cursor: "pointer", color: C.ink },
+    },
+    React.createElement(
+      "span",
+      {
+        className: "ana-display",
+        style: { width: 40, height: 40, borderRadius: "50%", background: u ? CLOUD_BLUE : C.mute, color: u ? "#fff" : C.inkSoft, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, flexShrink: 0 },
+      },
+      u ? (nm || u.email || "?").charAt(0).toUpperCase() : "\u{1F464}",
+    ),
+    React.createElement(
+      "span",
+      { style: { flex: 1, minWidth: 0 } },
+      React.createElement("span", { className: "ana-display", style: { display: "block", fontSize: 15.5, fontWeight: 700 } }, u ? nm || _T("Dein Konto") : _T("Anmelden oder registrieren")),
+      React.createElement(
+        "span",
+        { style: { display: "block", fontSize: 12.5, color: C.inkSoft, lineHeight: 1.35, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: u ? "nowrap" : "normal" } },
+        u ? `${u.email || ""} \xB7 ${syncLine(cl)}` : _T("Fortschritt auf allen Ger\xE4ten und Rangliste mit Freunden"),
+      ),
+    ),
+    React.createElement("span", { className: "ana-display", style: { fontSize: 22, color: C.inkSoft } }, "›"),
+  );
+}
+function AccountScreen({ onExit: r, onFriends: fr, onPrivacy: pv }) {
+  const cl = useCloud(),
+    u = cl.user,
+    [mode, setMode] = useState("up"),
+    [email, setEmail] = useState(""),
+    [pw, setPw] = useState(""),
+    [nick, setNick] = useState(""),
+    [show, setShow] = useState(!1),
+    [busy, setBusy] = useState(!1),
+    [bad, setBad] = useState(null),
+    [good, setGood] = useState(null),
+    [name, setName] = useState(""),
+    [pw2, setPw2] = useState("");
+  useEffect(() => {
+    cloudStart().catch(() => setBad(cloudErr({ message: "offline" })));
+  }, []);
+  useEffect(() => {
+    cl.profile && setName(cl.profile.name);
+  }, [cl.profile && cl.profile.name]);
+  const run = async (f, ok) => {
+      (setBusy(!0), setBad(null), setGood(null));
+      try {
+        const v = await f();
+        ok && setGood(typeof ok == "function" ? ok(v) : ok);
+      } catch (e) {
+        setBad(cloudErr(e));
+      } finally {
+        setBusy(!1);
+      }
+    },
+    em = email.trim(),
+    submit = (ev) => {
+      ev && ev.preventDefault();
+      if (!/^\S+@\S+\.\S+$/.test(em)) return setBad(_T("Bitte eine g\xFCltige E-Mail-Adresse eingeben."));
+      if (mode === "forgot") return run(() => cloudForgot(em), _T("Wenn es zu dieser E-Mail ein Konto gibt, kommt gleich eine Mail mit einem Link zum Zur\xFCcksetzen."));
+      if (mode === "up" && nick.trim().length < 2) return setBad(_T("Der Spitzname braucht mindestens 2 Zeichen."));
+      if (pw.length < 8) return setBad(_T("Das Passwort braucht mindestens 8 Zeichen."));
+      return mode === "up"
+        ? run(
+            () => cloudSignUp(em, pw, nick.trim().slice(0, 24)),
+            (d) => (d && !d.session ? _T("Fast geschafft: Bitte \xF6ffne den Link in der Mail, um dein Konto zu best\xE4tigen.") : null),
+          )
+        : run(() => cloudSignIn(em, pw));
+    },
+    tab = (k, t) =>
+      React.createElement(
+        "button",
+        {
+          onClick: () => (setMode(k), setBad(null), setGood(null)),
+          "data-account-tab": k,
+          "aria-pressed": mode === k ? "true" : "false",
+          className: "ana-display",
+          style: { flex: 1, padding: "10px 8px", borderRadius: 11, border: "none", cursor: "pointer", fontSize: 14.5, fontWeight: 700, background: mode === k ? C.card : "transparent", color: mode === k ? C.ink : C.inkSoft, boxShadow: mode === k ? "0 1px 4px rgba(0,0,0,0.12)" : "none" },
+        },
+        t,
+      ),
+    title = React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, _T("Konto")),
+    privacy = React.createElement(
+      "button",
+      { onClick: pv, "data-privacy": "1", className: "ana-body", style: { display: "block", margin: "6px auto 0", background: "none", border: "none", color: CLOUD_BLUE, fontSize: 13.5, textDecoration: "underline", cursor: "pointer" } },
+      _T("Datenschutz"),
+    );
+  if (!u)
+    return React.createElement(
+      "div",
+      { style: { minHeight: PAGE_H, paddingBottom: 30 } },
+      React.createElement(TopBar, { onBack: r }, title),
+      React.createElement(
+        "div",
+        { className: "ana-body", style: { fontSize: 14.5, color: C.inkSoft, lineHeight: 1.5, margin: "4px 2px 14px" } },
+        _T("Mit einem Konto ist dein Fortschritt auf all deinen Ger\xE4ten gleich, und du kannst dich mit Freunden vergleichen. Lernen geht auch ohne Konto."),
+      ),
+      mode !== "forgot" &&
+        React.createElement("div", { style: { display: "flex", gap: 4, background: C.mute, borderRadius: 13, padding: 3, marginBottom: 14 } }, tab("up", _T("Registrieren")), tab("in", _T("Anmelden"))),
+      React.createElement(
+        "form",
+        { onSubmit: submit, "data-account-form": mode, noValidate: !0 },
+        mode === "forgot" &&
+          React.createElement(
+            "div",
+            { className: "ana-display", style: { fontSize: 16, fontWeight: 700, color: C.ink, marginBottom: 8 } },
+            _T("Passwort vergessen"),
+          ),
+        mode === "up" && React.createElement(CloudField, { label: _T("Spitzname"), hint: _T("So sehen dich deine Freunde in der Rangliste."), value: nick, onChange: (e) => setNick(e.target.value), maxLength: 24, autoComplete: "nickname", name: "nickname" }),
+        React.createElement(CloudField, { label: _T("E-Mail"), type: "email", value: email, onChange: (e) => setEmail(e.target.value), autoComplete: "email", autoCapitalize: "none", inputMode: "email", name: "email" }),
+        mode !== "forgot" &&
+          React.createElement(CloudField, {
+            label: _T("Passwort"),
+            type: show ? "text" : "password",
+            value: pw,
+            onChange: (e) => setPw(e.target.value),
+            autoComplete: mode === "up" ? "new-password" : "current-password",
+            name: "password",
+            hint: mode === "up" ? _T("Mindestens 8 Zeichen.") : null,
+          }),
+        mode !== "forgot" &&
+          React.createElement(
+            "label",
+            { className: "ana-body", style: { display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, color: C.inkSoft, margin: "-2px 2px 12px" } },
+            React.createElement("input", { type: "checkbox", checked: show, onChange: (e) => setShow(e.target.checked) }),
+            _T("Passwort anzeigen"),
+          ),
+        React.createElement(CloudMsg, { good, bad }),
+        React.createElement(
+          Btn,
+          { color: CLOUD_BLUE, dark: "#1864AB", disabled: busy, "data-account-submit": "1", onClick: submit },
+          busy ? _T("Einen Moment …") : mode === "up" ? _T("Konto anlegen") : mode === "in" ? _T("Anmelden") : _T("Link schicken"),
+        ),
+      ),
+      mode === "in" &&
+        React.createElement(
+          "button",
+          { onClick: () => (setMode("forgot"), setBad(null), setGood(null)), "data-forgot": "1", className: "ana-body", style: { display: "block", margin: "12px auto 0", background: "none", border: "none", color: CLOUD_BLUE, fontSize: 14, cursor: "pointer" } },
+          _T("Passwort vergessen?"),
+        ),
+      mode === "forgot" &&
+        React.createElement(
+          "button",
+          { onClick: () => (setMode("in"), setBad(null), setGood(null)), className: "ana-body", style: { display: "block", margin: "12px auto 0", background: "none", border: "none", color: CLOUD_BLUE, fontSize: 14, cursor: "pointer" } },
+          _T("Zur\xFCck zum Anmelden"),
+        ),
+      mode === "up" &&
+        React.createElement(
+          "div",
+          { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.45, margin: "14px 2px 0", textAlign: "center" } },
+          _T("Gespeichert werden E-Mail, Spitzname, Freundesliste und dein Lernfortschritt, auf Servern in Frankfurt."),
+        ),
+      privacy,
+    );
+  const nm = (cl.profile && cl.profile.name) || "",
+    code = cl.profile && cl.profile.friend_code;
+  return React.createElement(
+    "div",
+    { style: { minHeight: PAGE_H, paddingBottom: 30 } },
+    React.createElement(TopBar, { onBack: r }, title),
+    cloudBox(
+      { "data-account": "in", style: { display: "flex", alignItems: "center", gap: 12 } },
+      React.createElement(
+        "span",
+        { className: "ana-display", style: { width: 46, height: 46, borderRadius: "50%", background: CLOUD_BLUE, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21, fontWeight: 700, flexShrink: 0 } },
+        (nm || u.email || "?").charAt(0).toUpperCase(),
+      ),
+      React.createElement(
+        "div",
+        { style: { flex: 1, minWidth: 0 } },
+        React.createElement("div", { className: "ana-display", "data-account-name": "1", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, nm || "…"),
+        React.createElement("div", { className: "ana-body", style: { fontSize: 13, color: C.inkSoft, overflow: "hidden", textOverflow: "ellipsis" } }, u.email),
+      ),
+    ),
+    cl.recovery &&
+      cloudBox(
+        { "data-new-pw": "1" },
+        React.createElement("div", { className: "ana-display", style: { fontSize: 15.5, fontWeight: 700, color: C.ink, marginBottom: 8 } }, _T("Neues Passwort festlegen")),
+        React.createElement(CloudField, { label: _T("Neues Passwort"), type: "password", value: pw2, onChange: (e) => setPw2(e.target.value), autoComplete: "new-password", hint: _T("Mindestens 8 Zeichen.") }),
+        React.createElement(
+          Btn,
+          { color: CLOUD_BLUE, dark: "#1864AB", disabled: busy || pw2.length < 8, onClick: () => run(() => cloudNewPw(pw2), _T("Dein neues Passwort ist gespeichert.")).then(() => setPw2("")) },
+          _T("Passwort speichern"),
+        ),
+      ),
+    React.createElement(CloudMsg, { good, bad }),
+    React.createElement(SectionLabel, null, _T("FREUNDE")),
+    cloudBox(
+      { "data-my-code": code || "" },
+      React.createElement("div", { className: "ana-body", style: { fontSize: 13, color: C.inkSoft } }, _T("Dein Freundescode")),
+      React.createElement("div", { className: "ana-display", style: { fontSize: 24, fontWeight: 700, letterSpacing: 2, color: C.ink, margin: "2px 0 10px" } }, codeShow(code) || "…"),
+      React.createElement(Btn, { ghost: !0, color: CLOUD_BLUE, onClick: fr, "data-open-friends": "1", style: { padding: "11px 8px", fontSize: 15 } }, _T("Freunde & Rangliste")),
+    ),
+    React.createElement(SectionLabel, null, _T("SPITZNAME")),
+    cloudBox(
+      null,
+      React.createElement(CloudField, { label: _T("So sehen dich deine Freunde"), value: name, onChange: (e) => setName(e.target.value), maxLength: 24, "data-rename": "1" }),
+      React.createElement(
+        Btn,
+        {
+          ghost: !0,
+          color: CLOUD_BLUE,
+          disabled: busy || name.trim().length < 2 || name.trim() === nm,
+          onClick: () => run(() => cloudRename(name.trim()), _T("Dein Spitzname ist gespeichert.")),
+          "data-rename-save": "1",
+          style: { padding: "11px 8px", fontSize: 15 },
+        },
+        _T("Spitzname speichern"),
+      ),
+    ),
+    React.createElement(SectionLabel, null, _T("FORTSCHRITT")),
+    cloudBox(
+      { "data-sync": cl.status },
+      React.createElement(
+        "div",
+        { className: "ana-body", style: { fontSize: 14, color: C.ink, lineHeight: 1.45, marginBottom: 10 } },
+        _T("Dein Fortschritt geh\xF6rt zu deinem Konto: Meldest du dich auf einem anderen Ger\xE4t an, ist er dort auch."),
+        React.createElement("span", { style: { display: "block", color: C.inkSoft, fontSize: 13, marginTop: 4 }, "data-sync-line": "1" }, syncLine(cl)),
+      ),
+      React.createElement(Btn, { ghost: !0, color: CLOUD_BLUE, disabled: cl.status === "sync", onClick: () => cloudSync(), "data-sync-now": "1", style: { padding: "11px 8px", fontSize: 15 } }, _T("Jetzt abgleichen")),
+    ),
+    React.createElement(
+      "div",
+      { style: { display: "flex", flexDirection: "column", gap: 8, marginTop: 6 } },
+      React.createElement(
+        Btn,
+        {
+          ghost: !0,
+          color: C.inkSoft,
+          disabled: busy,
+          "data-sign-out": "1",
+          onClick: () =>
+            (cl.status !== "offline" || window.confirm(_T("Noch ist nicht alles abgeglichen (keine Verbindung). Trotzdem abmelden? Der Fortschritt bleibt auf diesem Ger\xE4t."))) &&
+            run(() => cloudSignOut()),
+        },
+        _T("Abmelden"),
+      ),
+      React.createElement(
+        Btn,
+        {
+          ghost: !0,
+          color: C.bad,
+          disabled: busy,
+          "data-delete-account": "1",
+          onClick: () =>
+            window.confirm(_T("Konto wirklich l\xF6schen? Spitzname, Freundesliste und der Fortschritt im Konto werden gel\xF6scht. Auf diesem Ger\xE4t bleibt dein Fortschritt.")) &&
+            run(() => cloudDelete(), _T("Dein Konto ist gel\xF6scht.")),
+        },
+        _T("Konto l\xF6schen"),
+      ),
+    ),
+    privacy,
+  );
+}
+// friends and the leaderboard: this week or all time; add a friend by code, invite with your own
+function FriendsScreen({ onExit: r, onAccount: ac }) {
+  const cl = useCloud(),
+    u = cl.user,
+    [week, setWeek] = useState(!0),
+    [code, setCode] = useState(() => cloudInvite()),
+    [busy, setBusy] = useState(!1),
+    [bad, setBad] = useState(null),
+    [good, setGood] = useState(null),
+    [open, setOpen] = useState(null),
+    [loading, setLoading] = useState(!1),
+    load = async (force) => {
+      if (!CLOUD.user) return;
+      setLoading(!0);
+      try {
+        await cloudBoard(force);
+      } catch (e) {
+        setBad(cloudErr(e));
+      } finally {
+        setLoading(!1);
+      }
+    };
+  useEffect(() => {
+    cloudStart()
+      .then(() => load(!1))
+      .catch(() => {});
+  }, [u && u.id]);
+  const my = cl.profile && cl.profile.friend_code,
+    list = boardSort(cl.board, week),
+    add = async () => {
+      const c = code.replace(/[^A-Za-z0-9]/g, "");
+      if (c.length !== 8) return setBad(_T("Ein Freundescode hat 8 Zeichen."));
+      (setBusy(!0), setBad(null), setGood(null));
+      try {
+        const d = await cloudAddFriend(c);
+        d.ok
+          ? (setGood(_T("{0} ist jetzt in deiner Freundesliste.", d.name)), setCode(""), cloudInviteSet(""), haptic("ok"), await load(!0))
+          : setBad(d.error === "self" ? _T("Das ist dein eigener Code.") : d.error === "full" ? _T("Deine Freundesliste ist voll.") : _T("Diesen Code gibt es nicht. Bitte pr\xFCfe ihn."));
+      } catch (e) {
+        setBad(cloudErr(e));
+      } finally {
+        setBusy(!1);
+      }
+    },
+    invite = async () => {
+      const link = `${CLOUD_SITE}?freund=${my}`,
+        text = _T("Lern mit mir Anatomie in Anatomia! Mein Freundescode: {0}", codeShow(my));
+      try {
+        if (navigator.share) return void (await navigator.share({ title: "Anatomia", text, url: link }));
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+      }
+      try {
+        (await navigator.clipboard.writeText(`${text} ${link}`), setGood(_T("Einladung kopiert – schick sie deinen Freunden.")));
+      } catch {
+        setGood(_T("Schick deinen Freunden deinen Code: {0}", codeShow(my)));
+      }
+    },
+    drop = async (f) => {
+      if (!window.confirm(_T("{0} aus deiner Freundesliste entfernen?", f.name))) return;
+      (setBusy(!0), setBad(null), setGood(null));
+      try {
+        (await cloudDropFriend(f.id), setOpen(null), await load(!0));
+      } catch (e) {
+        setBad(cloudErr(e));
+      } finally {
+        setBusy(!1);
+      }
+    },
+    title = React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, _T("Freunde & Rangliste"));
+  if (!u)
+    return React.createElement(
+      "div",
+      { style: { minHeight: PAGE_H, paddingBottom: 30 } },
+      React.createElement(TopBar, { onBack: r }, title),
+      cloudBox(
+        { "data-friends": "out", style: { textAlign: "center", padding: "20px 16px" } },
+        React.createElement("div", { style: { fontSize: 40, marginBottom: 6 } }, "\u{1F3C6}"),
+        React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink, marginBottom: 6 } }, _T("Mit Freunden vergleichen")),
+        React.createElement(
+          "div",
+          { className: "ana-body", style: { fontSize: 14, color: C.inkSoft, lineHeight: 1.5, marginBottom: 14 } },
+          code
+            ? _T("Du wurdest eingeladen! Leg ein Konto an oder melde dich an, dann kommt dein Freund in deine Rangliste.")
+            : _T("Leg ein Konto an, lade Freunde mit deinem Code ein und seht, wer diese Woche die meisten XP sammelt."),
+        ),
+        React.createElement(Btn, { color: CLOUD_BLUE, dark: "#1864AB", onClick: ac, "data-friends-login": "1" }, _T("Anmelden oder registrieren")),
+      ),
+    );
+  const row = (f, i) => {
+    const v = week ? f.week_xp : f.xp,
+      on = open === f.id && !f.me;
+    return React.createElement(
+      "div",
+      { key: f.id, "data-board-row": f.me ? "me" : "friend", style: { borderBottom: i < list.length - 1 ? `1px solid ${C.line}` : "none" } },
+      React.createElement(
+        "button",
+        {
+          onClick: () => f.me || setOpen(on ? null : f.id),
+          className: "ana-body",
+          style: { display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "10px 4px", background: f.me ? C.blueBg : "none", border: "none", borderRadius: 10, cursor: f.me ? "default" : "pointer", color: C.ink },
+        },
+        React.createElement("span", { className: "ana-display", style: { width: 30, textAlign: "center", fontSize: i < 3 && v > 0 ? 20 : 15, fontWeight: 700, color: C.inkSoft } }, i < 3 && v > 0 ? CLOUD_MEDAL[i] : i + 1),
+        React.createElement(
+          "span",
+          { style: { flex: 1, minWidth: 0 } },
+          React.createElement("span", { className: "ana-display", style: { fontSize: 15.5, fontWeight: 700 } }, f.name),
+          f.me && React.createElement("span", { style: { fontSize: 13, color: C.inkSoft } }, " \xB7 ", _T("du")),
+          f.streak > 0 && React.createElement("span", { style: { display: "block", fontSize: 12.5, color: C.inkSoft } }, "\u{1F525} ", f.streak === 1 ? _T("1 Tag Serie") : _T("{0} Tage Serie", f.streak)),
+        ),
+        React.createElement("span", { className: "ana-display", "data-board-xp": v, style: { fontSize: 16, fontWeight: 700, color: C.ink } }, `${v} XP`),
+      ),
+      on &&
+        React.createElement(
+          "div",
+          { style: { padding: "0 4px 10px 44px" } },
+          React.createElement(
+            "button",
+            { onClick: () => drop(f), disabled: busy, "data-drop-friend": "1", className: "ana-body", style: { background: "none", border: `1.5px solid ${C.bad}`, color: C.bad, borderRadius: 10, padding: "6px 12px", fontSize: 13.5, cursor: "pointer" } },
+            _T("Aus der Freundesliste entfernen"),
+          ),
+        ),
+    );
+  };
+  return React.createElement(
+    "div",
+    { style: { minHeight: PAGE_H, paddingBottom: 30 } },
+    React.createElement(
+      TopBar,
+      {
+        onBack: r,
+        right: React.createElement(
+          "button",
+          { onClick: () => load(!0), "aria-label": _T("Neu laden"), "data-board-reload": "1", style: { background: "none", border: "none", fontSize: 20, color: C.inkSoft, cursor: "pointer", padding: 6 } },
+          "↻",
+        ),
+      },
+      title,
+    ),
+    React.createElement(
+      "div",
+      { style: { display: "flex", gap: 4, background: C.mute, borderRadius: 13, padding: 3, marginBottom: 12 } },
+      [
+        [!0, _T("Diese Woche")],
+        [!1, _T("Gesamt")],
+      ].map(([k, t]) =>
+        React.createElement(
+          "button",
+          {
+            key: t,
+            onClick: () => setWeek(k),
+            "data-board-tab": k ? "week" : "all",
+            "aria-pressed": week === k ? "true" : "false",
+            className: "ana-display",
+            style: { flex: 1, padding: "9px 8px", borderRadius: 11, border: "none", cursor: "pointer", fontSize: 14.5, fontWeight: 700, background: week === k ? C.card : "transparent", color: week === k ? C.ink : C.inkSoft, boxShadow: week === k ? "0 1px 4px rgba(0,0,0,0.12)" : "none" },
+          },
+          t,
+        ),
+      ),
+    ),
+    cloudBox(
+      { "data-board": list.length, style: { padding: "6px 8px" } },
+      list.length
+        ? list.map(row)
+        : React.createElement("div", { className: "ana-body", style: { padding: "14px 6px", color: C.inkSoft, fontSize: 14 } }, loading ? _T("wird geladen …") : _T("Die Rangliste ist gerade nicht erreichbar.")),
+      list.length === 1 &&
+        React.createElement("div", { className: "ana-body", style: { padding: "8px 6px 6px", color: C.inkSoft, fontSize: 13.5, lineHeight: 1.45 } }, _T("Noch keine Freunde hier. Lade jemanden mit deinem Code ein!")),
+    ),
+    week &&
+      list.length > 0 &&
+      React.createElement("div", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, margin: "-4px 4px 12px" } }, _T("Die Woche beginnt am Montag.")),
+    React.createElement(CloudMsg, { good, bad }),
+    React.createElement(SectionLabel, null, _T("FREUND HINZUF\xDCGEN")),
+    cloudBox(
+      null,
+      React.createElement(CloudField, {
+        label: _T("Code deines Freundes"),
+        value: code,
+        onChange: (e) => setCode(e.target.value.toUpperCase().slice(0, 9)),
+        placeholder: "ABCD-EFGH",
+        autoCapitalize: "characters",
+        autoComplete: "off",
+        "data-friend-code": "1",
+        style: { letterSpacing: 2, fontWeight: 700 },
+      }),
+      React.createElement(Btn, { color: CLOUD_BLUE, dark: "#1864AB", disabled: busy || !code.trim(), onClick: add, "data-add-friend": "1" }, _T("Hinzuf\xFCgen")),
+    ),
+    React.createElement(SectionLabel, null, _T("DEIN CODE")),
+    cloudBox(
+      { "data-my-code": my || "" },
+      React.createElement("div", { className: "ana-display", style: { fontSize: 24, fontWeight: 700, letterSpacing: 2, color: C.ink, marginBottom: 4 } }, codeShow(my) || "…"),
+      React.createElement("div", { className: "ana-body", style: { fontSize: 13, color: C.inkSoft, lineHeight: 1.45, marginBottom: 10 } }, _T("Wer deinen Code eingibt, ist sofort mit dir befreundet.")),
+      React.createElement(Btn, { ghost: !0, color: CLOUD_BLUE, disabled: !my, onClick: invite, "data-invite": "1", style: { padding: "11px 8px", fontSize: 15 } }, _T("Freunde einladen")),
+    ),
+  );
+}
+// the friends on the menu: your place this week, or an invitation to compare yourself
+function FriendsHomeCard({ onOpen: op }) {
+  const cl = useCloud(),
+    u = cl.user,
+    b = u && cl.board ? boardSort(cl.board, !0) : null;
+  useEffect(() => {
+    u && CLOUD.ready && cloudBoard(!1).catch(() => {});
+  }, [u && u.id]);
+  const i = b ? b.findIndex((x) => x.me) : -1,
+    me = i >= 0 ? b[i] : null,
+    line = !u ? _T("Mit Freunden vergleichen") : b && b.length > 1 ? _T("Platz {0} von {1} diese Woche", i + 1, b.length) : _T("Rangliste"),
+    sub = !u
+      ? _T("Konto anlegen, Freunde einladen und Wochen-XP vergleichen")
+      : !b
+        ? syncLine(cl)
+        : b.length > 1
+          ? b
+              .slice(0, 3)
+              .map((x, k) => `${x.week_xp > 0 ? CLOUD_MEDAL[k] : k + 1 + "."} ${x.name}`)
+              .join("   ")
+          : _T("Lade Freunde mit deinem Code ein");
+  return React.createElement(
+    "button",
+    {
+      onClick: op,
+      "data-friends-card": u ? "in" : "out",
+      className: "ana-body",
+      style: { display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "11px 15px", marginBottom: 4, borderRadius: 18, border: `2px solid ${CLOUD_BLUE}`, borderBottom: "5px solid #1864AB", background: C.card, cursor: "pointer", color: C.ink },
+    },
+    React.createElement("span", { style: { width: 40, height: 40, borderRadius: "50%", background: CLOUD_BLUE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 21 } }, "\u{1F3C6}"),
+    React.createElement(
+      "span",
+      { style: { flex: 1, minWidth: 0 } },
+      React.createElement("span", { className: "ana-display", style: { display: "block", fontSize: 16.5, fontWeight: 700 } }, line),
+      React.createElement("span", { style: { display: "block", fontSize: 12.5, color: C.inkSoft, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, sub),
+    ),
+    me && React.createElement("span", { className: "ana-display", style: { fontSize: 15, fontWeight: 700, color: CLOUD_BLUE, whiteSpace: "nowrap" } }, `${me.week_xp} XP`),
+    React.createElement("span", { className: "ana-display", style: { fontSize: 22, color: CLOUD_BLUE } }, "›"),
+  );
+}
+// this device and the account both have progress: bring both together, or take the account's
+function SyncAskDialog() {
+  const cl = useCloud(),
+    a = cl.ask;
+  if (!a) return null;
+  const num = (v) => React.createElement("div", { className: "ana-display", style: { fontSize: 22, fontWeight: 700, color: C.ink } }, `${v} XP`);
+  return React.createElement(
+    "div",
+    { "data-sync-ask": "1", role: "dialog", "aria-modal": "true", style: { position: "fixed", inset: 0, background: "rgba(15,20,30,0.55)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 } },
+    React.createElement(
+      "div",
+      { className: "ana-body", style: { background: C.card, color: C.ink, borderRadius: 20, padding: "20px 18px 16px", maxWidth: 400, width: "100%", boxShadow: "0 12px 40px rgba(0,0,0,0.3)" } },
+      React.createElement("div", { className: "ana-display", style: { fontSize: 18, fontWeight: 700, marginBottom: 6 } }, _T("Zwei Fortschritte gefunden")),
+      React.createElement("div", { style: { fontSize: 14, color: C.inkSoft, lineHeight: 1.45, marginBottom: 12 } }, _T("Auf diesem Ger\xE4t und in deinem Konto ist schon Fortschritt. Was soll gelten?")),
+      React.createElement(
+        "div",
+        { style: { display: "flex", gap: 8, marginBottom: 14 } },
+        [
+          [_T("Dieses Ger\xE4t"), a.here],
+          [_T("Konto"), a.there],
+        ].map(([t, v]) => React.createElement("div", { key: t, style: { flex: 1, background: C.mute, borderRadius: 12, padding: "8px 10px", textAlign: "center" } }, React.createElement("div", { style: { fontSize: 12.5, color: C.inkSoft } }, t), num(v))),
+      ),
+      React.createElement(
+        "div",
+        { style: { display: "flex", flexDirection: "column", gap: 8 } },
+        React.createElement(Btn, { color: CLOUD_BLUE, dark: "#1864AB", onClick: () => a.done("merge"), "data-ask-merge": "1" }, _T("Beides zusammenf\xFChren")),
+        React.createElement(Btn, { ghost: !0, color: CLOUD_BLUE, onClick: () => a.done("take"), "data-ask-take": "1" }, _T("Nur den Stand vom Konto")),
+      ),
+      React.createElement(
+        "div",
+        { style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.45, marginTop: 10 } },
+        _T("Zusammenf\xFChren z\xE4hlt beides zusammen. „Nur vom Konto“ ersetzt den Stand auf diesem Ger\xE4t."),
+      ),
+    ),
+  );
+}
+// what the app keeps about an account, and why
+function PrivacyScreen({ onExit: r }) {
+  const h = (t) => React.createElement("div", { className: "ana-display", style: { fontSize: 15.5, fontWeight: 700, color: C.ink, margin: "16px 0 4px" } }, t),
+    p = (t) => React.createElement("p", { className: "ana-body", style: { fontSize: 14, color: C.ink, lineHeight: 1.55, margin: "0 0 8px" } }, t);
+  return React.createElement(
+    "div",
+    { "data-privacy-screen": "1", style: { minHeight: PAGE_H, paddingBottom: 30 } },
+    React.createElement(TopBar, { onBack: r }, React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, _T("Datenschutz"))),
+    h(_T("Ohne Konto")),
+    p(_T("Ohne Konto bleibt alles auf deinem Ger\xE4t. Die App schickt dann nichts \xFCber dich ins Internet.")),
+    h(_T("Mit Konto: was gespeichert wird")),
+    p(_T("Deine E-Mail-Adresse und dein Passwort (nur verschl\xFCsselt), dein Spitzname, dein Freundescode, deine Freundesliste und dein Lernfortschritt: XP, Taler, Serie, Lektionen, Wiederholungen und Fehlerbuch.")),
+    h(_T("Wof\xFCr")),
+    p(_T("Damit du dich anmelden kannst, dein Fortschritt auf all deinen Ger\xE4ten gleich ist und du dich mit Freunden vergleichen kannst. Keine Werbung, kein Verkauf von Daten, keine Analyse deines Verhaltens.")),
+    h(_T("Wer was sieht")),
+    p(_T("Deine Freunde sehen nur deinen Spitznamen, deine XP (gesamt und diese Woche) und deine Serie. Deine E-Mail-Adresse und deinen Lernfortschritt im Einzelnen sieht niemand au\xDFer dir.")),
+    h(_T("Wo die Daten liegen")),
+    p(_T("Bei Supabase, einem Anbieter f\xFCr Datenbanken, auf Servern in Frankfurt am Main (EU). Supabase verarbeitet die Daten nur f\xFCr diese App.")),
+    h(_T("L\xF6schen")),
+    p(_T("Unter Konto → „Konto l\xF6schen“ wird dein Konto mit allem darin sofort gel\xF6scht.")),
+    h(_T("Deine Rechte")),
+    p(_T("Du kannst Auskunft \xFCber deine Daten verlangen und sie berichtigen oder l\xF6schen lassen. Au\xDFerdem kannst du dich bei einer Datenschutz-Aufsichtsbeh\xF6rde beschweren.")),
+  );
+}
+function SettingsScreen({ progress: s, onExit: r, onSet: o, onDark: e, onReset: t, onAccount: oa }) {
+  const cl = useCloud();
   const a = (n, i, l) =>
     React.createElement(
       "div",
@@ -16744,6 +17740,8 @@ function SettingsScreen({ progress: s, onExit: r, onSet: o, onDark: e, onReset: 
     "div",
     { style: { minHeight: PAGE_H, paddingBottom: 30 } },
     React.createElement(TopBar, { onBack: r }, React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, _T("Einstellungen"))),
+    React.createElement(SectionLabel, null, _T("KONTO")),
+    React.createElement(AccountCard, { onOpen: oa }),
     React.createElement(LangCard, null),
     React.createElement(SectionLabel, null, _T("DARSTELLUNG")),
     a(_T("Dunkelmodus"), _T("Dunkler Hintergrund, angenehm am Abend."), React.createElement(Switch, { on: !!s.dark, onChange: e, label: _T("Dunkelmodus") })),
@@ -16769,7 +17767,9 @@ function SettingsScreen({ progress: s, onExit: r, onSet: o, onDark: e, onReset: 
     React.createElement(
       "div",
       { className: "ana-body", style: { color: "#9AA3B2", fontSize: 12, textAlign: "center", padding: "18px 4px 10px", lineHeight: 1.45 } },
-      _T("Abbildungen: OpenStax (CC BY 4.0) \xB7 3D-Modelle: BodyParts3D / Z-Anatomy (CC BY-SA) \xB7 Fortschritt bleibt auf diesem Ger\xE4t gespeichert"),
+      cl.user
+        ? _T("Abbildungen: OpenStax (CC BY 4.0) \xB7 3D-Modelle: BodyParts3D / Z-Anatomy (CC BY-SA) \xB7 Fortschritt wird mit deinem Konto abgeglichen")
+        : _T("Abbildungen: OpenStax (CC BY 4.0) \xB7 3D-Modelle: BodyParts3D / Z-Anatomy (CC BY-SA) \xB7 Fortschritt bleibt auf diesem Ger\xE4t gespeichert"),
     ),
   );
 }
@@ -16800,6 +17800,7 @@ function HomeScreen({
   onDailyClaim: dClaim,
   onReview: review,
   onSettings: goSet,
+  onFriends: goFriends,
 }) {
   const lv = s.level || "alle",
     VU = levelUnits(UNITS, lv),
@@ -17379,6 +18380,8 @@ function HomeScreen({
               onClick: n,
             }),
           ),
+          React.createElement(SectionLabel, null, _T("FREUNDE")),
+          React.createElement(FriendsHomeCard, { onOpen: goFriends }),
           React.createElement(SectionLabel, null, _T("NACHSCHLAGEN")),
           React.createElement(
             "div",
@@ -23026,8 +24029,29 @@ function AnatomiaApp() {
     );
   }, []);
   (useEffect(() => {
-    loadProgress().then(r);
+    loadProgress().then((p) => (r(p), (CLOUD.ready = !0), CLOUD.user && cloudSync()));
   }, []),
+    // the account: a progress brought together with the account's goes into the app's state; a saved session signs in
+    // again; an invitation link (?freund=CODE) opens the friends; the progress is sent when the app goes to the
+    // background and fetched when it comes back (or the connection does)
+    useEffect(() => {
+      CLOUD.apply = (f) => r(f);
+      cloudHas() && cloudStart().catch(() => {});
+      try {
+        const q = new URLSearchParams(location.search).get("freund");
+        if (q) {
+          (cloudInviteSet(q.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 8)), history.replaceState(null, "", location.pathname + location.hash), go({ name: "friends" }));
+          cloudStart().catch(() => {});
+        }
+      } catch {}
+      const v = () => CLOUD.user && (document.visibilityState === "hidden" || Date.now() - (CLOUD.at || 0) > 6e4) && cloudSync(),
+        on = () => CLOUD.user && cloudSync();
+      return (
+        document.addEventListener("visibilitychange", v),
+        window.addEventListener("online", on),
+        () => (delete CLOUD.apply, document.removeEventListener("visibilitychange", v), window.removeEventListener("online", on))
+      );
+    }, []),
     // a new day while the app is open (checked each minute and when it comes back from the background): the days missed
     // take their Serien-Schutz, or the streak is lost
     useEffect(() => {
@@ -23400,6 +24424,7 @@ function AnatomiaApp() {
       onStreak: () => e({ name: "streak" }),
       onXpLog: () => e({ name: "xplog" }),
       onDark: toggleDark,
+      onFriends: () => e({ name: "friends" }),
       onSettings: () => e({ name: "settings" }),
       onSecOpen: setSecOpen,
       onVoice: setVoice,
@@ -23410,9 +24435,19 @@ function AnatomiaApp() {
       onDailySync: dailyShown,
       onDailyClaim: dailyCollect,
     });
+  else if (o.name === "account")
+    A = React.createElement(AccountScreen, {
+      onExit: () => e({ name: o.from === "friends" ? "friends" : "settings" }),
+      onFriends: () => e({ name: "friends" }),
+      onPrivacy: () => e({ name: "privacy", from: o.from }),
+    });
+  else if (o.name === "friends")
+    A = React.createElement(FriendsScreen, { onExit: () => e({ name: "home" }), onAccount: () => e({ name: "account", from: "friends" }) });
+  else if (o.name === "privacy") A = React.createElement(PrivacyScreen, { onExit: () => e({ name: "account", from: o.from }) });
   else if (o.name === "settings")
     A = React.createElement(SettingsScreen, {
       progress: s,
+      onAccount: () => e({ name: "account" }),
       onExit: () => e({ name: "home" }),
       onSet: setVoice,
       onDark: toggleDark,
@@ -23791,6 +24826,7 @@ function AnatomiaApp() {
     React.createElement("style", null, FONT_CSS),
     React.createElement(SvgDefs, null),
     React.createElement("div", { id: "ana-screen", style: { maxWidth: 480, margin: "0 auto", padding: "0 14px" } }, A),
+    React.createElement(SyncAskDialog, null),
   );
 }
 function AortaFig({ hl: s = [], accent: r = "#DE3D3D", pulse: o = !0 }) {
