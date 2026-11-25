@@ -12387,11 +12387,16 @@ const cloudLoad = () =>
   },
   cloudSignUp = async (email, pw, nick) => {
     const c = await cloudClient(),
-      { data: d, error: e } = await c.auth.signUp({ email, password: pw, options: { data: { nickname: nick }, emailRedirectTo: CLOUD_SITE } });
+      { data: d, error: e } = await c.auth.signUp({ email, password: pw, options: { data: { nickname: nick, lang: UI_LANG }, emailRedirectTo: CLOUD_SITE } });
     if (e) throw e;
     // an address that already has an account comes back without a session (the service does not tell more)
     if (!d.session && d.user && !(d.user.identities || []).length) throw { code: "user_already_exists" };
     return d;
+  },
+  cloudResend = async (email) => {
+    const c = await cloudClient(),
+      { error: e } = await c.auth.resend({ type: "signup", email, options: { emailRedirectTo: CLOUD_SITE } });
+    if (e) throw e;
   },
   cloudSignIn = async (email, pw) => {
     const c = await cloudClient(),
@@ -12415,7 +12420,7 @@ const cloudLoad = () =>
     const c = await cloudClient(),
       { error: e } = await c.auth.updateUser({ password: pw });
     if (e) throw e;
-    cloudSet({ recovery: !1 });
+    cloudSet({ recovery: !1, recShown: !1 });
   },
   cloudRename = async (name) => {
     const c = await cloudClient(),
@@ -17206,8 +17211,14 @@ function AccountScreen({ onExit: r, onFriends: fr, onPrivacy: pv }) {
     [nick, setNick] = useState(""),
     [show, setShow] = useState(!1),
     [busy, setBusy] = useState(!1),
-    [bad, setBad] = useState(null),
-    [good, setGood] = useState(null),
+    // a note from an e-mail link (account confirmed, link expired), shown once
+    [note] = useState(() => {
+      const n = CLOUD.notice || {};
+      return ((CLOUD.notice = null), n);
+    }),
+    [bad, setBad] = useState(note.bad || null),
+    [good, setGood] = useState(note.good || null),
+    [unconf, setUnconf] = useState(!1),
     [name, setName] = useState(""),
     [pw2, setPw2] = useState("");
   useEffect(() => {
@@ -17217,12 +17228,12 @@ function AccountScreen({ onExit: r, onFriends: fr, onPrivacy: pv }) {
     cl.profile && setName(cl.profile.name);
   }, [cl.profile && cl.profile.name]);
   const run = async (f, ok) => {
-      (setBusy(!0), setBad(null), setGood(null));
+      (setBusy(!0), setBad(null), setGood(null), setUnconf(!1));
       try {
         const v = await f();
         ok && setGood(typeof ok == "function" ? ok(v) : ok);
       } catch (e) {
-        setBad(cloudErr(e));
+        (setBad(cloudErr(e)), setUnconf(/email_not_confirmed|not confirmed/i.test(String((e && (e.code || e.message)) || ""))));
       } finally {
         setBusy(!1);
       }
@@ -17237,7 +17248,11 @@ function AccountScreen({ onExit: r, onFriends: fr, onPrivacy: pv }) {
       return mode === "up"
         ? run(
             () => cloudSignUp(em, pw, nick.trim().slice(0, 24)),
-            (d) => (d && !d.session ? _T("Fast geschafft: Bitte \xF6ffne den Link in der Mail, um dein Konto zu best\xE4tigen.") : null),
+            // the account waits for its confirmation: on to signing in, the address stays
+            (d) =>
+              d && !d.session
+                ? (setMode("in"), setPw(""), _T("Fast geschafft! Wir haben dir eine Mail geschickt. Tippe auf den Link darin, um dein Konto zu best\xE4tigen. Danach meldest du dich hier an."))
+                : null,
           )
         : run(() => cloudSignIn(em, pw));
     },
@@ -17300,6 +17315,18 @@ function AccountScreen({ onExit: r, onFriends: fr, onPrivacy: pv }) {
             _T("Passwort anzeigen"),
           ),
         React.createElement(CloudMsg, { good, bad }),
+        unconf &&
+          React.createElement(
+            "button",
+            {
+              type: "button",
+              onClick: () => run(() => cloudResend(em), _T("Die Mail ist unterwegs. Schau auch im Spam-Ordner nach.")),
+              "data-resend": "1",
+              className: "ana-body",
+              style: { display: "block", margin: "-4px 0 12px", background: "none", border: "none", color: CLOUD_BLUE, fontSize: 14, textDecoration: "underline", cursor: "pointer", padding: 0 },
+            },
+            _T("Best\xE4tigungs-Mail noch einmal schicken"),
+          ),
         React.createElement(
           Btn,
           { color: CLOUD_BLUE, dark: "#1864AB", disabled: busy, "data-account-submit": "1", onClick: submit },
@@ -24036,6 +24063,12 @@ function AnatomiaApp() {
     // background and fetched when it comes back (or the connection does)
     useEffect(() => {
       CLOUD.apply = (f) => r(f);
+      const h = location.hash || "";
+      /[#&]error_description=/.test(h)
+        ? ((CLOUD.notice = { bad: _T("Der Link ist abgelaufen oder wurde schon benutzt. Melde dich an oder lass dir eine neue Mail schicken.") }), go({ name: "account" }))
+        : /[#&]type=signup/.test(h) && ((CLOUD.notice = { good: _T("Deine E-Mail-Adresse ist best\xE4tigt. Willkommen bei Anatomia!") }), go({ name: "account" }));
+      const rec = () => CLOUD.recovery && !CLOUD.recShown && ((CLOUD.recShown = !0), go({ name: "account" }));
+      CLOUD.ls.add(rec);
       cloudHas() && cloudStart().catch(() => {});
       try {
         const q = new URLSearchParams(location.search).get("freund");
@@ -24049,7 +24082,7 @@ function AnatomiaApp() {
       return (
         document.addEventListener("visibilitychange", v),
         window.addEventListener("online", on),
-        () => (delete CLOUD.apply, document.removeEventListener("visibilitychange", v), window.removeEventListener("online", on))
+        () => (delete CLOUD.apply, CLOUD.ls.delete(rec), document.removeEventListener("visibilitychange", v), window.removeEventListener("online", on))
       );
     }, []),
     // a new day while the app is open (checked each minute and when it comes back from the background): the days missed

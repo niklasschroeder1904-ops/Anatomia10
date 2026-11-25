@@ -30,9 +30,17 @@ besseren, Listen (Käufe, Tage) behalten, was eine Seite hinzugefügt hat, bei e
 Karteikarte gilt die Wiederholung, die früher fällig ist. Ein neues Gerät ohne Fortschritt
 übernimmt den Stand des Kontos; hat es eigenen Fortschritt, fragt die App einmal.
 
+## Mails
+
+Bestätigungs- und Passwort-Mails gehen über ein eigenes Gmail-Konto der App (SMTP mit
+App-Passwort, in Supabase unter Authentication → Emails → SMTP eingetragen). Die Texte stehen
+in der Auth-Einstellung des Projekts, in vier Sprachen: Die App gibt beim Registrieren die
+Sprache mit (`lang` in den Nutzerdaten), die Vorlagen wählen danach (`{{ if eq .Data.lang "en" }}`).
+Neue Konten müssen ihre E-Mail-Adresse bestätigen. Ein Link aus der Mail öffnet die App:
+bestätigt → Konto-Seite mit Begrüßung; Passwort vergessen → Formular für ein neues Passwort;
+abgelaufen → Hinweis.
+
 ## Noch offen
 
-- Bestätigungs- und Passwort-Mails brauchen einen eigenen Mail-Dienst (SMTP). Bis dahin ist
-  die E-Mail-Bestätigung ausgeschaltet.
 - Anmeldung mit Google (Google-Cloud-Projekt) und Apple (Apple-Entwicklerkonto).
 - Tägliche Erinnerung per Push.
