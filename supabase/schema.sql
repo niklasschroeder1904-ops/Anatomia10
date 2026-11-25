@@ -291,3 +291,25 @@ language sql stable security definer set search_path = '' as $$
 $$;
 revoke execute on function public.group_board(text) from public, anon;
 grant execute on function public.group_board(text) to authenticated;
+
+-- ---- 4. reports: something wrong in a lesson, a question or elsewhere, sent from the app ----
+-- Written only by the function "report" (with the service key); nobody reads them through the app's API.
+create table if not exists public.reports (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  user_id uuid references auth.users (id) on delete set null,
+  ip_hash text,
+  kind text check (kind is null or char_length(kind) <= 40),
+  lesson_id text check (lesson_id is null or char_length(lesson_id) <= 120),
+  lesson_title text check (lesson_title is null or char_length(lesson_title) <= 300),
+  reason text check (reason is null or char_length(reason) <= 60),
+  message text not null check (char_length(message) between 3 and 2000),
+  ctx jsonb check (ctx is null or pg_column_size(ctx) < 20000),
+  lang text check (lang is null or char_length(lang) <= 8),
+  emailed_at timestamptz,
+  done boolean not null default false
+);
+alter table public.reports enable row level security;
+revoke all on public.reports from anon, authenticated;
+create index if not exists reports_ip on public.reports (ip_hash, created_at);
+create index if not exists reports_unsent on public.reports (created_at) where emailed_at is null;

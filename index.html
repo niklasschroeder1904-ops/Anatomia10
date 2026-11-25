@@ -5297,6 +5297,15 @@ const { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } = R
     ),
   ),
   ChevronLeft = mkIcon(React.createElement("path", { d: "m15 18-6-6 6-6" })),
+  // a flag: "Melden"
+  Flag = mkIcon(
+    React.createElement(
+      React.Fragment,
+      null,
+      React.createElement("path", { d: "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" }),
+      React.createElement("path", { d: "M4 22v-7" }),
+    ),
+  ),
   Gear = mkIcon(
     React.createElement(
       React.Fragment,
@@ -12899,7 +12908,7 @@ const stickyTop = (up, px = 4) => ({
   boxShadow: up ? `0 1px 0 ${C.line}, 0 10px 14px -14px rgba(16,24,40,0.45)` : "none",
   transition: "box-shadow .15s",
 });
-function TopBar({ onBack: s, children: r, right: o, swipe: sw = !0 }) {
+function TopBar({ onBack: s, children: r, right: o, swipe: sw = !0, report: rp }) {
   useSwipeBack(sw ? s : null);
   const up = useScrolled(),
     ref = useRef(null);
@@ -12927,6 +12936,8 @@ function TopBar({ onBack: s, children: r, right: o, swipe: sw = !0 }) {
     ),
     React.createElement("div", { style: { flex: 1, display: "flex", alignItems: "center", gap: 10 } }, r),
     o,
+    // "Melden": something wrong on this screen (rp gives what the screen shows)
+    rp && React.createElement(ReportButton, { ctx: rp }),
   );
 }
 function starsFor(s) {
@@ -15822,7 +15833,17 @@ function FigureScreen({ src: s, onExit: r, onQuiz: o, q: e = "" }) {
     { style: { paddingBottom: 26 } },
     React.createElement(
       TopBar,
-      { onBack: r },
+      {
+        onBack: r,
+        report: () => ({
+          kind: "figure",
+          what: _T("Bildatlas"),
+          name: t.title + (S ? " \xB7 " + repTxt(S.la) : ""),
+          figure: (t.titleDe || t.title) + " (" + s + ")",
+          item: S ? { la: repTxt(orLa(S.lab)), de: repTxt(orDe(S.lab)) } : void 0,
+          images: [s],
+        }),
+      },
       React.createElement(
         "div",
         { className: "ana-display", style: { fontSize: 15.5, fontWeight: 700, color: C.ink, lineHeight: 1.2 } },
@@ -15994,7 +16015,26 @@ function FigureQuizScreen({ src: s, onExit: r, onFinish: o }) {
     { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
     React.createElement(
       TopBar,
-      { onBack: r },
+      {
+        onBack: r,
+        report: () => ({
+          kind: "figquiz",
+          what: _T("{0} \xB7 Frage {1} von {2}", e.title, a + 1, t.length),
+          name: _T("Was geh\xF6rt an die Stelle des Fragezeichens?"),
+          figure: (e.titleDe || e.title) + " (" + s + ")",
+          item: { la: repTxt(m.la), de: repTxt(m.de), label: m.idx },
+          question: {
+            n: a + 1,
+            total: t.length,
+            text: _T("Was geh\xF6rt an die Stelle des Fragezeichens?"),
+            options: repOpts(m.options),
+            picked: i != null ? i : void 0,
+            answered: i != null,
+            right: i != null ? !!m.options[i].correct : void 0,
+          },
+          images: [s],
+        }),
+      },
       React.createElement(ProgressBar, { value: a / t.length, color: ATLAS_COLOR }),
       React.createElement(
         "span",
@@ -18060,6 +18100,327 @@ function SyncAskDialog() {
     ),
   );
 }
+// ---- "Melden": something wrong in a lesson, a question, a case, a picture or elsewhere. The report goes with what
+// the screen shows (the lesson, the card or question, its pictures) to the Anatomia mailbox, through the server's
+// function "report"; no account needed. Without a connection it waits on the device and goes out later ----
+const REPORT = { open: null, n: 0, route: "", busy: !1, ls: new Set() },
+  REPORT_Q = "anatomia-reports",
+  REPORT_REASONS = [
+    ["fact", _T("Inhalt falsch")],
+    ["picture", _T("Bild oder Markierung")],
+    ["typo", _T("Tippfehler")],
+    ["translation", _T("\xDCbersetzung")],
+    ["other", _T("Sonstiges")],
+  ],
+  // the text of a name, a question or an answer (also when it is made of parts)
+  repTxt = (v) =>
+    v == null || typeof v === "boolean"
+      ? ""
+      : typeof v === "string" || typeof v === "number"
+        ? String(v)
+        : Array.isArray(v)
+          ? v.map(repTxt).join("")
+          : v.props
+            ? repTxt(v.props.children)
+            : "",
+  // a lesson with its topic and a card, by their German names (the e-mail is read in German; the text of the screen
+  // in it shows what the app showed)
+  repLesson = (l) => {
+    if (!l || !l.id) return void 0;
+    const u = UNITS.find((x) => x.id === l.unitId);
+    return { id: l.id, title: l.titleDe || l.title, unit: u ? u.titleDe || u.title : void 0 };
+  },
+  repItem = (i) => (i ? { id: i.id, la: repTxt(orLa(i)), de: repTxt(orDe(i)), fact: repTxt(i.factDe != null ? i.factDe : i.fact) || void 0 } : void 0),
+  repOpts = (o) => (Array.isArray(o) && o.length ? o.slice(0, 12).map((x) => ({ label: repTxt(x && x.label), correct: !!(x && x.correct) })) : void 0),
+  // a question: its place in the round, its text, the answers on offer, what was chosen or typed
+  repQ = (q, i, n, pick, typed, done, right) => ({
+    n: i + 1,
+    total: n,
+    text: [repTxt(q.prompt), repTxt(q.sub)].filter(Boolean).join(" – "),
+    type: q.kind || (q.showFig ? "fig" : "choice"),
+    options: repOpts(q.options && q.options.length ? q.options : q.choices),
+    picked: pick != null ? pick : void 0,
+    typed: typed || void 0,
+    answered: !!done,
+    right: done ? !!right : void 0,
+  }),
+  // a clinical case, with the lesson it belongs to
+  repCase = (c, i, n, pick) => {
+    const L = c.ref ? findLesson(c.ref.lessonId) : null,
+      k = CASES.findIndex((x) => x.text === c.text);
+    return {
+      kind: "case",
+      what: _T("Klinischer Fall {0} von {1}", i + 1, n),
+      name: repTxt(c.question),
+      lesson: repLesson(L),
+      item: L ? repItem(L.items.find((x) => x.id === c.ref.itemId)) : void 0,
+      case: { no: k >= 0 ? k + 1 : void 0, text: repTxt(c.text), question: repTxt(c.question), explain: repTxt(c.explain) },
+      question: { n: i + 1, total: n, options: repOpts(c.options), picked: pick != null ? pick : void 0, answered: pick != null, right: pick != null ? !!c.options[pick].correct : void 0 },
+    };
+  },
+  // the mnemonics in view (the list is long: those being read)
+  repMnemo = () => {
+    const v = [],
+      top = topBarBottom();
+    document.querySelectorAll("[data-mnemo]").forEach((x) => {
+      const b = x.getBoundingClientRect();
+      b.bottom > top && b.top < window.innerHeight && v.length < 4 && v.push(x.getAttribute("data-mnemo"));
+    });
+    const ms = v.map((id) => MNEMONICS.find((m) => m.id === id)).filter(Boolean);
+    return {
+      kind: "mnemonic",
+      what: _T("Eselsbr\xFCcken"),
+      name: ms.length === 1 ? repTxt(ms[0].title) : void 0,
+      mnemonics: ms.map((m) => m.id),
+      screen: ms.map((m) => `${repTxt(m.title)}: „${repTxt(m.text)}“\n${repTxt(m.explain)}`).join("\n\n"),
+    };
+  },
+  // what is on the screen: its text and the app's own pictures on it
+  repScreen = () => {
+    const el = document.getElementById("ana-screen"),
+      im = [];
+    if (!el) return { screen: "", images: im };
+    el.querySelectorAll("img").forEach((x) => {
+      const f = x.getAttribute("src") || "";
+      /^(\.\/)?[\w.\-]+\.(jpe?g|png)$/i.test(f) && !im.includes(f) && im.push(f);
+    });
+    return { screen: String(el.innerText || "").replace(/\n{3,}/g, "\n\n").trim().slice(0, 3000), images: im.slice(0, 3) };
+  },
+  // the report window, with what the screen shows (c: that, or a function that gives it)
+  repOpen = (c) => {
+    let x = {};
+    try {
+      x = (typeof c === "function" ? c() : c) || {};
+    } catch {}
+    const sc = repScreen(),
+      { kind: k, what: w, name: nm, ...rest } = x;
+    REPORT.open = {
+      kind: k || "other",
+      what: w || "",
+      name: nm || "",
+      ctx: {
+        ...rest,
+        screen: "screen" in x ? x.screen : sc.screen,
+        images: x.images || sc.images,
+        route: REPORT.route,
+        terms: TERM_LANG + "/" + NAME_LANG,
+        device: String(navigator.userAgent || "").slice(0, 200),
+      },
+    };
+    REPORT.n++;
+    REPORT.ls.forEach((f) => f());
+  },
+  repClose = () => ((REPORT.open = null), REPORT.ls.forEach((f) => f())),
+  // the app's version: the name of its offline store
+  repVersion = async () => {
+    try {
+      const k = (await caches.keys())
+        .map((x) => /^anatomia-v(\d+)$/.exec(x))
+        .filter(Boolean)
+        .map((m) => +m[1]);
+      return k.length ? "v" + Math.max(...k) : "";
+    } catch {
+      return "";
+    }
+  },
+  repPost = async (b) => {
+    const h = { apikey: CLOUD_KEY, "Content-Type": "application/json" };
+    // signed in: the account goes with it (its nickname is in the e-mail)
+    if (CLOUD.user)
+      try {
+        const { data: d } = await (await cloudClient()).auth.getSession();
+        d && d.session && (h.Authorization = "Bearer " + d.session.access_token);
+      } catch {}
+    const r = await fetch(CLOUD_URL + "/functions/v1/report", { method: "POST", headers: h, body: JSON.stringify(b) });
+    if (r.status === 429) throw { code: "rate_limit", status: 429 };
+    if (!r.ok) throw { code: "http_" + r.status, status: r.status };
+    return r.json();
+  },
+  repQueue = () => {
+    try {
+      const a = JSON.parse(localStorage.getItem(REPORT_Q) || "[]");
+      return Array.isArray(a) ? a : [];
+    } catch {
+      return [];
+    }
+  },
+  repQueueSet = (a) => {
+    try {
+      a.length ? localStorage.setItem(REPORT_Q, JSON.stringify(a.slice(-10))) : localStorage.removeItem(REPORT_Q);
+    } catch {}
+  },
+  // reports written without a connection: sent once there is one (one the server refuses is dropped, the rest wait)
+  repFlush = async () => {
+    if (REPORT.busy || navigator.onLine === !1 || !repQueue().length) return;
+    REPORT.busy = !0;
+    let i = 0;
+    try {
+      const q = repQueue();
+      for (; i < q.length; i++)
+        try {
+          await repPost(q[i]);
+        } catch (e) {
+          if (!(e && e.status >= 400 && e.status < 500 && e.status !== 429)) break;
+        }
+    } finally {
+      repQueueSet(repQueue().slice(i));
+      REPORT.busy = !1;
+    }
+  },
+  repSend = async (o, why, msg) => {
+    const b = { kind: o.kind, reason: why || null, lang: UI_LANG, message: msg, ctx: { ...o.ctx, what: o.what || void 0, version: await repVersion() } };
+    // within what the server takes
+    for (let k = 0; k < 4 && JSON.stringify(b.ctx).length > 14e3; k++) b.ctx = { ...b.ctx, screen: String(b.ctx.screen || "").slice(0, 1e3 >> k), item: b.ctx.item && { ...b.ctx.item, fact: void 0 } };
+    try {
+      return (await repPost(b), "sent");
+    } catch (e) {
+      // no connection (or the server is down for a moment): it waits on the device
+      if (!(e && e.status) || e.status >= 500) return (repQueueSet([...repQueue(), b]), "queued");
+      throw e;
+    }
+  };
+// the flag in a top bar
+function ReportButton({ ctx: c }) {
+  return React.createElement(
+    "button",
+    {
+      onClick: () => repOpen(c),
+      "aria-label": _T("Fehler melden"),
+      title: _T("Fehler melden"),
+      "data-report": "1",
+      style: { background: "none", border: "none", padding: 7, margin: "-7px -7px -7px -3px", cursor: "pointer", color: C.inkSoft, display: "flex", alignItems: "center", flexShrink: 0 },
+    },
+    React.createElement(Flag, { size: 19 }),
+  );
+}
+function ReportHost() {
+  const [, f] = useState(0);
+  useEffect(() => {
+    const g = () => f((x) => x + 1);
+    return (REPORT.ls.add(g), () => REPORT.ls.delete(g));
+  }, []);
+  return REPORT.open ? React.createElement(ReportDialog, { key: REPORT.n, o: REPORT.open }) : null;
+}
+// the report window: why (optional), what is wrong (in words), send
+function ReportDialog({ o }) {
+  const [why, setWhy] = useState(o.kind === "other" ? "other" : null),
+    [msg, setMsg] = useState(""),
+    [st, setSt] = useState(null),
+    [err, setErr] = useState(""),
+    ta = useRef(null),
+    ok = msg.trim().length >= 3,
+    done = st === "sent" || st === "queued",
+    send = async () => {
+      if (!ok || st === "busy") return;
+      (setSt("busy"), setErr(""));
+      try {
+        const r = await repSend(o, why, msg.trim());
+        (setSt(r), haptic("ok"));
+      } catch (e) {
+        (setSt(null), setErr(e && e.code === "rate_limit" ? _T("Du hast gerade viele Meldungen geschickt. Bitte versuche es sp\xE4ter noch einmal.") : cloudErr(e)));
+      }
+    };
+  useEffect(() => {
+    const k = (e) => e.key === "Escape" && repClose();
+    document.addEventListener("keydown", k);
+    // ready to type
+    const t = setTimeout(() => ta.current && ta.current.focus({ preventScroll: !0 }), 80);
+    return () => (document.removeEventListener("keydown", k), clearTimeout(t));
+  }, []);
+  const chip = ([id, t]) =>
+    React.createElement(
+      "button",
+      {
+        key: id,
+        onClick: () => setWhy(why === id ? null : id),
+        "aria-pressed": why === id ? "true" : "false",
+        "data-report-reason": id,
+        className: "ana-body",
+        style: {
+          padding: "7px 11px",
+          borderRadius: 999,
+          cursor: "pointer",
+          fontSize: 13.5,
+          fontWeight: 600,
+          border: `1.5px solid ${why === id ? CLOUD_BLUE : C.line}`,
+          background: why === id ? CLOUD_BLUE : C.card,
+          color: why === id ? "#fff" : C.ink,
+        },
+      },
+      t,
+    );
+  return React.createElement(
+    "div",
+    {
+      "data-report-dialog": "1",
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": "ana-report-t",
+      // a tap beside the window closes it (not while something is written in it)
+      onClick: (e) => e.target === e.currentTarget && (done || !msg.trim()) && repClose(),
+      style: { position: "fixed", inset: 0, background: "rgba(15,20,30,0.55)", zIndex: 310, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 },
+    },
+    React.createElement(
+      "div",
+      {
+        className: "ana-body ana-pop",
+        style: { background: C.card, color: C.ink, borderRadius: 20, padding: "18px 18px 16px", maxWidth: 420, width: "100%", maxHeight: "calc(100% - 16px)", overflowY: "auto", boxSizing: "border-box", boxShadow: "0 12px 40px rgba(0,0,0,0.3)" },
+      },
+      done
+        ? React.createElement(
+            React.Fragment,
+            null,
+            React.createElement("div", { style: { fontSize: 38, textAlign: "center", lineHeight: 1, margin: "4px 0 10px" } }, st === "sent" ? "✅" : "\u{1F4E8}"),
+            React.createElement("div", { id: "ana-report-t", className: "ana-display", style: { fontSize: 18, fontWeight: 700, textAlign: "center", marginBottom: 6 } }, _T("Danke f\xFCr deine Meldung!")),
+            React.createElement(
+              "div",
+              { "data-report-done": st, style: { fontSize: 14, color: C.inkSoft, lineHeight: 1.45, textAlign: "center", marginBottom: 14 } },
+              st === "sent"
+                ? _T("Sie ist angekommen. Wir schauen sie uns an.")
+                : _T("Du bist gerade offline. Die Meldung wird gesendet, sobald du wieder Internet hast."),
+            ),
+            React.createElement(Btn, { color: CLOUD_BLUE, dark: "#1864AB", onClick: repClose, "data-report-close": "1" }, _T("Schlie\xDFen")),
+          )
+        : React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(
+              "div",
+              { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 4 } },
+              React.createElement(Flag, { size: 19, color: CLOUD_BLUE }),
+              React.createElement("div", { id: "ana-report-t", className: "ana-display", style: { fontSize: 18, fontWeight: 700 } }, _T("Fehler melden")),
+            ),
+            o.what && React.createElement("div", { "data-report-what": "1", style: { fontSize: 13.5, color: C.inkSoft, lineHeight: 1.4 } }, o.what),
+            o.name && React.createElement("div", { className: "ana-display", style: { fontSize: 15, fontWeight: 700, color: C.ink, lineHeight: 1.3, marginTop: 2, ...CLAMP2 } }, o.name),
+            React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, margin: "12px 0 10px" } }, REPORT_REASONS.map(chip)),
+            React.createElement("textarea", {
+              ref: ta,
+              value: msg,
+              maxLength: 2e3,
+              rows: 4,
+              onChange: (e) => setMsg(e.target.value),
+              placeholder: _T("Was ist falsch? Schreib es kurz auf …"),
+              "aria-label": _T("Was ist falsch?"),
+              "data-report-text": "1",
+              className: "ana-body",
+              style: { display: "block", width: "100%", boxSizing: "border-box", padding: "11px 13px", fontSize: 16, lineHeight: 1.4, borderRadius: 12, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, resize: "vertical", minHeight: 100, fontFamily: "inherit" },
+            }),
+            React.createElement(
+              "div",
+              { style: { fontSize: 12, color: C.inkSoft, lineHeight: 1.4, margin: "6px 0 12px" } },
+              o.kind === "other" ? _T("Mitgeschickt werden nur dein Text, die App-Version und der Ger\xE4tetyp.") : _T("Mitgeschickt wird, was gerade auf dem Bildschirm steht: Lektion, Karte oder Frage und das Bild."),
+            ),
+            err && React.createElement(CloudMsg, { bad: err }),
+            React.createElement(
+              "div",
+              { style: { display: "flex", flexDirection: "column", gap: 8 } },
+              React.createElement(Btn, { color: CLOUD_BLUE, dark: "#1864AB", onClick: send, disabled: !ok || st === "busy", "data-report-send": "1" }, st === "busy" ? _T("Einen Moment …") : _T("Meldung senden")),
+              React.createElement(Btn, { ghost: !0, color: C.inkSoft, onClick: repClose, "data-report-cancel": "1" }, _T("Abbrechen")),
+            ),
+          ),
+    ),
+  );
+}
 // what the app keeps about an account, and why
 function PrivacyScreen({ onExit: r }) {
   const h = (t) => React.createElement("div", { className: "ana-display", style: { fontSize: 15.5, fontWeight: 700, color: C.ink, margin: "16px 0 4px" } }, t),
@@ -18069,7 +18430,7 @@ function PrivacyScreen({ onExit: r }) {
     { "data-privacy-screen": "1", style: { minHeight: PAGE_H, paddingBottom: 30 } },
     React.createElement(TopBar, { onBack: r }, React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, _T("Datenschutz"))),
     h(_T("Ohne Konto")),
-    p(_T("Ohne Konto bleibt alles auf deinem Ger\xE4t. Die App schickt dann nichts \xFCber dich ins Internet.")),
+    p(_T("Ohne Konto bleibt alles auf deinem Ger\xE4t. Die App schickt dann nichts \xFCber dich ins Internet \u2013 au\xDFer einer Meldung, die du selbst abschickst.")),
     h(_T("Mit Konto: was gespeichert wird")),
     p(_T("Deine E-Mail-Adresse und dein Passwort (nur verschl\xFCsselt), dein Spitzname, deine Gruppe (z. B. Medizinstudium), dein Freundescode, deine Freundesliste und dein Lernfortschritt: XP, Taler, Serie, Lektionen, Wiederholungen und Fehlerbuch.")),
     h(_T("Wof\xFCr")),
@@ -18078,6 +18439,12 @@ function PrivacyScreen({ onExit: r }) {
     p(_T("Deine Freunde sehen deinen Spitznamen, deine XP (gesamt und diese Woche) und deine Serie. In der weltweiten Rangliste und in der Rangliste deiner Gruppe sehen das alle Nutzer \u2013 ausblenden kannst du dich in deinem Konto. Deine E-Mail-Adresse und deinen Lernfortschritt im Einzelnen sieht niemand au\xDFer dir.")),
     h(_T("Wo die Daten liegen")),
     p(_T("Bei Supabase, einem Anbieter f\xFCr Datenbanken, auf Servern in Frankfurt am Main (EU). Supabase verarbeitet die Daten nur f\xFCr diese App.")),
+    h(_T("Meldungen")),
+    p(
+      _T(
+        "Meldest du einen Fehler, gehen dein Text und was gerade auf dem Bildschirm stand (Lektion, Karte oder Frage, Bild) mit App-Version, Sprache und Ger\xE4tetyp an Supabase und von dort per E-Mail an das Postfach von Anatomia (Versand \xFCber den Dienst Resend, USA). Bist du angemeldet, steht dein Spitzname dabei. Von deiner IP-Adresse wird nur eine Pr\xFCfsumme gespeichert, damit niemand die App mit Meldungen \xFCberflutet.",
+      ),
+    ),
     h(_T("L\xF6schen")),
     p(_T("Unter Konto → „Konto l\xF6schen“ wird dein Konto mit allem darin sofort gel\xF6scht.")),
     h(_T("Deine Rechte")),
@@ -18123,6 +18490,21 @@ function SettingsScreen({ progress: s, onExit: r, onSet: o, onDark: e, onReset: 
       React.createElement(Switch, { on: s.vibration !== !1, onChange: (n) => (o({ vibration: n }), n && ((HAP.on = !0), haptic("ok"))), label: _T("Vibration") }),
     ),
     React.createElement(VoiceCard, { progress: s, onVoice: o }),
+    React.createElement(SectionLabel, null, _T("HILFE")),
+    a(
+      _T("Etwas melden"),
+      _T("Ein Fehler in der App oder eine Idee? In Lektionen, Fragen und F\xE4llen geht es auch direkt \xFCber das F\xE4hnchen oben rechts."),
+      React.createElement(
+        "button",
+        {
+          onClick: () => repOpen({ kind: "other", what: _T("Allgemeine Meldung"), screen: "", images: [] }),
+          "data-report-general": "1",
+          className: "ana-display",
+          style: { flexShrink: 0, padding: "8px 14px", borderRadius: 999, border: `2px solid ${CLOUD_BLUE}`, background: "none", color: CLOUD_BLUE, fontSize: 14, fontWeight: 700, cursor: "pointer" },
+        },
+        _T("Melden"),
+      ),
+    ),
     React.createElement(SectionLabel, null, _T("FORTSCHRITT")),
     React.createElement(ProgressMove, null),
     React.createElement(Btn, { ghost: !0, color: C.bad, onClick: t, "data-reset": "1" }, _T("\u21BA App zur\xFCcksetzen")),
@@ -20205,6 +20587,7 @@ function VignetteScreen({ cases: s, onExit: r, onFinish: o, onAnswer: e, onCase:
       TopBar,
       {
         onBack: r,
+        report: () => repCase(c, t, s.length, n),
         right: React.createElement(
           "span",
           { className: "ana-display", style: { fontSize: 13, fontWeight: 600, color: C.inkSoft } },
@@ -20804,6 +21187,18 @@ function FlashScreen({ cards: s, title: r, color: o, dark: e, onExit: t, onFinis
       ),
       React.createElement("div", { style: { flex: 1 } }, React.createElement(ProgressBar, { value: d / p, color: o })),
       React.createElement("div", { className: "ana-display", style: { fontSize: 13, fontWeight: 700, color: C.inkSoft } }, d + 1, "/", p),
+      React.createElement(ReportButton, {
+        ctx: () => ({
+          kind: "flash",
+          what: _T("{0} \xB7 Karte {1} von {2}", g.title, d + 1, p),
+          name: repTxt(k.la),
+          lesson: repLesson(g),
+          slide: { n: d + 1, total: p },
+          item: repItem(k),
+          deck: repTxt(r) || void 0,
+          flipped: !!m,
+        }),
+      }),
     ),
     React.createElement(
       "div",
@@ -21247,7 +21642,18 @@ function ConceptLearn({ lesson: s, unit: r, onExit: o, onQuiz: e, done: dn = !1 
     { style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
     React.createElement(
       TopBar,
-      { onBack: o, right: dn ? quizChip(r, e) : null },
+      {
+        onBack: o,
+        right: dn ? quizChip(r, e) : null,
+        report: () => ({
+          kind: "learn",
+          what: _T("{0} \xB7 Karte {1} von {2}", s.title, a + 1, l),
+          name: repTxt(i.la),
+          lesson: repLesson(s),
+          slide: { n: a + 1, total: l },
+          item: repItem(i),
+        }),
+      },
       React.createElement(ProgressBar, { value: (a + 1) / l, color: r.color }),
       React.createElement(
         "span",
@@ -21369,7 +21775,19 @@ function LearnScreen({ lesson: s, unit: r, onExit: o, onQuiz: e, done: dn = !1 }
         { ref: pR, style: { display: "flex", flexDirection: "column", minHeight: PAGE_H } },
         React.createElement(
           TopBar,
-          { onBack: o, right: dn ? quizChip(r, e) : null },
+          {
+            onBack: o,
+            right: dn ? quizChip(r, e) : null,
+            report: () => ({
+              kind: "learn",
+              what: _T("{0} \xB7 Karte {1} von {2}", s.title, a + 1, s.items.length),
+              name: repTxt(i.la),
+              lesson: repLesson(s),
+              slide: { n: a + 1, total: s.items.length },
+              item: repItem(i),
+              view: h,
+            }),
+          },
           React.createElement(ProgressBar, { value: (a + 1) / s.items.length, color: r.color }),
           React.createElement(
             "span",
@@ -22188,7 +22606,17 @@ function QuizScreen({
         swipe: !1,
         right: o
           ? React.createElement(Hearts, { n: y, max: l })
-          : React.createElement("span", { className: "ana-display", style: { fontSize: 13, fontWeight: 600, color: C.inkSoft } }, e),
+          : // a long title (a topic's test) on up to two lines, the progress bar keeps its room
+            React.createElement("span", { className: "ana-display", style: { fontSize: 13, fontWeight: 600, color: C.inkSoft, maxWidth: "46%", textAlign: "right", lineHeight: 1.25, ...CLAMP2 } }, e),
+        report: () => ({
+          kind: "question",
+          what: _T("{0} \xB7 Frage {1} von {2}", (M.lesson && M.lesson.title) || repTxt(e), m + 1, qs.length),
+          name: repTxt(M.prompt),
+          lesson: repLesson(M.lesson),
+          item: repItem(M.item),
+          round: repTxt(e) || void 0,
+          question: repQ(M, m, qs.length, u, g, I, F),
+        }),
       },
       React.createElement(ProgressBar, { value: (rw ? cl : m) / s.length, color: r.color }),
       // three or more right answers in a row
@@ -23092,7 +23520,15 @@ function ExamQuiz({ questions: s, color: r, dark: dk, title: ti, timeUp: tu, onE
       {
         onBack: () => (nAns === 0 || window.confirm(_T("Pr\xFCfung abbrechen? Deine Antworten gehen verloren."))) && ox(),
         swipe: !1,
-        right: React.createElement("span", { className: "ana-display", style: { fontSize: 13, fontWeight: 600, color: C.inkSoft } }, ti),
+        right: React.createElement("span", { className: "ana-display", style: { fontSize: 13, fontWeight: 600, color: C.inkSoft, maxWidth: "46%", textAlign: "right", lineHeight: 1.25, ...CLAMP2 } }, ti),
+        report: () => ({
+          kind: "exam",
+          what: _T("{0} \xB7 Frage {1} von {2}", repTxt(ti), m + 1, s.length),
+          name: repTxt(M.prompt),
+          lesson: repLesson(M.lesson),
+          item: repItem(M.item),
+          question: repQ(M, m, s.length, v && v.pick, v && v.text, !1),
+        }),
       },
       React.createElement(ProgressBar, { value: nAns / s.length, color: r }),
     ),
@@ -23528,6 +23964,7 @@ function MnemonicCard({ m: s, color: r = "#F59F00", open: o = !1 }) {
   return React.createElement(
     "div",
     {
+      "data-mnemo": s.id,
       style: { marginTop: 12, borderRadius: 14, background: C.card, border: `1.5px solid ${C.line}`, borderLeft: `5px solid ${r}`, padding: "10px 12px" },
     },
     React.createElement(
@@ -23561,7 +23998,7 @@ function MnemonicScreen({ onExit: s }) {
     { style: { minHeight: PAGE_H, paddingBottom: 30 } },
     React.createElement(
       TopBar,
-      { onBack: s },
+      { onBack: s, report: repMnemo },
       React.createElement("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, _T("Eselsbr\xFCcken")),
     ),
     React.createElement(
@@ -24413,7 +24850,9 @@ function AnatomiaApp() {
         }
       } catch {}
       const v = () => CLOUD.user && (document.visibilityState === "hidden" || Date.now() - (CLOUD.at || 0) > 6e4) && cloudSync(),
-        on = () => CLOUD.user && cloudSync();
+        on = () => (CLOUD.user && cloudSync(), repFlush());
+      // reports written offline go out once the app is up
+      setTimeout(repFlush, 4e3);
       return (
         document.addEventListener("visibilitychange", v),
         window.addEventListener("online", on),
@@ -25188,6 +25627,10 @@ function AnatomiaApp() {
       onDue: () => d({ cards: dueCards(s, 10), title: _T("F\xE4llige Wiederholungen"), color: C.gold, dark: "#C99A04", back: "home" }),
     });
   }
+  // the screen a report comes from
+  REPORT.route = o.name;
+  // tests open a screen directly
+  typeof window < "u" && window.__anaTest && ((window.__anaGo = e), (window.__anaQuiz = l));
   return React.createElement(
     "div",
     { className: "ana-body", style: { minHeight: PAGE_H, background: C.paper, color: C.ink } },
@@ -25195,6 +25638,7 @@ function AnatomiaApp() {
     React.createElement(SvgDefs, null),
     React.createElement("div", { id: "ana-screen", style: { maxWidth: 480, margin: "0 auto", padding: "0 14px" } }, A),
     React.createElement(SyncAskDialog, null),
+    React.createElement(ReportHost, null),
   );
 }
 function AortaFig({ hl: s = [], accent: r = "#DE3D3D", pulse: o = !0 }) {

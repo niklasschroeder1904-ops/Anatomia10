@@ -47,6 +47,22 @@ Neue Konten müssen ihre E-Mail-Adresse bestätigen. Ein Link aus der Mail öffn
 bestätigt → Konto-Seite mit Begrüßung; Passwort vergessen → Formular für ein neues Passwort;
 abgelaufen → Hinweis.
 
+## Meldungen
+
+Das Fähnchen oben rechts (Lernkarten, Fragen, Fälle, Karteikarten, Bildatlas, Eselsbrücken,
+Prüfung) und „Etwas melden“ in den Einstellungen öffnen ein Fenster: Grund (optional) und Text.
+Die App schickt die Meldung an die Funktion `report` (`functions/report/index.ts`) mit dem, was
+der Bildschirm zeigt: Lektion, Karte n von N oder Frage n von N mit Antworten (die gewählte und
+die richtige), Fall, Bild, den Text des Bildschirms, App-Version, Sprache und Gerätetyp. Ohne
+Internet wartet die Meldung auf dem Gerät und geht später raus.
+
+Die Funktion speichert jede Meldung in der Tabelle `reports` (nur der Server liest sie) und
+schickt sie per E-Mail über Resend an anatomia.lernen@gmail.com, sobald unter Edge Functions →
+Secrets der Schlüssel `RESEND_API_KEY` eingetragen ist; Meldungen von vorher gehen mit der
+nächsten raus. Grenzen: 10 Meldungen pro Stunde und Gerät (gezählt über eine Prüfsumme der
+IP-Adresse), höchstens 90 E-Mails am Tag. Bereitstellen:
+`supabase functions deploy report --no-verify-jwt`.
+
 ## Noch offen
 
 - Anmeldung mit Google (Google-Cloud-Projekt) und Apple (Apple-Entwicklerkonto).
