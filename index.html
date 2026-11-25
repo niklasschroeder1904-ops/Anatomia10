@@ -12353,7 +12353,7 @@ const cloudLoad = () =>
         cloudSet({ user: u, recovery: ev === "PASSWORD_RECOVERY" || (CLOUD.recovery && !!u) });
         // (calls to the library from inside this callback wait for each other: after it)
         u && u.id !== was && setTimeout(() => (cloudProfile(), cloudSync()), 0);
-        u || cloudSet({ profile: null, board: null, global: null, status: "off" });
+        u || cloudSet({ profile: null, board: null, global: null, groups: null, status: "off" });
       });
       return c;
     })().catch((e) => ((CLOUD.started = null), Promise.reject(e)))),
@@ -12361,7 +12361,7 @@ const cloudLoad = () =>
     if (!CLOUD.user) return;
     try {
       const c = await cloudClient(),
-        { data: d } = await c.from("profiles").select("name,friend_code,public").eq("id", CLOUD.user.id).maybeSingle();
+        { data: d } = await c.from("profiles").select("name,friend_code,public,grp").eq("id", CLOUD.user.id).maybeSingle();
       d && cloudSet({ profile: d });
     } catch {}
   },
@@ -12385,9 +12385,9 @@ const cloudLoad = () =>
                   ? _T("Keine Verbindung. Bitte pr\xFCfe dein Internet.")
                   : _T("Das hat nicht geklappt. Bitte versuche es noch einmal.");
   },
-  cloudSignUp = async (email, pw, nick) => {
+  cloudSignUp = async (email, pw, nick, grp) => {
     const c = await cloudClient(),
-      { data: d, error: e } = await c.auth.signUp({ email, password: pw, options: { data: { nickname: nick, lang: UI_LANG }, emailRedirectTo: CLOUD_SITE } });
+      { data: d, error: e } = await c.auth.signUp({ email, password: pw, options: { data: { nickname: nick, lang: UI_LANG, grp }, emailRedirectTo: CLOUD_SITE } });
     if (e) throw e;
     // an address that already has an account comes back without a session (the service does not tell more)
     if (!d.session && d.user && !(d.user.identities || []).length) throw { code: "user_already_exists" };
@@ -12409,7 +12409,7 @@ const cloudLoad = () =>
       await cloudSync();
     } catch {}
     const c = await cloudClient();
-    (await c.auth.signOut({ scope: "local" }), cloudSet({ user: null, profile: null, board: null, global: null, status: "off" }));
+    (await c.auth.signOut({ scope: "local" }), cloudSet({ user: null, profile: null, board: null, global: null, groups: null, status: "off" }));
   },
   cloudForgot = async (email) => {
     const c = await cloudClient(),
@@ -12424,7 +12424,7 @@ const cloudLoad = () =>
   },
   cloudRename = async (name) => {
     const c = await cloudClient(),
-      { data: d, error: e } = await c.from("profiles").update({ name }).eq("id", CLOUD.user.id).select("name,friend_code,public").single();
+      { data: d, error: e } = await c.from("profiles").update({ name }).eq("id", CLOUD.user.id).select("name,friend_code,public,grp").single();
     if (e) throw e;
     cloudSet({ profile: d, boardAt: 0 });
   },
@@ -12436,7 +12436,7 @@ const cloudLoad = () =>
     try {
       localStorage.removeItem(CLOUD_META);
     } catch {}
-    (await c.auth.signOut({ scope: "local" }), cloudSet({ user: null, profile: null, board: null, global: null, status: "off" }));
+    (await c.auth.signOut({ scope: "local" }), cloudSet({ user: null, profile: null, board: null, global: null, groups: null, status: "off" }));
   },
   // a date as the app writes it (2026-11-25), and this week's Monday
   ymdOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
@@ -12465,9 +12465,26 @@ const cloudLoad = () =>
     if (e) throw e;
     return (cloudSet({ global: { ...(CLOUD.global || {}), [period]: { ...(d || {}), at: Date.now() } } }), CLOUD.global[period]);
   },
+  // the groups compared (period "week" or "all"), my group and my place in it
+  cloudGroups = async (period, force) => {
+    if (!CLOUD.user) return null;
+    const h = CLOUD.groups && CLOUD.groups[period];
+    if (!force && h && Date.now() - h.at < 6e4) return h;
+    await cloudSync();
+    const c = await cloudClient(),
+      { data: d, error: e } = await c.rpc("group_board", { period });
+    if (e) throw e;
+    return (cloudSet({ groups: { ...(CLOUD.groups || {}), [period]: { ...(d || {}), at: Date.now() } } }), CLOUD.groups[period]);
+  },
+  cloudSetGroup = async (grp) => {
+    const c = await cloudClient(),
+      { data: d, error: e } = await c.from("profiles").update({ grp }).eq("id", CLOUD.user.id).select("name,friend_code,public,grp").single();
+    if (e) throw e;
+    cloudSet({ profile: d, groups: null });
+  },
   cloudShow = async (on) => {
     const c = await cloudClient(),
-      { data: d, error: e } = await c.from("profiles").update({ public: on }).eq("id", CLOUD.user.id).select("name,friend_code,public").single();
+      { data: d, error: e } = await c.from("profiles").update({ public: on }).eq("id", CLOUD.user.id).select("name,friend_code,public,grp").single();
     if (e) throw e;
     cloudSet({ profile: d, global: null });
   },
@@ -17237,6 +17254,7 @@ function AccountScreen({ onExit: r, onFriends: fr, onPrivacy: pv }) {
     [bad, setBad] = useState(note.bad || null),
     [good, setGood] = useState(note.good || null),
     [unconf, setUnconf] = useState(!1),
+    [grp, setGrp] = useState(null),
     [name, setName] = useState(""),
     [pw2, setPw2] = useState("");
   useEffect(() => {
@@ -17262,10 +17280,11 @@ function AccountScreen({ onExit: r, onFriends: fr, onPrivacy: pv }) {
       if (!/^\S+@\S+\.\S+$/.test(em)) return setBad(_T("Bitte eine g\xFCltige E-Mail-Adresse eingeben."));
       if (mode === "forgot") return run(() => cloudForgot(em), _T("Wenn es zu dieser E-Mail ein Konto gibt, kommt gleich eine Mail mit einem Link zum Zur\xFCcksetzen."));
       if (mode === "up" && nick.trim().length < 2) return setBad(_T("Der Spitzname braucht mindestens 2 Zeichen."));
+      if (mode === "up" && !grp) return setBad(_T("Bitte w\xE4hle, zu welcher Gruppe du geh\xF6rst."));
       if (pw.length < 8) return setBad(_T("Das Passwort braucht mindestens 8 Zeichen."));
       return mode === "up"
         ? run(
-            () => cloudSignUp(em, pw, nick.trim().slice(0, 24)),
+            () => cloudSignUp(em, pw, nick.trim().slice(0, 24), grp),
             // the account waits for its confirmation: on to signing in, the address stays
             (d) =>
               d && !d.session
@@ -17314,6 +17333,14 @@ function AccountScreen({ onExit: r, onFriends: fr, onPrivacy: pv }) {
             _T("Passwort vergessen"),
           ),
         mode === "up" && React.createElement(CloudField, { label: _T("Spitzname"), hint: _T("So sehen dich deine Freunde in der Rangliste."), value: nick, onChange: (e) => setNick(e.target.value), maxLength: 24, autoComplete: "nickname", name: "nickname" }),
+        mode === "up" &&
+          React.createElement(
+            "div",
+            { style: { marginBottom: 12 } },
+            React.createElement("span", { className: "ana-display", style: { display: "block", fontSize: 12.5, fontWeight: 700, color: C.inkSoft, marginBottom: 4 } }, _T("Ich geh\xF6re zu …")),
+            React.createElement(GroupPicker, { value: grp, onPick: setGrp }),
+            React.createElement("span", { className: "ana-body", style: { display: "block", fontSize: 12, color: C.inkSoft, marginTop: 4 } }, _T("F\xFCr die Gruppen-Rangliste. \xC4ndern kannst du das jederzeit.")),
+          ),
         React.createElement(CloudField, { label: _T("E-Mail"), type: "email", value: email, onChange: (e) => setEmail(e.target.value), autoComplete: "email", autoCapitalize: "none", inputMode: "email", name: "email" }),
         mode !== "forgot" &&
           React.createElement(CloudField, {
@@ -17410,6 +17437,12 @@ function AccountScreen({ onExit: r, onFriends: fr, onPrivacy: pv }) {
       React.createElement("div", { className: "ana-display", style: { fontSize: 24, fontWeight: 700, letterSpacing: 2, color: C.ink, margin: "2px 0 10px" } }, codeShow(code) || "…"),
       React.createElement(Btn, { ghost: !0, color: CLOUD_BLUE, onClick: fr, "data-open-friends": "1", style: { padding: "11px 8px", fontSize: 15 } }, _T("Freunde & Rangliste")),
     ),
+    React.createElement(SectionLabel, null, _T("GRUPPE")),
+    cloudBox(
+      { "data-my-group": (cl.profile && cl.profile.grp) || "" },
+      React.createElement("div", { className: "ana-body", style: { fontSize: 13, color: C.inkSoft, lineHeight: 1.4, marginBottom: 10 } }, _T("Zu welcher Gruppe geh\xF6rst du? Die Gruppen treten in der Rangliste gegeneinander an.")),
+      React.createElement(GroupPicker, { value: cl.profile && cl.profile.grp, busy, onPick: (k) => cl.profile && k !== cl.profile.grp && run(() => cloudSetGroup(k), _T("Deine Gruppe ist gespeichert.")) }),
+    ),
     React.createElement(SectionLabel, null, _T("RANGLISTE")),
     cloudBox(
       { "data-public": cl.profile && cl.profile.public === !1 ? "off" : "on", style: { display: "flex", alignItems: "center", gap: 12 } },
@@ -17486,19 +17519,180 @@ function AccountScreen({ onExit: r, onFriends: fr, onPrivacy: pv }) {
     privacy,
   );
 }
-// friends and the leaderboards: of your friends or of everyone, this week or all time; add a friend by code,
-// invite with your own
+// the groups people belong to (the account's "grp")
+const CLOUD_GROUPS = [
+    { id: "medstud", icon: "\u{1F393}", label: _T("Medizinstudium") },
+    { id: "doctor", icon: "\u{1FA7A}", label: _T("\xC4rztinnen & \xC4rzte") },
+    { id: "dental", icon: "\u{1F9B7}", label: _T("Zahnmedizin") },
+    { id: "nursing", icon: "\u{1F489}", label: _T("Pflege") },
+    { id: "physio", icon: "\u{1F9B5}", label: _T("Physiotherapie") },
+    { id: "ems", icon: "\u{1F691}", label: _T("Rettungsdienst") },
+    { id: "health", icon: "⚕️", label: _T("Andere Gesundheitsberufe") },
+    { id: "self", icon: "\u{1F4DA}", label: _T("Selbststudium") },
+  ],
+  groupOf = (k) => CLOUD_GROUPS.find((x) => x.id === k) || null;
+// choosing a group: one button per group
+function GroupPicker({ value: v, onPick: f, busy: b }) {
+  return React.createElement(
+    "div",
+    { "data-group-picker": "1", style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 } },
+    CLOUD_GROUPS.map((x) =>
+      React.createElement(
+        "button",
+        {
+          key: x.id,
+          type: "button",
+          disabled: b,
+          onClick: () => f(x.id),
+          "data-group": x.id,
+          "aria-pressed": v === x.id ? "true" : "false",
+          className: "ana-body",
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            textAlign: "left",
+            padding: "10px 10px",
+            borderRadius: 12,
+            cursor: "pointer",
+            fontSize: 14,
+            fontWeight: 700,
+            color: C.ink,
+            background: v === x.id ? C.blueBg : C.card,
+            border: `2px solid ${v === x.id ? CLOUD_BLUE : C.line}`,
+          },
+        },
+        React.createElement("span", { style: { fontSize: 18 } }, x.icon),
+        React.createElement("span", { style: { flex: 1, minWidth: 0 } }, x.label),
+      ),
+    ),
+  );
+}
+// the groups compared, and your place in yours
+function GroupsView({ gb, week, busy, loading, pick, setPick, setGrp, line, name, good, bad }) {
+  const my = gb && groupOf(gb.mine),
+    rows = gb ? gb.groups || [] : [],
+    rest = CLOUD_GROUPS.filter((x) => !rows.some((r) => r.grp === x.id)),
+    mine = my && rows.find((r) => r.grp === my.id),
+    top = (gb && gb.top) || [],
+    meIn = top.some((x) => x.me);
+  if (!gb)
+    return cloudBox({ style: { padding: "14px" } }, React.createElement("div", { className: "ana-body", style: { fontSize: 14, color: C.inkSoft } }, loading ? _T("wird geladen …") : _T("Die Rangliste ist gerade nicht erreichbar.")));
+  if (!my || pick)
+    return React.createElement(
+      React.Fragment,
+      null,
+      cloudBox(
+        { "data-group-ask": "1" },
+        React.createElement("div", { className: "ana-display", style: { fontSize: 16.5, fontWeight: 700, color: C.ink, marginBottom: 4 } }, _T("Zu welcher Gruppe geh\xF6rst du?")),
+        React.createElement(
+          "div",
+          { className: "ana-body", style: { fontSize: 13.5, color: C.inkSoft, lineHeight: 1.45, marginBottom: 12 } },
+          _T("Die Gruppen treten gegeneinander an. \xC4ndern kannst du deine Gruppe jederzeit."),
+        ),
+        React.createElement(GroupPicker, { value: gb.mine, onPick: setGrp, busy }),
+        my &&
+          React.createElement(
+            "button",
+            { onClick: () => setPick(!1), className: "ana-body", style: { display: "block", margin: "12px auto 0", background: "none", border: "none", color: CLOUD_BLUE, fontSize: 14, cursor: "pointer" } },
+            _T("Abbrechen"),
+          ),
+      ),
+      React.createElement(CloudMsg, { good, bad }),
+    );
+  const people = (n) => (n === 1 ? _T("1 Person") : _T("{0} Personen", fmtN(n)));
+  return React.createElement(
+    React.Fragment,
+    null,
+    cloudBox(
+      { "data-group-me": my.id, style: { textAlign: "center", padding: "14px 14px" } },
+      React.createElement("div", { className: "ana-body", style: { fontSize: 13.5, color: C.inkSoft } }, my.icon, " ", my.label),
+      mine
+        ? React.createElement(
+            React.Fragment,
+            null,
+            React.createElement("div", { className: "ana-display", style: { fontSize: 30, fontWeight: 700, color: CLOUD_BLUE, margin: "2px 0" } }, _T("Platz {0}", mine.rank)),
+            React.createElement("div", { className: "ana-body", style: { fontSize: 14, color: C.ink } }, _T("von {0} Gruppen", rows.length)),
+          )
+        : React.createElement(
+            "div",
+            { className: "ana-body", style: { fontSize: 14, color: C.ink, margin: "6px 0 2px", lineHeight: 1.45 } },
+            week ? _T("Diese Woche hat in deiner Gruppe noch niemand gelernt.") : _T("In deiner Gruppe hat noch niemand XP."),
+          ),
+      gb.me &&
+        React.createElement("div", { className: "ana-body", "data-group-place": gb.me.rank, style: { fontSize: 13.5, color: C.inkSoft, marginTop: 6 } }, _T("Du: Platz {0} von {1} in deiner Gruppe", gb.me.rank, gb.size)),
+      React.createElement(
+        "button",
+        { onClick: () => setPick(!0), "data-group-change": "1", className: "ana-body", style: { display: "block", margin: "8px auto 0", background: "none", border: "none", color: CLOUD_BLUE, fontSize: 13.5, textDecoration: "underline", cursor: "pointer" } },
+        _T("Gruppe \xE4ndern"),
+      ),
+    ),
+    cloudBox(
+      { "data-groups": rows.length, style: { padding: "6px 8px" } },
+      rows.map((r, i) => {
+        const x = groupOf(r.grp) || { icon: "", label: r.grp },
+          me = my.id === r.grp;
+        return React.createElement(
+          "div",
+          {
+            key: r.grp,
+            "data-group-row": r.grp,
+            style: { display: "flex", alignItems: "center", gap: 10, padding: "10px 4px", background: me ? C.blueBg : "none", borderRadius: 10, borderBottom: i < rows.length - 1 || rest.length ? `1px solid ${C.line}` : "none" },
+          },
+          React.createElement("span", { className: "ana-display", style: { minWidth: 30, textAlign: "center", fontSize: r.rank <= 3 ? 20 : 15, fontWeight: 700, color: C.inkSoft } }, r.rank <= 3 ? CLOUD_MEDAL[r.rank - 1] : r.rank),
+          React.createElement(
+            "span",
+            { style: { flex: 1, minWidth: 0 } },
+            React.createElement("span", { className: "ana-display", style: { fontSize: 15.5, fontWeight: 700, color: C.ink } }, x.icon, " ", x.label),
+            React.createElement("span", { className: "ana-body", style: { display: "block", fontSize: 12.5, color: C.inkSoft } }, people(r.n), " \xB7 ", _T("zusammen {0} XP", fmtN(r.total))),
+          ),
+          React.createElement("span", { className: "ana-display", "data-group-per": r.per, style: { fontSize: 16, fontWeight: 700, color: C.ink, whiteSpace: "nowrap" } }, _T("\xD8 {0} XP", fmtN(r.per))),
+        );
+      }),
+      rest.map((x, i) =>
+        React.createElement(
+          "div",
+          { key: x.id, "data-group-row": x.id, style: { display: "flex", alignItems: "center", gap: 10, padding: "9px 4px", opacity: 0.55, background: my.id === x.id ? C.blueBg : "none", borderRadius: 10, borderBottom: i < rest.length - 1 ? `1px solid ${C.line}` : "none" } },
+          React.createElement("span", { className: "ana-display", style: { minWidth: 30, textAlign: "center", fontSize: 15, color: C.inkSoft } }, "–"),
+          React.createElement("span", { className: "ana-display", style: { flex: 1, fontSize: 15, fontWeight: 700, color: C.ink } }, x.icon, " ", x.label),
+          React.createElement("span", { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft } }, week ? _T("diese Woche noch niemand") : _T("noch niemand")),
+        ),
+      ),
+    ),
+    React.createElement(
+      "div",
+      { className: "ana-body", style: { fontSize: 12.5, color: C.inkSoft, lineHeight: 1.45, margin: "-4px 4px 12px" } },
+      _T("Verglichen wird der Durchschnitt pro Person, die gelernt hat. So haben kleine Gruppen die gleiche Chance."),
+      week ? " " + _T("Die Woche beginnt am Montag.") : "",
+    ),
+    React.createElement(CloudMsg, { good, bad }),
+    top.length > 0 && React.createElement(SectionLabel, null, _T("IN DEINER GRUPPE")),
+    top.length > 0 &&
+      cloudBox(
+        { "data-group-top": top.length, style: { padding: "6px 8px" } },
+        ...top.map((f, i) => line(f, f.rank, f.value, i === top.length - 1 && meIn, null, !1)),
+        !meIn && gb.me && React.createElement("div", { key: "gap", className: "ana-display", style: { textAlign: "center", color: C.inkSoft, padding: "2px 0", borderBottom: `1px solid ${C.line}` } }, "⋮"),
+        !meIn && gb.me && line({ ...gb.me, name, me: !0 }, gb.me.rank, gb.me.value, !0, null, !1),
+      ),
+  );
+}
+// the leaderboards: of your friends, of the groups (medical students, nursing, ...) or of everyone; this week or all
+// time. Friends: add one by code, invite with your own. Groups: compared by the XP per person, with your place in yours
 function FriendsScreen({ onExit: r, onAccount: ac }) {
   const cl = useCloud(),
     u = cl.user,
     [week, setWeek] = useState(!0),
-    [world, setWorld] = useState(() => {
+    [scope, setScope] = useState(() => {
       try {
-        return localStorage.getItem("anatomia-board") === "world";
+        const v = localStorage.getItem("anatomia-board");
+        return v === "world" || v === "groups" ? v : "friends";
       } catch {
-        return !1;
+        return "friends";
       }
     }),
+    world = scope === "world",
+    groups = scope === "groups",
+    [pick, setPick] = useState(!1),
     [code, setCode] = useState(() => cloudInvite()),
     [busy, setBusy] = useState(!1),
     [bad, setBad] = useState(null),
@@ -17509,7 +17703,7 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
       if (!CLOUD.user) return;
       setLoading(!0);
       try {
-        await (world ? cloudGlobal(week ? "week" : "all", force) : cloudBoard(force));
+        await (world ? cloudGlobal(week ? "week" : "all", force) : groups ? cloudGroups(week ? "week" : "all", force) : cloudBoard(force));
       } catch (e) {
         setBad(cloudErr(e));
       } finally {
@@ -17520,10 +17714,21 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
     cloudStart()
       .then(() => load(!1))
       .catch(() => {});
-  }, [u && u.id, world, week]);
+  }, [u && u.id, scope, week]);
   const my = cl.profile && cl.profile.friend_code,
     list = boardSort(cl.board, week),
     g = world && cl.global && cl.global[week ? "week" : "all"],
+    gb = groups && cl.groups && cl.groups[week ? "week" : "all"],
+    setGrp = async (k) => {
+      (setBusy(!0), setBad(null), setGood(null));
+      try {
+        (await cloudSetGroup(k), setPick(!1), await load(!0));
+      } catch (e) {
+        setBad(cloudErr(e));
+      } finally {
+        setBusy(!1);
+      }
+    },
     add = async () => {
       const c = code.replace(/[^A-Za-z0-9]/g, "");
       if (c.length !== 8) return setBad(_T("Ein Freundescode hat 8 Zeichen."));
@@ -17656,15 +17861,16 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
       title,
     ),
     seg(
-      world,
+      scope,
       [
-        [!1, _T("Freunde"), "friends"],
-        [!0, _T("Weltweit"), "world"],
+        ["friends", _T("Freunde"), "friends"],
+        ["groups", _T("Gruppen"), "groups"],
+        ["world", _T("Weltweit"), "world"],
       ],
       (v) => {
-        (setWorld(v), setOpen(null));
+        (setScope(v), setOpen(null), setPick(!1), setBad(null), setGood(null));
         try {
-          localStorage.setItem("anatomia-board", v ? "world" : "friends");
+          localStorage.setItem("anatomia-board", v);
         } catch {}
       },
       "data-board-scope",
@@ -17678,7 +17884,9 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
       setWeek,
       "data-board-tab",
     ),
-    world
+    groups
+      ? React.createElement(GroupsView, { gb, week, busy, loading, pick, setPick, setGrp, line, name: (cl.profile && cl.profile.name) || "", good, bad })
+      : world
       ? React.createElement(
           React.Fragment,
           null,
@@ -17769,9 +17977,12 @@ function FriendsHomeCard({ onOpen: op }) {
   const cl = useCloud(),
     u = cl.user,
     b = u && cl.board ? boardSort(cl.board, !0) : null,
-    g = u && cl.global && cl.global.all;
+    g = u && cl.global && cl.global.all,
+    gw = u && cl.groups && cl.groups.week,
+    myg = gw && groupOf(gw.mine),
+    gr = myg && (gw.groups || []).find((x) => x.grp === myg.id);
   useEffect(() => {
-    u && CLOUD.ready && (cloudBoard(!1).catch(() => {}), cloudGlobal("all", !1).catch(() => {}));
+    u && CLOUD.ready && (cloudBoard(!1).catch(() => {}), cloudGlobal("all", !1).catch(() => {}), cloudGroups("week", !1).catch(() => {}));
   }, [u && u.id]);
   const i = b ? b.findIndex((x) => x.me) : -1,
     fr = b && b.length > 1,
@@ -17790,7 +18001,9 @@ function FriendsHomeCard({ onOpen: op }) {
           ? g && g.me
             ? _T("Freunde diese Woche: {0}", top3)
             : top3
-          : _T("Lade Freunde mit deinem Code ein"),
+          : gr
+            ? `${myg.icon} ${myg.label}: ${_T("Platz {0} von {1} Gruppen", gr.rank, (gw.groups || []).length)}`
+            : _T("Lade Freunde mit deinem Code ein"),
     val = g && g.me ? g.me.value : b && i >= 0 ? b[i].week_xp : null;
   return React.createElement(
     "button",
@@ -17858,11 +18071,11 @@ function PrivacyScreen({ onExit: r }) {
     h(_T("Ohne Konto")),
     p(_T("Ohne Konto bleibt alles auf deinem Ger\xE4t. Die App schickt dann nichts \xFCber dich ins Internet.")),
     h(_T("Mit Konto: was gespeichert wird")),
-    p(_T("Deine E-Mail-Adresse und dein Passwort (nur verschl\xFCsselt), dein Spitzname, dein Freundescode, deine Freundesliste und dein Lernfortschritt: XP, Taler, Serie, Lektionen, Wiederholungen und Fehlerbuch.")),
+    p(_T("Deine E-Mail-Adresse und dein Passwort (nur verschl\xFCsselt), dein Spitzname, deine Gruppe (z. B. Medizinstudium), dein Freundescode, deine Freundesliste und dein Lernfortschritt: XP, Taler, Serie, Lektionen, Wiederholungen und Fehlerbuch.")),
     h(_T("Wof\xFCr")),
     p(_T("Damit du dich anmelden kannst, dein Fortschritt auf all deinen Ger\xE4ten gleich ist und du dich mit Freunden vergleichen kannst. Keine Werbung, kein Verkauf von Daten, keine Analyse deines Verhaltens.")),
     h(_T("Wer was sieht")),
-    p(_T("Deine Freunde sehen deinen Spitznamen, deine XP (gesamt und diese Woche) und deine Serie. In der weltweiten Rangliste sehen das alle Nutzer \u2013 ausblenden kannst du dich in deinem Konto. Deine E-Mail-Adresse und deinen Lernfortschritt im Einzelnen sieht niemand au\xDFer dir.")),
+    p(_T("Deine Freunde sehen deinen Spitznamen, deine XP (gesamt und diese Woche) und deine Serie. In der weltweiten Rangliste und in der Rangliste deiner Gruppe sehen das alle Nutzer \u2013 ausblenden kannst du dich in deinem Konto. Deine E-Mail-Adresse und deinen Lernfortschritt im Einzelnen sieht niemand au\xDFer dir.")),
     h(_T("Wo die Daten liegen")),
     p(_T("Bei Supabase, einem Anbieter f\xFCr Datenbanken, auf Servern in Frankfurt am Main (EU). Supabase verarbeitet die Daten nur f\xFCr diese App.")),
     h(_T("L\xF6schen")),

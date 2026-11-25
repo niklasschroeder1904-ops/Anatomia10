@@ -242,3 +242,52 @@ $$;
 revoke execute on function public.berlin_today(), public.stats_put(uuid, jsonb), public.progress_stats() from public, anon, authenticated;
 revoke execute on function public.global_board(text, integer) from public, anon;
 grant execute on function public.global_board(text, integer) to authenticated;
+
+-- ---- 3. groups: everyone says which group they belong to; the groups are compared by the XP per person ----
+
+alter table public.profiles add column if not exists grp text
+  check (grp is null or grp in ('medstud', 'doctor', 'dental', 'nursing', 'physio', 'ems', 'health', 'self'));
+grant update (name, public, grp) on public.profiles to authenticated;
+
+-- a new account: also its group, when the app sends a known one
+create or replace function public.handle_new_user() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare v text; g text := new.raw_user_meta_data ->> 'grp';
+begin
+  v := btrim(coalesce(new.raw_user_meta_data ->> 'nickname',
+                      split_part(coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name', ''), ' ', 1)));
+  if char_length(v) < 2 then v := 'Anatomie-Fan'; end if;
+  if g is null or g not in ('medstud', 'doctor', 'dental', 'nursing', 'physio', 'ems', 'health', 'self') then g := null; end if;
+  insert into public.profiles (id, name, friend_code, grp) values (new.id, left(v, 24), public.new_friend_code(), g);
+  return new;
+end $$;
+
+-- the groups compared (period 'week' or 'all'): per group the people who learnt (shown accounts with XP above 0),
+-- their XP together and the XP per person; the groups in order of XP per person (then together). Also my group, my
+-- place in it and the first 10 of it (shown accounts and me).
+create or replace function public.group_board(period text) returns json
+language sql stable security definer set search_path = '' as $$
+  with cur as (select date_trunc('week', public.berlin_today())::date ws, public.berlin_today() td),
+  v as (
+    select s.user_id, p.name, p.public, p.grp,
+           case when period = 'week' then case when s.week_start = (select ws from cur) then s.week_xp else 0 end else s.xp end val,
+           case when s.last_day >= to_char((select td from cur) - 1, 'YYYY-MM-DD') then s.streak else 0 end streak
+      from public.stats s join public.profiles p on p.id = s.user_id
+     where p.grp is not null
+  ),
+  mine as (select grp from public.profiles where id = auth.uid()),
+  g as (select grp, count(*) n, sum(val) total, round(avg(val))::bigint per from v where val > 0 and public group by grp),
+  gr as (select grp, n, total, per, rank() over (order by per desc, total desc) rk from g),
+  mem as (select user_id, name, val, streak, rank() over (order by val desc) rk from v
+           where grp = (select grp from mine) and val > 0 and (public or user_id = auth.uid()))
+  select json_build_object(
+    'mine', (select grp from mine),
+    'groups', coalesce((select json_agg(json_build_object('grp', grp, 'n', n, 'total', total, 'per', per, 'rank', rk) order by rk, grp) from gr), '[]'::json),
+    'me', (select json_build_object('rank', rk, 'value', val) from mem where user_id = auth.uid()),
+    'size', (select count(*) from mem),
+    'top', coalesce((select json_agg(json_build_object('rank', t.rk, 'name', t.name, 'value', t.val, 'streak', t.streak, 'me', t.user_id = auth.uid()) order by t.rk, t.name)
+                       from (select * from mem order by rk, name limit 10) t), '[]'::json))
+  where auth.uid() is not null;
+$$;
+revoke execute on function public.group_board(text) from public, anon;
+grant execute on function public.group_board(text) to authenticated;
