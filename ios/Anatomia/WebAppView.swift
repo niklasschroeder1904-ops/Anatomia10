@@ -6,15 +6,18 @@ import WebKit
 /// Shows the bundled Anatomia web app. All files (HTML, images, 3D models, translations) ship inside the
 /// app bundle in the "Web" folder and are served through a custom URL scheme, so the app
 /// works completely offline and XHR/fetch requests for the 3D models behave like on a web server.
-/// The page talks to the app through two message handlers: "haptic" (vibration patterns, HapticBridge)
-/// and "share" (the progress backup as a file in the share sheet, ShareBridge). Its alert() and
-/// confirm() dialogs are shown as native alerts (Coordinator) - a WKWebView shows none on its own.
-/// Until the page has loaded, the web view is the blue of the launch screen and of the page's loading screen.
+/// The page talks to the app through three message handlers: "haptic" (vibration patterns, HapticBridge),
+/// "share" (the progress backup as a file in the share sheet, ShareBridge) and "splash" (the app is on screen: the
+/// loading animation over the web view goes, SplashBridge). Its alert() and confirm() dialogs are shown as native
+/// alerts (Coordinator) - a WKWebView shows none on its own. Until the page has loaded, the web view is the blue of
+/// the launch screen and of the loading animation.
 struct WebAppView: UIViewRepresentable {
     static let startURL = URL(string: "\(BundleSchemeHandler.scheme)://app/index.html")!
+    /// the loading animation over the web view (AnatomiaApp, SplashView)
+    let splash: SplashModel
 
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(splash: splash)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -24,6 +27,7 @@ struct WebAppView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.userContentController.add(HapticBridge(), name: HapticBridge.name)
         config.userContentController.add(ShareBridge(), name: ShareBridge.name)
+        config.userContentController.add(SplashBridge(splash: splash), name: SplashBridge.name)
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.uiDelegate = context.coordinator
@@ -48,7 +52,13 @@ struct WebAppView: UIViewRepresentable {
         static let startColor = UIColor(red: 0.118, green: 0.157, blue: 0.212, alpha: 1)
         /// the page's light ground (#F4F6FB): shows where the page is pulled past its top or bottom
         static let pageColor = UIColor(red: 0.957, green: 0.965, blue: 0.984, alpha: 1)
+        private let splash: SplashModel
         private var lastRestart = Date.distantPast
+
+        init(splash: SplashModel) {
+            self.splash = splash
+            super.init()
+        }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             webView.backgroundColor = Self.pageColor
@@ -59,6 +69,7 @@ struct WebAppView: UIViewRepresentable {
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             guard Date().timeIntervalSince(lastRestart) > 15 else { return }
             lastRestart = Date()
+            splash.show()
             webView.backgroundColor = Self.startColor
             if webView.url != nil {
                 webView.reload()
@@ -109,6 +120,21 @@ struct WebAppView: UIViewRepresentable {
             default: return "Cancel"
             }
         }
+    }
+}
+
+/// The page reports that the app is on screen (or that it could not start): the loading animation goes.
+final class SplashBridge: NSObject, WKScriptMessageHandler {
+    static let name = "splash"
+    private weak var splash: SplashModel?
+
+    init(splash: SplashModel) {
+        self.splash = splash
+        super.init()
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        splash?.done()
     }
 }
 

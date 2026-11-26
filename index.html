@@ -89,6 +89,9 @@ html.as-boot { background: #1E2836; }
 @keyframes as-rise { from { opacity: 0; transform: translateY(18px) scale(.9); } to { opacity: 1; transform: none; } }
 @keyframes as-scroll { from { transform: translateX(0); } to { transform: translateX(-100px); } }
 @keyframes as-pen { 4%{transform:translateY(0px)}6%{transform:translateY(-2.5px)}9%{transform:translateY(-4.5px)}12%{transform:translateY(-2.5px)}14%{transform:translateY(0px)}20%{transform:translateY(0px)}23%{transform:translateY(3px)}27%{transform:translateY(-22px)}31%{transform:translateY(10px)}34%{transform:translateY(0px)}42%{transform:translateY(0px)}45%{transform:translateY(-1.8px)}48%{transform:translateY(-5.2px)}51%{transform:translateY(-6.4px)}54%{transform:translateY(-5px)}57%{transform:translateY(-1.6px)}60%{transform:translateY(0px)}90%{transform:translateY(0px)}100%{transform:translateY(0px)} }
+html.as-wk #ana-splash .as-aura, html.as-wk #ana-splash .as-words, html.as-wk #ana-splash .as-glow,
+html.as-wk #ana-splash .as-bone-in, html.as-wk #ana-splash .as-heart, html.as-wk #ana-splash .as-star,
+html.as-wk #ana-splash .as-word span, html.as-wk #ana-splash .as-ecg { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   #ana-splash *, #ana-splash *::before, #ana-splash *::after { animation-duration: .01s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
 }
@@ -119,12 +122,28 @@ html.as-boot { background: #1E2836; }
 (function () {
   var sp = document.getElementById("ana-splash"), de = document.documentElement, t0 = Date.now(), gone = 0;
   window.anaSplashDone = function () {};
+  // in the iPhone app, the app itself shows the loading animation (drawn by the app, it keeps moving while the page
+  // loads): the page only tells it when the app is on screen (message "splash"), or at once on an error
+  var app = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.splash;
+  if (app) {
+    de.classList.remove("as-boot");
+    sp && sp.parentNode.removeChild(sp);
+    var told = 0, tell = function () { if (!told) { told = 1; try { app.postMessage("done"); } catch (e) {} } };
+    window.anaSplashDone = function () { requestAnimationFrame(function () { requestAnimationFrame(tell); }); };
+    window.addEventListener("error", tell);
+    return void setTimeout(tell, 25000);
+  }
   // automated tests get the app without it (a test of the loading screen sets __anaSplashTest); the page's ground is
   // the loading screen's blue from the start (class as-boot on <html>) until it goes
   if (!sp || ((navigator.webdriver || window.__anaTest) && !window.__anaSplashTest)) {
     de.classList.remove("as-boot");
     return void (sp && sp.parentNode.removeChild(sp));
   }
+  // Safari (and every browser on the iPhone) draws the page only between its scripts, so an intro would stand still
+  // half-built while the app's scripts run: there the picture is whole from the start, and the heartbeat, the ECG
+  // and the star move whenever the browser can draw
+  var ua = navigator.userAgent || "";
+  if (/AppleWebKit/.test(ua) && !/Chrome|Chromium|Android|Edg\//.test(ua)) de.classList.add("as-wk");
   // the line under the animation in the app's language, picked like the language loader below does
   var W = { de: "Wird geladen", en: "Loading", es: "Cargando", sv: "Laddar", nb: "Laster inn" }, ui = null, ls, i, k;
   try { ui = (JSON.parse(localStorage.getItem("ana:lang") || "null") || {}).ui; } catch (e) {}
@@ -138,7 +157,7 @@ html.as-boot { background: #1E2836; }
     gone = 1;
     var bye = function () {
       sp.className += " as-out";
-      setTimeout(function () { sp.parentNode && sp.parentNode.removeChild(sp); de.classList.remove("as-boot"); }, 520);
+      setTimeout(function () { sp.parentNode && sp.parentNode.removeChild(sp); de.classList.remove("as-boot", "as-wk"); }, 520);
     };
     if (now) return bye();
     setTimeout(function () { requestAnimationFrame(function () { requestAnimationFrame(bye); }); }, Math.max(0, 1200 - (Date.now() - t0)));

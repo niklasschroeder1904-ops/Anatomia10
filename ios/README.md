@@ -105,14 +105,17 @@ heißt: Der Swift-Code lässt sich bauen, und die App zeigt die Web-App.
   aus dem Ordner „Web“ in der App (Adresse `anatomia://app/`). Dazu:
   - `HapticBridge` („haptic“): spielt die Vibrationsmuster der Seite.
   - `ShareBridge` („share“): gibt die Sicherungsdatei an das Teilen-Menü.
+  - `SplashBridge` („splash“): die App ist auf dem Bildschirm, die Ladeanimation geht.
   - `Coordinator`: zeigt `alert()`/`confirm()` der Seite als iOS-Dialoge (sonst würde z. B.
     „Prüfung abbrechen?“ nie gefragt).
-- Start: Der Startbildschirm von iOS ist das Blau der Ladeanimation der Web-App (Farbe
-  `LaunchBackground` in `Assets.xcassets`, eingetragen in `Info.plist`), ebenso der Hintergrund
-  der Web-Ansicht, bis die Seite geladen ist – so kommt beim Öffnen kein weißer oder schwarzer
-  Bildschirm, sondern gleich die Animation. iOS merkt sich den Startbildschirm: Zeigt die App nach
-  dem Update noch den alten, hilft einmal das iPhone neu zu starten (nicht die App löschen – das
-  löscht den Fortschritt).
+- Start: Der Startbildschirm von iOS ist das Blau der Ladeanimation (Farbe `LaunchBackground`
+  in `Assets.xcassets`, eingetragen in `Info.plist`). Danach zeigt `Anatomia/SplashView.swift` die
+  Ladeanimation (Knochen, schlagendes Herz mit EKG, Stern – wie in der Web-App), von der App selbst
+  gezeichnet: Die Web-Ansicht könnte sie nur zwischen den großen Skripten der Seite zeichnen, sie
+  würde beim Laden stehen bleiben. Sobald die App auf dem Bildschirm ist, meldet die Seite das
+  („splash“, `SplashBridge`) und die Animation blendet aus. iOS merkt sich den Startbildschirm: Zeigt
+  die App nach dem Update noch den alten, hilft einmal das iPhone neu zu starten (nicht die App
+  löschen – das löscht den Fortschritt).
 - Build-Phase „Copy web app“: kopiert `*.html`, `*.js`, Bilder und `*.glb` aus dem Hauptordner.
 - `Anatomia/Info.plist`: nennt die Sprachen der Web-App (Deutsch, Englisch, Spanisch,
   Schwedisch, Norwegisch). Nur dann meldet die Web-Ansicht der App die Sprache des iPhones, und die App
