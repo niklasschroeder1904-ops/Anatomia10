@@ -14933,13 +14933,16 @@ const avShade = (h, a) => {
   // ---- beards: stubble and a full beard under the mouth, a moustache over it ----
   AV_BEARD = "M 102.6,45 C 103,53 106,58.6 110,61.6 C 113,63.8 116.6,64.8 120,64.8 C 123.4,64.8 127,63.8 130,61.6 C 134,58.6 137,53 137.4,45 C 135,50.4 132,53.4 128,54.8 C 125,55.8 122,54.4 120,55 C 118,54.4 115,55.8 112,54.8 C 108,53.4 105,50.4 102.6,45 Z",
   AV_MOUSTACHE = "M 113.8,55 C 115.8,53.2 118.8,53.6 120,54.8 C 121.2,53.6 124.2,53.2 126.2,55 C 124.6,56.6 121.6,56.4 120,55.6 C 118.4,56.4 115.4,56.6 113.8,55 Z",
+  // the female figure has no beard
   AV_BEARDS_UNDER = (x) =>
-    x.L.beard === "stubble"
+    x.L.body === "f"
+      ? []
+      : x.L.beard === "stubble"
       ? [x.P(AV_BEARD, { fill: x.hc[1], opacity: 0.22 })]
       : x.L.beard === "full"
         ? [x.P(AV_BEARD, { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.6 })]
         : [],
-  AV_BEARDS_OVER = (x) => (x.L.beard === "full" || x.L.beard === "moustache" ? [x.P(AV_MOUSTACHE, { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.5 })] : []);
+  AV_BEARDS_OVER = (x) => (x.L.body !== "f" && (x.L.beard === "full" || x.L.beard === "moustache") ? [x.P(AV_MOUSTACHE, { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.5 })] : []);
 
 // ---- the avatar: the figure of the home screen (same face and shape) with free looks (skin, eyes, hair, beard) and
 // clothes and things from the shop. Shapes are written in the figure's old coordinates and go through its cartoon map
@@ -15454,6 +15457,92 @@ const AV3D = (() => {
     return g;
   }
 
+  // ---- beards: where the beard begins on the face (th for each ph), from the sideburn in front of the ear over the
+  // lower cheek round the mouth to under the lower lip ----
+  const BEARD_PH0 = 1.38,
+    BEARD_PH1 = 1.68,
+    beardTop = (ph) =>
+      headAng(0, HC + lerpTab([[0, -0.79], [0.18, -0.77], [0.3, -0.62], [0.45, -0.52], [0.7, -0.43], [1.0, -0.3], [1.2, -0.17], [1.38, -0.1], [2, -0.1]], Math.abs(ph)))[0];
+  // a full beard: one surface over jaw and chin, thin at its edges so it goes over into the skin, full at the chin,
+  // with combed strands
+  const beardPt = (u, v, t) => {
+    const a = Math.abs(1 - 2 * u),
+      ph = (BEARD_PH0 + (BEARD_PH1 - BEARD_PH0) * smooth(0.2, 0.7, v)) * (1 - 2 * u),
+      t0 = beardTop(ph * Math.min(1, BEARD_PH0 / Math.max(1e-6, Math.abs(ph))) || 0),
+      th = t0 + (PI - 0.03 - t0) * Math.pow(v, 0.9),
+      fade = smooth(1, 0.8, a) * smooth(0, 0.3, v),
+      thick = 0.095 * fade * (1 - 0.45 * smooth(0.5, 0.95, a)) + 0.014 * Math.sin(ph * 15) * fade * smooth(0.1, 0.35, v),
+      drop = 0.16 * smooth(0.3, 0.95, v) * smooth(0.75, 0, a);
+    headPt(th, ph, 1.012 + thick, t);
+    t.y -= drop;
+    t.z += 0.45 * drop;
+    return t;
+  };
+  // the moustache: a curved roll over the upper lip, full in two halves, the ends thin and turned down
+  const MOUSTACHE = new T.SplineCurve([[-0.32, -0.655], [-0.25, -0.588], [-0.16, -0.525], [-0.075, -0.49], [0, -0.503], [0.075, -0.49], [0.16, -0.525], [0.25, -0.588], [0.32, -0.655]].map(([x, y]) => new T.Vector2(x, y)));
+  const moustachePt = (() => {
+    const C = new T.Vector3(),
+      C2 = new T.Vector3(),
+      N = new T.Vector3(),
+      D = new T.Vector3(),
+      B = new T.Vector3(),
+      at = (t, out) => {
+        const p = MOUSTACHE.getPoint(clamp(t, 0, 1)),
+          [th, ph] = headAng(p.x, HC + p.y);
+        return headPt(th, ph, 1.0, out);
+      };
+    return (u, v, t) => {
+      const r = 0.05 * Math.pow(Math.sin(PI * u), 0.65) * (1 - 0.2 * Math.exp(-Math.pow((u - 0.5) / 0.07, 2)));
+      at(u, C);
+      at(u + 0.01, C2);
+      D.subVectors(C2, at(u - 0.01, B)).normalize();
+      N.set(C.x / (HA * HA), (C.y - HC) / (HBB * HBB), C.z / (HZ * HZ)).normalize();
+      D.addScaledVector(N, -D.dot(N)).normalize();
+      B.crossVectors(N, D);
+      // turning this way round, the faces look outwards
+      const a = -2 * PI * v;
+      return t.copy(C).addScaledVector(N, r * 0.45 + 0.7 * r * Math.sin(a)).addScaledVector(B, r * Math.cos(a));
+    };
+  })();
+  function beardTexture(hc) {
+    return kept("beard|" + hc[0], () => {
+      const cv = document.createElement("canvas");
+      cv.width = 128;
+      cv.height = 128;
+      const c = cv.getContext("2d");
+      c.fillStyle = hc[0];
+      c.fillRect(0, 0, 128, 128);
+      let rs = 11;
+      const rnd = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
+      c.lineCap = "round";
+      for (let i = 0; i < 260; i++) {
+        const x = rnd() * 128,
+          y = rnd() * 128,
+          l = 8 + 14 * rnd();
+        c.strokeStyle = shade(hc[0], i % 2 ? 0.09 : -0.11);
+        c.globalAlpha = 0.35;
+        c.lineWidth = 1.6;
+        c.beginPath();
+        c.moveTo(x, y);
+        c.quadraticCurveTo(x + 2 * (rnd() - 0.5), y + l / 2, x + 3 * (rnd() - 0.5), y + l);
+        c.stroke();
+      }
+      return cv;
+    });
+  }
+  function beardMeshes(L, hc, M) {
+    const out = [];
+    if (L.beard === "full") {
+      const bt = tex(beardTexture(hc));
+      bt.wrapS = bt.wrapT = T.RepeatWrapping;
+      bt.repeat.set(5, 2);
+      out.push(new T.Mesh(gk("beard|full2", () => new T.ParametricGeometry(beardPt, 64, 30)), M("#ffffff", { map: bt, r: 0.7, env: 0.3, side: T.DoubleSide })));
+    }
+    if ((L.beard === "full" || L.beard === "moustache") && L.face !== "mask")
+      out.push(new T.Mesh(gk("beard|moustache2", () => new T.ParametricGeometry(moustachePt, 40, 12)), M(hc[0], { r: 0.66, env: 0.3 })));
+    return out;
+  }
+
   // ---- the face on the head's texture: blush, mouth, brows, stubble; the eyes are their own balls ----
   function faceCanvas(sk, L, hc) {
     return kept(`face|${sk.g[1]}|${L.beard}|${hc[1]}`, () => faceCanvasNew(sk, L, hc));
@@ -15503,23 +15592,66 @@ const AV3D = (() => {
     // soft colour: warm cheeks and nose tip
     [-1, 1].forEach((s) => glow(0.5 * s, -0.42, 52, 34, "rgba(240,140,140,A)", 0.32));
     glow(0, -0.36, 26, 20, "rgba(230,130,120,A)", 0.18);
-    // stubble: a soft shadow over the jaw and the upper lip
-    if (L.beard === "stubble") {
-      c.save();
-      c.globalAlpha = 0.26;
-      c.fillStyle = hc[1];
-      path(
-        [
-          ...curve([-0.66, -0.34], [-0.62, -0.88], [0, -0.97], 20),
-          ...curve([0, -0.97], [0.62, -0.88], [0.66, -0.34], 20),
-          ...curve([0.66, -0.34], [0.42, -0.6], [0.2, -0.56], 10),
-          ...curve([0.2, -0.5], [0, -0.44], [-0.2, -0.5], 10),
-          ...curve([-0.2, -0.56], [-0.42, -0.6], [-0.66, -0.34], 10),
-        ],
-        true,
+    // stubble: fine dots over the jaw, the chin and the upper lip, fading out at the edges (also under a full beard,
+    // so its edge goes over into the skin)
+    if (L.beard === "stubble" || L.beard === "full") {
+      const k = 8,
+        mk2 = document.createElement("canvas");
+      mk2.width = W / k;
+      mk2.height = H / k;
+      const m = mk2.getContext("2d"),
+        atA = (th, ph) => [(((PI - ph) / (2 * PI)) * W) / k, ((th / PI) * H) / k],
+        shape = (pts) => {
+          m.beginPath();
+          pts.forEach(([a, b], i) => (i ? m.lineTo(a, b) : m.moveTo(a, b)));
+          m.closePath();
+          m.fill();
+        };
+      m.fillStyle = "#fff";
+      const jaw = [];
+      for (let i = 0; i <= 40; i++) {
+        const ph = -BEARD_PH0 + (2 * BEARD_PH0 * i) / 40;
+        jaw.push(atA(beardTop(ph), ph));
+      }
+      jaw.push(atA(2.2, BEARD_PH1), atA(PI - 0.04, BEARD_PH1), atA(PI - 0.04, -BEARD_PH1), atA(2.2, -BEARD_PH1));
+      shape(jaw);
+      shape(
+        [[-0.3, -0.63], [-0.24, -0.53], [-0.12, -0.465], [0, -0.45], [0.12, -0.465], [0.24, -0.53], [0.3, -0.63], [0.2, -0.59], [0, -0.59], [-0.2, -0.59]].map(([x, y]) => {
+          const [u, v] = faceUV(x, HC + y);
+          return [(u * W) / k, (v * H) / k];
+        }),
       );
-      c.fill();
+      // the soft shadow: the small mask drawn large is soft at its edges
+      const sh = document.createElement("canvas");
+      sh.width = W;
+      sh.height = H;
+      const g = sh.getContext("2d");
+      g.imageSmoothingEnabled = !0;
+      g.imageSmoothingQuality = "high";
+      g.drawImage(mk2, 0, 0, W, H);
+      g.globalCompositeOperation = "source-in";
+      g.fillStyle = hc[1];
+      g.fillRect(0, 0, W, H);
+      c.save();
+      c.globalAlpha = L.beard === "full" ? 0.3 : 0.17;
+      c.drawImage(sh, 0, 0);
       c.restore();
+      // the dots, thinner towards the edges
+      const md = m.getImageData(0, 0, W / k, H / k).data;
+      let rs = 7;
+      const rnd = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
+      c.fillStyle = hc[1];
+      for (let i = 0; i < 9000; i++) {
+        const x = rnd() * W,
+          y = H * (0.5 + 0.5 * rnd()),
+          a = md[(Math.floor(y / k) * (W / k) + Math.floor(x / k)) * 4 + 3] / 255;
+        if (a < 0.05 || rnd() > a) continue;
+        c.globalAlpha = 0.22 + 0.3 * rnd();
+        c.beginPath();
+        c.arc(x, y, 0.9 + 0.8 * rnd(), 0, 2 * PI);
+        c.fill();
+      }
+      c.globalAlpha = 1;
     }
     // the mouth: a soft smile, a little open, upper teeth, the tongue below
     const mouth = [...curve([-0.21, -0.56], [0, -0.59], [0.21, -0.56], 18), ...curve([0.21, -0.56], [0.17, -0.73], [0, -0.735], 14), ...curve([0, -0.735], [-0.17, -0.73], [-0.21, -0.56], 14)];
@@ -15793,7 +15925,8 @@ const AV3D = (() => {
     opt = opt || {};
     useBody(look.body);
     J = look.body === "f" ? JF : JM;
-    const L = look,
+    // the female figure has no beard
+    const L = look.body === "f" && look.beard && look.beard !== "none" ? { ...look, beard: "none" } : look,
       mats = [],
       M = mk(mats),
       sk = AV_SKINS[L.skin] || AV_SKINS.t1,
@@ -15941,37 +16074,7 @@ const AV3D = (() => {
     const hatOn = !!(L.head && L.head !== "none" && L.head !== "crown" && L.head !== "head-mirror");
     hairMeshes(L, hc, M, hatOn).forEach((m) => fig.add(m));
     // a full beard round the jaw and the chin, a moustache over the mouth
-    if (L.beard === "full" || L.beard === "moustache") {
-      const hm = M("#ffffff", { map: tex(hairTexture(hc)), r: 0.55 });
-      if (L.beard === "full") {
-        const top = (ph) => {
-          const a = Math.abs(ph);
-          return headAng(0, HC - lerpTab([[0, 0.72], [0.35, 0.68], [0.75, 0.42], [1.25, 0.18], [1.6, 0.0]], a))[0];
-        };
-        const bg = new T.ParametricGeometry(
-          (u, v, t) => {
-            const ph = 1.62 - 3.24 * u,
-              t0 = top(ph),
-              th = t0 + (PI - 0.02 - t0) * v,
-              k = Math.sin(Math.min(1, v * 1.6) * PI * 0.5);
-            return headPt(th, ph, 1.0 + 0.075 * k * (1 - 0.3 * Math.abs(ph) / 1.62), t);
-          },
-          48,
-          20,
-        );
-        fig.add(new T.Mesh(bg, M("#ffffff", { map: hm.map, r: 0.6, side: T.DoubleSide })));
-      }
-      if (L.face !== "mask")
-      [-1, 1].forEach((s) => {
-        const [th, ph] = headAng(0.1 * s, HC - 0.525),
-          mo = sphere(1, hm, 16, 10);
-        mo.scale.set(0.13, 0.045, 0.05);
-        mo.position.copy(headPt(th, ph, 1.02));
-        mo.rotation.z = -0.25 * s;
-        mo.rotation.y = 0.35 * s;
-        fig.add(mo);
-      });
-    }
+    beardMeshes(L, hc, M).forEach((m) => fig.add(m));
     // what is worn round the neck, on the face, on the head, held in the right hand
     const NK = AV3_NECKS[L.neck],
       FC = AV3_FACES[L.face],
@@ -16802,7 +16905,7 @@ const AV3D = (() => {
 // ---- 3D pictures of the avatar: one renderer off screen draws them one after the other, kept by look and size;
 // the small ones of the last looks are kept on the device for the next start ----
 const av3 = { ok: null, r: null, pics: new Map(), queue: [], busy: !1 },
-  AV3_STORE = "ana:av3pics:3",
+  AV3_STORE = "ana:av3pics:4",
   av3Usable = () => {
     if (av3.ok != null) return av3.ok;
     try {
@@ -16813,13 +16916,13 @@ const av3 = { ok: null, r: null, pics: new Map(), queue: [], busy: !1 },
     }
     if (av3.ok)
       try {
-        ["ana:av3pics", "ana:av3pics:2"].forEach((k) => localStorage.removeItem(k));
+        ["ana:av3pics", "ana:av3pics:2", "ana:av3pics:3"].forEach((k) => localStorage.removeItem(k));
         const o = JSON.parse(localStorage.getItem(AV3_STORE) || "{}");
         Object.keys(o).forEach((k) => typeof o[k] === "string" && o[k].startsWith("data:image/png") && av3.pics.set(k, o[k]));
       } catch {}
     return av3.ok;
   },
-  av3Key = (L) => Object.keys(AV_DEFAULT).map((k) => L[k] || "").join(","),
+  av3Key = (L) => Object.keys(AV_DEFAULT).map((k) => (k === "beard" && L.body === "f" ? "" : L[k] || "")).join(","),
   AV3_ROT = { full: 0.22, bust: 0.18, hand: 0.5 },
   av3Draw = (L, view, w, h) => {
     if (av3.r && av3.r.getContext().isContextLost()) av3.r = null;
@@ -17111,7 +17214,7 @@ function AvatarLooks({ progress: s, onLook }) {
       ...Object.keys(HC).map((v) => sw("hairColor", v, AV_HAIR_COLORS[v][0], HC[v], L.hairColor === v)),
       ...fun.map((x) => sw("hairColor", x.apply.avHairColor, AV_HAIR_COLORS[x.apply.avHairColor][0], x.name, L.hairColor === x.apply.avHairColor)),
     ]),
-    row(_T("Bart"), Object.keys(BEARD).map((v) => chip("beard", v, BEARD[v], L.beard === v))),
+    L.body !== "f" && row(_T("Bart"), Object.keys(BEARD).map((v) => chip("beard", v, BEARD[v], L.beard === v))),
   );
 }
 // ---- pictures for the basics lessons: planes and axes, directions, movements, organ systems, cavities, tissues ----
