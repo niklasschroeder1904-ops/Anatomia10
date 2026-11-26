@@ -14741,9 +14741,9 @@ const avShade = (h, a) => {
   AV_HEADS = {
     "op-cap": {
       draw: (x) => [
-        x.P("M 101.2,33 C 100.6,20 109,11 120,11 C 131,11 139.4,20 138.8,33 C 132,29.6 126,29 120,29 C 114,29 108,29.6 101.2,33 Z", { fill: "#7FB3E6", stroke: "#4C86C6", strokeWidth: 0.8 }),
-        x.P("M 101.2,33 C 108,29.4 132,29.4 138.8,33 L 138.6,29.6 C 132,26 108,26 101.4,29.6 Z", { fill: "#4C86C6" }),
-        ...[[110, 18], [120, 15], [130, 18], [106, 24], [115, 22], [125, 22], [134, 24]].map(([a, b]) => x.E(a, b, 0.9, 0.9, { fill: "#FFFFFF", opacity: 0.7 })),
+        x.P("M 101.2,37.4 C 100.2,21 109,11 120,11 C 131,11 139.8,21 138.8,37.4 C 132,34.4 126,34 120,34 C 114,34 108,34.4 101.2,37.4 Z", { fill: "#7FB3E6", stroke: "#4C86C6", strokeWidth: 0.8 }),
+        x.P("M 101.2,37.4 C 108,33.8 132,33.8 138.8,37.4 L 138.7,34 C 132,30.4 108,30.4 101.3,34 Z", { fill: "#4C86C6" }),
+        ...[[110, 18], [120, 15], [130, 18], [106, 25], [115, 23.4], [125, 23.4], [134, 25]].map(([a, b]) => x.E(a, b, 0.9, 0.9, { fill: "#FFFFFF", opacity: 0.7 })),
       ],
     },
     "doctor-hat": {
@@ -14776,18 +14776,18 @@ const avShade = (h, a) => {
     },
     beanie: {
       draw: (x) => [
-        x.P("M 100.8,31 C 100.2,17.6 108.6,9 120,9 C 131.4,9 139.8,17.6 139.2,31 Z", { fill: "#D9534F", stroke: "#A83A37", strokeWidth: 0.8 }),
-        x.P("M 100.6,31.6 L 139.4,31.6 L 139.2,25.6 C 128,23.6 112,23.6 100.8,25.6 Z", { fill: "#B8403C" }),
-        x.P("M 106,25 L 106,31 M 111,24.4 L 111,31 M 116,24 L 116,31 M 121,24 L 121,31 M 126,24.2 L 126,31 M 131,24.6 L 131,31 M 136,25.2 L 136,31", x.ln("#A0332F", 0.6, 0.7)),
+        x.P("M 100.7,34 C 100,18.4 108.6,9 120,9 C 131.4,9 140,18.4 139.3,34 Z", { fill: "#D9534F", stroke: "#A83A37", strokeWidth: 0.8 }),
+        x.P("M 100.5,34.6 L 139.5,34.6 L 139.3,28.6 C 128,26.6 112,26.6 100.7,28.6 Z", { fill: "#B8403C" }),
+        x.P("M 106,28 L 106,34 M 111,27.4 L 111,34 M 116,27 L 116,34 M 121,27 L 121,34 M 126,27.2 L 126,34 M 131,27.6 L 131,34 M 136,28.2 L 136,34", x.ln("#A0332F", 0.6, 0.7)),
         x.E(120, 7.6, 4.4, 3.6, { fill: "#F4F1EA", stroke: "#D6D1C6", strokeWidth: 0.5 }),
       ],
     },
     cap: {
       draw: (x) => [
-        x.P("M 101.4,29.6 C 101,17.6 109,10.4 120,10.4 C 131,10.4 139,17.6 138.6,29.6 Z", { fill: "#3FA66B", stroke: "#2D7D50", strokeWidth: 0.8 }),
-        x.P("M 98.6,29 C 107,33 133,33 141.4,29 C 136,35.4 104,35.4 98.6,29 Z", { fill: "#2D7D50" }),
+        x.P("M 101.3,31.4 C 100.8,18 109,10.4 120,10.4 C 131,10.4 139.2,18 138.7,31.4 Z", { fill: "#3FA66B", stroke: "#2D7D50", strokeWidth: 0.8 }),
+        x.P("M 98.6,30.8 C 107,34.8 133,34.8 141.4,30.8 C 136,37.2 104,37.2 98.6,30.8 Z", { fill: "#2D7D50" }),
         x.E(120, 10.8, 1.4, 1, { fill: "#2D7D50" }),
-        x.P("M 120,11.4 L 120,29.4", x.ln("#2D7D50", 0.6, 0.6)),
+        x.P("M 120,11.4 L 120,31.2", x.ln("#2D7D50", 0.6, 0.6)),
       ],
     },
   },
@@ -14898,7 +14898,7 @@ const avShade = (h, a) => {
     },
   },
   // ---- hair: in front (over the head) and, for long hair, behind ----
-  AV_HAIR_SHORT = "M 102.3,34 C 101.4,27 103.2,20.4 107.4,16.6 C 110.8,13.6 115.2,12.6 120,12.6 C 124.8,12.6 129.2,13.6 132.6,16.6 C 136.8,20.4 138.6,27 137.7,34 C 136.4,29.2 134.4,26 131.4,24.4 C 129.6,26.6 126.4,27.4 123.2,26 C 121.4,27.8 118.2,28 115.8,26.4 C 113,27.8 109.8,27 108.4,24.8 C 105.6,26.6 103.4,29.6 102.3,34 Z",
+  AV_HAIR_SHORT = "M 102.1,37.4 C 100.8,28 102.9,20.4 107.4,16.6 C 110.8,13.6 115.2,12.6 120,12.6 C 124.8,12.6 129.2,13.6 132.6,16.6 C 137.1,20.4 139.2,28 137.9,37.4 C 136.9,33.4 135.2,31 132.4,30 C 130.4,32.4 126.8,33.3 123.6,31.9 C 121.6,33.8 118.4,34 116.2,32.3 C 113.4,33.8 110,33 108.2,30.6 C 105.4,32 103.2,34.2 102.1,37.4 Z",
   avHairShort = (x) => [
     x.P(AV_HAIR_SHORT, { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.8, strokeLinejoin: "round" }),
     x.P("M 108.6,17.6 C 111.6,15.4 115.4,14.6 119,14.6", x.ln("#FFFFFF", 1.2, 0.25)),
@@ -14915,7 +14915,7 @@ const avShade = (h, a) => {
     bun: {
       draw: (x) => [
         x.E(120, 10, 7.6, 6.4, { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.8 }),
-        x.P("M 102.3,34 C 101.4,26 104,18.6 109,15.4 C 112.4,13.4 116,12.8 120,12.8 C 124,12.8 127.6,13.4 131,15.4 C 136,18.6 138.6,26 137.7,34 C 134,26.4 128,23.6 120,23.4 C 112,23.6 106,26.4 102.3,34 Z", { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.8, strokeLinejoin: "round" }),
+        x.P("M 102.1,37.2 C 100.8,27 103.6,18.6 109,15.4 C 112.4,13.4 116,12.8 120,12.8 C 124,12.8 127.6,13.4 131,15.4 C 136.4,18.6 139.2,27 137.9,37.2 C 135.4,32.8 129.4,30.2 120,30 C 110.6,30.2 104.6,32.8 102.1,37.2 Z", { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.8, strokeLinejoin: "round" }),
         x.P("M 109,17.6 C 112,15.6 115.6,14.8 119,14.8", x.ln("#FFFFFF", 1.2, 0.25)),
       ],
     },
@@ -14963,9 +14963,13 @@ const AV_SKINS = {
 let AV_N = 0;
 const avWc = new Map(),
   avWAc = new Map(),
-  avW = (d) => avWc.get(d) || (avWc.set(d, bmW(d)), avWc.get(d)),
+  // a smaller forehead than the home screen figure: above the brows (y 41 in the old coordinates) the head and
+  // what is on it come 15% closer to them; the face below the brows and the body stay the same
+  avHy = (y) => (y < 41 ? 41 - (41 - y) * 0.85 : y),
+  avPt = (x, y) => bmPt(x, avHy(y)),
+  avW = (d) => avWc.get(d) || (avWc.set(d, bmWarp(d, avPt, (y) => bmLerp(BM_SX, avHy(y)), 1)), avWc.get(d)),
   avWA = (d) => avWAc.get(d) || (avWAc.set(d, bmWA(d)), avWAc.get(d)),
-  avGY = (y) => +bmLerp(BM_GY, y).toFixed(2),
+  avGY = (y) => +bmLerp(BM_GY, avHy(y)).toFixed(2),
   // the look of a progress (or of a leaderboard row from the server: {skin, eyes, ...})
   avLook = (s, server) => {
     const o = {};
@@ -14994,8 +14998,8 @@ function AvatarArt({ look: lk, view = "full", size = 120, title }) {
     PA = (d, t) => e("path", { key: key(), d: avWA(d), ...t }),
     PPA = (d, t) => [PA(d, t), PA(bmMirror(d), t)],
     E = (cx, cy, rx, ry, t) => {
-      const [x, y] = bmPt(cx, cy),
-        sy = bmLerp(BM_GY, cy + 0.5) - bmLerp(BM_GY, cy - 0.5);
+      const [x, y] = avPt(cx, cy),
+        sy = bmLerp(BM_GY, avHy(cy + 0.5)) - bmLerp(BM_GY, avHy(cy - 0.5));
       return e("ellipse", { key: key(), cx: x, cy: y, rx: +(rx * bmLerp(BM_SX, cy)).toFixed(2), ry: +(ry * sy).toFixed(2), ...t });
     },
     EE = (cx, cy, rx, ry, t) => [E(cx, cy, rx, ry, t), E(240 - cx, cy, rx, ry, t)],
@@ -15096,7 +15100,7 @@ function AvatarArt({ look: lk, view = "full", size = 120, title }) {
   );
 }
 // small crops of the figure for the shop's rows (what a piece looks like on you)
-const AV_VIEWS = { full: "36 0 168 418", bust: "74 4 92 92", top: "50 74 140 140", legs: "70 206 100 206", feet: "78 350 84 84", hand: "14 198 84 84" },
+const AV_VIEWS = { full: "36 0 168 418", bust: "74 6 92 92", top: "50 74 140 140", legs: "70 206 100 206", feet: "78 350 84 84", hand: "14 198 84 84" },
   // the slot keys of an item's apply ({ avTop: "coat" } -> { top: "coat" })
   avApplyLook = (a) => {
     const o = {};
