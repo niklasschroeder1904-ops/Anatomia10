@@ -12153,10 +12153,10 @@ const STORAGE_KEY = "anatomia-v1",
     { id: "av-glasses-red", cat: "Gesicht", av: "bust", icon: "\u{1F453}", name: _T("Rote Brille"), desc: _T("Rotes Gestell"), price: 100, apply: { avFace: "glasses-red" } },
     { id: "av-sunglasses", cat: "Gesicht", av: "bust", icon: "\u{1F576}\uFE0F", name: _T("Sonnenbrille"), desc: _T("Ganz l\xE4ssig"), price: 150, apply: { avFace: "sunglasses" } },
     { id: "av-mask", cat: "Gesicht", av: "bust", icon: "\u{1F637}", name: _T("OP-Maske"), desc: _T("Mund-Nasen-Schutz"), price: 100, apply: { avFace: "mask" } },
-    { id: "av-bowtie", cat: "Hals", av: "bust", icon: "\u{1F380}", name: _T("Fliege"), desc: _T("Rote Fliege am Kragen"), price: 100, apply: { avNeck: "bowtie" } },
-    { id: "av-scarf", cat: "Hals", av: "bust", icon: "\u{1F9E3}", name: _T("Schal"), desc: _T("Warm durch den Winter"), price: 120, apply: { avNeck: "scarf" } },
-    { id: "av-stethoscope", cat: "Hals", av: "bust", icon: "\u{1FA7A}", name: _T("Stethoskop"), desc: _T("Zum Abh\xF6ren von Herz und Lunge"), price: 300, apply: { avNeck: "stethoscope" } },
-    { id: "av-medal", cat: "Hals", av: "bust", icon: "\u{1F947}", name: _T("Goldmedaille"), desc: _T("F\xFCr echte Champions"), price: 700, apply: { avNeck: "medal" } },
+    { id: "av-bowtie", cat: "Hals", av: "chest", icon: "\u{1F380}", name: _T("Fliege"), desc: _T("Rote Fliege am Kragen"), price: 100, apply: { avNeck: "bowtie" } },
+    { id: "av-scarf", cat: "Hals", av: "chest", icon: "\u{1F9E3}", name: _T("Schal"), desc: _T("Warm durch den Winter"), price: 120, apply: { avNeck: "scarf" } },
+    { id: "av-stethoscope", cat: "Hals", av: "chest", icon: "\u{1FA7A}", name: _T("Stethoskop"), desc: _T("Zum Abh\xF6ren von Herz und Lunge"), price: 300, apply: { avNeck: "stethoscope" } },
+    { id: "av-medal", cat: "Hals", av: "chest", icon: "\u{1F947}", name: _T("Goldmedaille"), desc: _T("F\xFCr echte Champions"), price: 700, apply: { avNeck: "medal" } },
     { id: "av-book", cat: "In der Hand", av: "hand", icon: "\u{1F4D5}", name: _T("Anatomie-Buch"), desc: _T("Das Lehrbuch immer dabei"), price: 150, apply: { avHand: "book" } },
     { id: "av-scalpel", cat: "In der Hand", av: "hand", icon: "\u{1F52A}", name: _T("Skalpell"), desc: _T("F\xFCr den Pr\xE4parierkurs"), price: 150, apply: { avHand: "scalpel" } },
     { id: "av-hammer", cat: "In der Hand", av: "hand", icon: "\u{1F528}", name: _T("Reflexhammer"), desc: _T("Testet den Patellarsehnenreflex"), price: 200, apply: { avHand: "hammer" } },
@@ -14981,7 +14981,7 @@ const avWc = new Map(),
   };
 
 // the picture: view "full" (whole figure) or "bust" (head and shoulders, for lists); size = height in px
-function AvatarArt({ look: lk, view = "full", size = 120, title }) {
+function AvatarArt2D({ look: lk, view = "full", size = 120, title }) {
   const u = useRef(null);
   u.current || (u.current = "av" + ++AV_N);
   const id = u.current,
@@ -15100,7 +15100,7 @@ function AvatarArt({ look: lk, view = "full", size = 120, title }) {
   );
 }
 // small crops of the figure for the shop's rows (what a piece looks like on you)
-const AV_VIEWS = { full: "36 0 168 418", bust: "74 6 92 92", top: "50 74 140 140", legs: "70 206 100 206", feet: "78 350 84 84", hand: "14 198 84 84" },
+const AV_VIEWS = { full: "36 0 168 418", bust: "74 6 92 92", chest: "74 40 92 92", top: "50 74 140 140", legs: "70 206 100 206", feet: "78 350 84 84", hand: "14 198 84 84" },
   // the slot keys of an item's apply ({ avTop: "coat" } -> { top: "coat" })
   avApplyLook = (a) => {
     const o = {};
@@ -15110,8 +15110,1605 @@ const AV_VIEWS = { full: "36 0 168 418", bust: "74 6 92 92", top: "50 74 140 140
     });
     return o;
   };
+// ---- the avatar in 3D (three.js of the app): the figure of the home screen as a 3D figure, built from shapes for each
+// look. Units: the figure stands on y = 0, its head ends near y = 11.8; it faces +z, its left side is +x. Null when
+// three.js is missing (then the 2D drawing is used).
+const AV3D = (() => {
+  const T = typeof THREE < "u" ? THREE : null;
+  if (!T || !T.ParametricGeometry || !T.LatheGeometry) return null;
+  const PI = Math.PI,
+    V3 = (x, y, z) => new T.Vector3(x, y, z),
+    clamp = (v, a, b) => (v < a ? a : v > b ? b : v),
+    smooth = (a, b, x) => {
+      const t = clamp((x - a) / (b - a), 0, 1);
+      return t * t * (3 - 2 * t);
+    },
+    lerpTab = (tab, x) => {
+      if (x <= tab[0][0]) return tab[0][1];
+      for (let i = 1; i < tab.length; i++)
+        if (x <= tab[i][0]) {
+          const [a, b] = tab[i - 1],
+            [c, d] = tab[i];
+          return b + ((d - b) * (x - a)) / (c - a);
+        }
+      return tab[tab.length - 1][1];
+    },
+    col = (h) => new T.Color(h).convertSRGBToLinear(),
+    shade = (h, k) => {
+      const c = new T.Color(h),
+        s = {};
+      c.getHSL(s);
+      c.setHSL(s.h, s.s, clamp(s.l + k, 0, 1));
+      return "#" + c.getHexString();
+    };
+  // materials of one build (disposed with it)
+  const mk = (list) => (h, o) => {
+    o = o || {};
+    const m = new T.MeshStandardMaterial({ color: o.map ? 0xffffff : col(h), roughness: o.r != null ? o.r : 0.62, metalness: o.m || 0 });
+    if (o.map) m.map = o.map;
+    if (o.op != null) {
+      m.transparent = true;
+      m.opacity = o.op;
+      m.depthWrite = !!o.dw;
+    }
+    if (o.side) m.side = o.side;
+    if (o.emi) m.emissive = col(o.emi);
+    list.push(m);
+    return m;
+  };
+  // shapes and textures that are the same for many figures are made once and kept (never disposed)
+  const GEO = new Map(),
+    gk = (k, f) => {
+      let g = GEO.get(k);
+      if (!g) {
+        g = f();
+        g.__keep = !0;
+        GEO.set(k, g);
+      }
+      return g;
+    },
+    TEX = new Map(),
+    tex = (cv) => {
+      let t = TEX.get(cv);
+      if (!t) {
+        t = new T.CanvasTexture(cv);
+        t.encoding = T.sRGBEncoding;
+        t.anisotropy = 4;
+        t.__keep = !0;
+        TEX.set(cv, t);
+      }
+      return t;
+    },
+    canvasKeep = new Map(),
+    kept = (k, f) => {
+      if (!canvasKeep.has(k)) {
+        if (canvasKeep.size > 60) {
+          TEX.forEach((t) => t.dispose());
+          TEX.clear();
+          canvasKeep.clear();
+        }
+        canvasKeep.set(k, f());
+      }
+      return canvasKeep.get(k);
+    };
+
+  // ---- the head: an egg, wide above, narrow towards the chin; angles th (0 at the top) and ph (0 in front) ----
+  const HC = 10.48,
+    HA = 0.84,
+    HZ = 0.82,
+    HBT = 1.2,
+    HBB = 1.13,
+    headW = (th) => 1 - 0.38 * smooth(1.6, 2.9, th);
+  function headPt(th, ph, s, v) {
+    const h = Math.sin(th) * headW(th),
+      dy = Math.cos(th) * (th < PI / 2 ? HBT : HBB);
+    return (v || new T.Vector3()).set(HA * h * Math.sin(ph) * s, HC + dy * s, HZ * h * Math.cos(ph) * s);
+  }
+  // the angles of the point of the face at (x, y), seen from the front
+  function headAng(x, y) {
+    const th = Math.acos(clamp((y - HC) / (y >= HC ? HBT : HBB), -1, 1)),
+      h = Math.sin(th) * headW(th);
+    return [th, Math.asin(clamp(x / (HA * Math.max(h, 1e-3)), -1, 1))];
+  }
+  // a surface over the head: ph from p0 to p1 (u), th from the top to edge(ph) (v), scaled by sc(v, ph)
+  function shellGeo(edge, sc, o) {
+    o = o || {};
+    const p0 = o.p0 != null ? o.p0 : -PI,
+      p1 = o.p1 != null ? o.p1 : PI,
+      t0 = o.t0 || 0.004;
+    return new T.ParametricGeometry(
+      (u, v, t) => {
+        const ph = p1 - (p1 - p0) * u,
+          e = edge(ph),
+          th = t0 + (e - t0) * Math.min(v, 1) + (v > 1 ? (v - 1) * (o.lip || 0) : 0);
+        return headPt(th, ph, sc(v, ph), t);
+      },
+      o.su || 72,
+      o.sv || 40,
+    );
+  }
+  // where the face's points are on the head texture (u, v in 0..1): u from ph, v from th
+  const faceUV = (x, y) => {
+    const [th, ph] = headAng(x, y);
+    return [(PI - ph) / (2 * PI), th / PI];
+  };
+
+  // ---- the body: a lathe (round, flattened front to back) ----
+  const BODY = [
+      [0.001, 4.92], [0.45, 4.95], [0.75, 5.05], [0.93, 5.25], [1.02, 5.55], [1.04, 5.9], [0.96, 6.3], [0.93, 6.7], [0.97, 7.2],
+      [1.03, 7.7], [1.07, 8.2], [1.1, 8.55], [1.09, 8.78], [1.03, 8.95], [0.9, 9.07], [0.7, 9.16], [0.48, 9.23], [0.32, 9.28], [0.001, 9.33],
+    ],
+    BODY_Z = 0.62,
+    bodyCurve = new T.SplineCurve(BODY.map(([r, y]) => new T.Vector2(r, y))),
+    bodyPts = bodyCurve.getPoints(160),
+    bodyR = (y) => {
+      for (let i = 1; i < bodyPts.length; i++)
+        if (bodyPts[i].y >= y) {
+          const a = bodyPts[i - 1],
+            b = bodyPts[i];
+          return a.x + ((b.x - a.x) * (y - a.y)) / Math.max(1e-6, b.y - a.y);
+        }
+      return 0;
+    };
+  // the body between y0 and y1, d further out (clothes); open ends get a rim turned in
+  function bodyGeo(y0, y1, d, o) {
+    return gk(`b|${y0}|${y1}|${typeof d === "function" ? d.toString() : d}|${JSON.stringify(o || {})}`, () => bodyGeoNew(y0, y1, d, o));
+  }
+  function bodyGeoNew(y0, y1, d, o) {
+    o = o || {};
+    const pts = [],
+      n = Math.max(8, Math.round((y1 - y0) * 14));
+    for (let i = 0; i <= n; i++) {
+      const y = y0 + ((y1 - y0) * i) / n,
+        dd = typeof d === "function" ? d(y) : d;
+      pts.push(new T.Vector2(Math.max(0.001, bodyR(y) + dd), y));
+    }
+    return new T.LatheGeometry(pts, o.segs || 64, o.p0 != null ? o.p0 : -PI, o.pl || 2 * PI);
+  }
+  // body texture: u from the angle around (front = 0.5), v from the height
+  const bodyUV = (x, y, y0, y1, d) => {
+    const r = Math.max(0.05, bodyR(y) + (d || 0)),
+      ph = Math.asin(clamp(x / r, -1, 1));
+    return [0.5 + ph / (2 * PI), (y - y0) / (y1 - y0)];
+  };
+
+  // ---- limbs: rounded, tapering, along +y from 0 to len; placed from P to Q ----
+  function limbGeo(len, rs, segs) {
+    const r = (t) => lerpTab(rs, t),
+      pts = [],
+      r0 = r(0),
+      r1 = r(1);
+    for (let i = 0; i <= 6; i++) {
+      const a = -PI / 2 + (i / 6) * (PI / 2);
+      pts.push(new T.Vector2(Math.max(1e-3, r0 * Math.cos(a)), r0 * Math.sin(a) * 0.85));
+    }
+    for (let i = 1; i < 18; i++) pts.push(new T.Vector2(r(i / 18), (i / 18) * len));
+    for (let i = 0; i <= 6; i++) {
+      const a = (i / 6) * (PI / 2);
+      pts.push(new T.Vector2(Math.max(1e-3, r1 * Math.cos(a)), len + r1 * Math.sin(a) * 0.85));
+    }
+    return new T.LatheGeometry(pts, segs || 32);
+  }
+  const UP = V3(0, 1, 0);
+  function along(mesh, P, Q) {
+    const d = new T.Vector3().subVectors(Q, P);
+    mesh.position.copy(P);
+    mesh.quaternion.setFromUnitVectors(UP, d.normalize());
+    return mesh;
+  }
+  const limb = (P, Q, rs, m, segs) => {
+    const len = P.distanceTo(Q);
+    return along(new T.Mesh(gk(`l|${len.toFixed(3)}|${rs.join(";")}|${segs || 32}`, () => limbGeo(len, rs, segs)), m), P, Q);
+  };
+  // a tube (sleeve, trouser leg) from P to Q, open at both ends: radius rs(t)
+  function tubeGeo(len, rs, segs) {
+    const pts = [];
+    for (let i = 0; i <= 18; i++) pts.push(new T.Vector2(lerpTab(rs, i / 18), (i / 18) * len));
+    return new T.LatheGeometry(pts, segs || 32);
+  }
+  const tube = (P, Q, rs, m) => {
+    const len = P.distanceTo(Q);
+    return along(new T.Mesh(gk(`u|${len.toFixed(3)}|${rs.join(";")}`, () => tubeGeo(len, rs)), m), P, Q);
+  };
+  const ring = (P, Q, r, w, m) => {
+    // a soft ring (hem, cuff) around the axis P->Q at P
+    const g = gk(`t|${r}|${w}`, () => new T.TorusGeometry(r, w, 10, 36)),
+      mesh = new T.Mesh(g, m),
+      d = new T.Vector3().subVectors(Q, P).normalize();
+    mesh.position.copy(P);
+    mesh.quaternion.setFromUnitVectors(V3(0, 0, 1), d);
+    return mesh;
+  };
+  const sphere = (r, m, ws, hs) => {
+    const me = new T.Mesh(gk(`s|${ws || 24}|${hs || 16}`, () => new T.SphereGeometry(1, ws || 24, hs || 16)), m);
+    me.scale.setScalar(r);
+    return me;
+  };
+
+  // ---- the joints of the figure (left side, x > 0; the right side mirrored) ----
+  const J = {
+    S: V3(1.2, 8.52, 0),
+    E: V3(1.5, 6.92, -0.1),
+    W: V3(1.62, 5.38, 0.22),
+    H: V3(0.52, 5.3, 0),
+    K: V3(0.5, 2.95, 0.04),
+    A: V3(0.47, 0.62, -0.02),
+  };
+  const mir = (v, s) => V3(v.x * s, v.y, v.z);
+  const lerpV = (a, b, t) => new T.Vector3().lerpVectors(a, b, t);
+  const R_UP = [[0, 0.3], [0.3, 0.295], [1, 0.25]],
+    R_FORE = [[0, 0.245], [0.22, 0.258], [1, 0.172]],
+    R_THIGH = [[0, 0.5], [0.4, 0.44], [1, 0.31]],
+    R_SHIN = [[0, 0.31], [0.25, 0.345], [0.7, 0.26], [1, 0.2]];
+
+  // ---- a hand, hanging along -y from the wrist: palm, four fingers side by side and a little bent, the thumb in front ----
+  function hand(s, m) {
+    const g = new T.Group(),
+      seg = (P, Q, r0, r1) => g.add(limb(P, Q, [[0, r0], [1, r1]], m, 16));
+    const wr = sphere(0.168, m, 20, 14);
+    wr.position.set(0, -0.02, 0);
+    g.add(wr);
+    const palm = sphere(1, m, 28, 20);
+    palm.scale.set(0.115, 0.25, 0.205);
+    palm.position.set(0, -0.25, 0.005);
+    g.add(palm);
+    // index, middle, ring, little finger: two bent parts each, close together
+    [
+      [0.142, -0.43, 0.19, 0.13, 0.057],
+      [0.048, -0.44, 0.21, 0.145, 0.06],
+      [-0.046, -0.43, 0.2, 0.135, 0.057],
+      [-0.134, -0.41, 0.16, 0.115, 0.05],
+    ].forEach(([z, y0, l1, l2, r]) => {
+      const P0 = V3(0.005 * s, y0, z),
+        P1 = V3(-0.035 * s, y0 - l1, z * 1.02),
+        P2 = V3(-0.11 * s, y0 - l1 - l2 * 0.82, z * 1.03);
+      seg(P0, P1, r, r * 0.95);
+      seg(P1, P2, r * 0.95, r * 0.86);
+    });
+    // the thumb along the front of the palm
+    const T0 = V3(-0.035 * s, -0.12, 0.13),
+      T1 = V3(-0.07 * s, -0.31, 0.235),
+      T2 = V3(-0.1 * s, -0.45, 0.245);
+    seg(T0, T1, 0.078, 0.066);
+    seg(T1, T2, 0.066, 0.058);
+    return g;
+  }
+
+  // ---- a shoe on the floor under the ankle: sole, a rounded upper, the collar round the ankle, laces ----
+  function shoe(A, s, o, M, sock) {
+    const g = new T.Group(),
+      c = o.c,
+      cm = M(c, { r: 0.55 }),
+      loaf = (len, rs, sx, sy, y, z0, m) => {
+        const me = new T.Mesh(limbGeo(len, rs, 28), m);
+        me.rotation.x = PI / 2;
+        me.scale.set(sx, 1, sy);
+        me.position.set(0, y, z0);
+        g.add(me);
+        return me;
+      };
+    loaf(0.86, [[0, 0.235], [0.55, 0.255], [1, 0.23]], 1, 0.26, 0.07, -0.3, M(o.sole, { r: 0.72 }));
+    loaf(0.8, [[0, 0.215], [0.45, 0.235], [1, 0.205]], 0.96, 0.78, 0.22, -0.27, cm);
+    // the collar round the ankle (the leg goes into it)
+    if (!o.clog) {
+      g.add(tube(V3(0, 0.22, -0.06), V3(0, 0.56, -0.04), [[0, 0.235], [1, 0.225]], cm));
+      g.add(ring(V3(0, 0.56, -0.04), V3(0, 1, -0.04), 0.218, 0.042, M(shade(c, o.dark ? 0.12 : -0.1), { r: 0.6 })));
+    }
+    if (o.lace)
+      [0.14, 0.24, 0.34].forEach((z, i) => {
+        const b = new T.Mesh(new T.CylinderGeometry(0.018, 0.018, 0.2, 8), M(o.lace, { r: 0.5 }));
+        b.rotation.z = PI / 2;
+        b.position.set(0, 0.49 - i * 0.06, z);
+        g.add(b);
+      });
+    if (o.holes)
+      [-0.09, 0, 0.09].forEach((x) =>
+        [0.22, 0.34].forEach((z) => {
+          const h = sphere(0.026, M(shade(c, -0.32)), 8, 6);
+          h.position.set(x + (z > 0.3 ? 0.045 : 0), 0.43 - (z - 0.22) * 0.5, z);
+          g.add(h);
+        }),
+      );
+    if (o.boot) {
+      g.add(tube(V3(0, 0.3, -0.04), V3(0, 1.62, -0.04), [[0, 0.255], [1, 0.275]], cm));
+      g.add(ring(V3(0, 1.62, -0.04), V3(0, 2, -0.04), 0.275, 0.04, M(shade(c, -0.15))));
+    } else if (sock) g.add(tube(V3(0, o.clog ? 0.25 : 0.5, -0.04), V3(0, 0.95, -0.02), [[0, 0.215], [1, 0.205]], M("#F4F5F7", { r: 0.85 })));
+    g.position.set(A.x, 0, A.z);
+    g.rotation.y = 0.07 * s;
+    return g;
+  }
+
+  // ---- the face on the head's texture: blush, mouth, brows, stubble; the eyes are their own balls ----
+  function faceCanvas(sk, L, hc) {
+    return kept(`face|${sk.g[1]}|${L.beard}|${hc[1]}`, () => faceCanvasNew(sk, L, hc));
+  }
+  function faceCanvasNew(sk, L, hc) {
+    const W = 1024,
+      H = 1024,
+      cv = document.createElement("canvas");
+    cv.width = W;
+    cv.height = H;
+    const c = cv.getContext("2d");
+    c.fillStyle = sk.g[1];
+    c.fillRect(0, 0, W, H);
+    // face points (x, y relative to the head's centre) on the texture
+    const at = (x, y) => {
+      const [u, v] = faceUV(x, HC + y);
+      return [u * W, v * H];
+    };
+    const path = (pts, close) => {
+      c.beginPath();
+      pts.forEach(([x, y], i) => {
+        const [a, b] = at(x, y);
+        i ? c.lineTo(a, b) : c.moveTo(a, b);
+      });
+      close && c.closePath();
+    };
+    const curve = (p0, p1, p2, n) => {
+      const out = [];
+      n = n || 16;
+      for (let i = 0; i <= n; i++) {
+        const t = i / n,
+          k = 1 - t;
+        out.push([k * k * p0[0] + 2 * k * t * p1[0] + t * t * p2[0], k * k * p0[1] + 2 * k * t * p1[1] + t * t * p2[1]]);
+      }
+      return out;
+    };
+    // blush
+    [-1, 1].forEach((s) => {
+      const [a, b] = at(0.47 * s, -0.49),
+        g = c.createRadialGradient(a, b, 0, a, b, 46);
+      g.addColorStop(0, "rgba(243,154,152,0.55)");
+      g.addColorStop(1, "rgba(243,154,152,0)");
+      c.fillStyle = g;
+      c.beginPath();
+      c.ellipse(a, b, 46, 30, 0, 0, 2 * PI);
+      c.fill();
+    });
+    // stubble: a soft shadow over the jaw and the upper lip
+    if (L.beard === "stubble") {
+      c.save();
+      c.globalAlpha = 0.3;
+      c.fillStyle = hc[1];
+      path(
+        [
+          ...curve([-0.62, -0.43], [-0.6, -1.0], [0, -1.17], 20),
+          ...curve([0, -1.17], [0.6, -1.0], [0.62, -0.43], 20),
+          ...curve([0.62, -0.43], [0.42, -0.69], [0.2, -0.65], 10),
+          ...curve([0.2, -0.65], [0, -0.52], [-0.2, -0.65], 10),
+          ...curve([-0.2, -0.65], [-0.42, -0.69], [-0.62, -0.43], 10),
+        ],
+        true,
+      );
+      c.fill();
+      c.restore();
+    }
+    // the mouth: open, smiling, upper teeth and the tongue
+    const mouth = [...curve([-0.19, -0.585], [0, -0.625], [0.19, -0.585], 18), ...curve([0.19, -0.585], [0.17, -0.76], [0, -0.765], 14), ...curve([0, -0.765], [-0.17, -0.76], [-0.19, -0.585], 14)];
+    path(mouth, true);
+    c.fillStyle = "#9A3631";
+    c.fill();
+    c.save();
+    c.clip();
+    path([...curve([-0.21, -0.575], [0, -0.615], [0.21, -0.575], 18), ...curve([0.21, -0.63], [0, -0.665], [-0.21, -0.63], 18)], true);
+    c.fillStyle = "#FFFFFF";
+    c.fill();
+    const [tx, ty] = at(0, -0.735);
+    c.fillStyle = "#E8767A";
+    c.beginPath();
+    c.ellipse(tx, ty, 34, 16, 0, 0, 2 * PI);
+    c.fill();
+    c.restore();
+    path(mouth, true);
+    c.strokeStyle = "#7A2622";
+    c.lineWidth = 3;
+    c.stroke();
+    // corners of the mouth
+    [-1, 1].forEach((s) => {
+      path(curve([0.185 * s, -0.585], [0.215 * s, -0.56], [0.225 * s, -0.54], 6));
+      c.strokeStyle = shade(sk.line, 0.1);
+      c.lineWidth = 2.4;
+      c.stroke();
+    });
+    // the brows
+    [-1, 1].forEach((s) => {
+      path(curve([0.15 * s, -0.05], [0.29 * s, 0.035], [0.43 * s, -0.03], 16));
+      c.strokeStyle = hc[1];
+      c.lineCap = "round";
+      c.lineWidth = 9;
+      c.stroke();
+    });
+    // a soft line under the nose
+    path(curve([-0.06, -0.51], [0, -0.53], [0.06, -0.51], 8));
+    c.strokeStyle = "rgba(150,90,70,0.35)";
+    c.lineWidth = 3;
+    c.stroke();
+    return cv;
+  }
+
+  // ---- hair: a cap over the head with an edge (fringe in front), and its extras ----
+  const edgeTab = (tab, fr) => (ph) => {
+    const a = Math.abs(ph);
+    let e = lerpTab(tab, a);
+    if (fr && a < 1) e += fr * Math.pow(Math.abs(Math.sin(ph * 7.5)), 0.55) * smooth(1, 0.55, a);
+    return e;
+  };
+  const HAIR_EDGE = {
+    short: edgeTab([[0, 1.37], [0.55, 1.39], [0.95, 1.5], [1.18, 1.74], [1.38, 1.58], [1.75, 1.62], [2.3, 1.95], [PI, 2.05]], 0.07),
+    long: edgeTab([[0, 1.37], [0.55, 1.39], [0.95, 1.5], [1.18, 1.8], [1.4, 1.75], [PI, 1.9]], 0.06),
+    bun: edgeTab([[0, 1.25], [0.6, 1.3], [1.1, 1.55], [1.4, 1.6], [2.3, 1.9], [PI, 2.0]]),
+    curly: edgeTab([[0, 1.36], [0.6, 1.38], [1.05, 1.55], [1.4, 1.62], [2.3, 1.95], [PI, 2.05]]),
+  };
+  function hairTexture(hc) {
+    return kept("hair|" + hc[0], () => hairTextureNew(hc));
+  }
+  function hairTextureNew(hc) {
+    const cv = document.createElement("canvas");
+    cv.width = 512;
+    cv.height = 256;
+    const c = cv.getContext("2d"),
+      g = c.createLinearGradient(0, 0, 0, 256);
+    g.addColorStop(0, hc[0]);
+    g.addColorStop(1, shade(hc[0], -0.04));
+    c.fillStyle = g;
+    c.fillRect(0, 0, 512, 256);
+    // strands: lines from the crown down to the edge
+    for (let i = 0; i < 260; i++) {
+      const x = (i * 197.3) % 512,
+        w = 1 + (i % 3);
+      c.strokeStyle = i % 2 ? shade(hc[1], 0.02) : shade(hc[0], 0.08);
+      c.globalAlpha = 0.22 + (i % 5) * 0.04;
+      c.lineWidth = w;
+      c.beginPath();
+      c.moveTo(x, 0);
+      c.bezierCurveTo(x + 6, 80, x - 6, 170, x + 3, 256);
+      c.stroke();
+    }
+    c.globalAlpha = 1;
+    return cv;
+  }
+  function hairMeshes(L, hc, M, hatOn) {
+    const out = [],
+      kind = L.hair;
+    if (kind === "bald") return out;
+    const hm = M("#ffffff", { map: tex(hairTexture(hc)), r: 0.48 });
+    const edge = HAIR_EDGE[kind] || HAIR_EDGE.short,
+      vol = kind === "curly" ? 0.05 : kind === "bun" ? 0.03 : 0.05;
+    const cap = new T.Mesh(
+      gk("hair|" + kind, () => shellGeo(edge, (v) => (v <= 1 ? 1.025 + vol * (1 - v * v) : 1.025 - (v - 1) * 0.5), { lip: 0.05, su: 96, sv: 44 })),
+      hm,
+    );
+    out.push(cap);
+    if (kind === "long") {
+      // down the back and the sides to the shoulders
+      const back = new T.Mesh(
+        new T.ParametricGeometry(
+          (u, v, t) => {
+            const ph = PI + (2 * PI - 2.3) * (u - 0.5),
+              th = 1.45,
+              top = headPt(th, ph, 1.07),
+              a = Math.abs(((ph + PI) % (2 * PI)) - PI),
+              y1 = lerpTab([[1.15, 9.0], [1.6, 8.75], [PI, 8.55]], a),
+              y = top.y + (y1 - top.y) * v,
+              k = 1.0 + 0.1 * smooth(0, 0.6, v) - 0.06 * smooth(0.85, 1, v);
+            return t.set(top.x * k, y, top.z * k - 0.04 * v);
+          },
+          60,
+          18,
+        ),
+        M("#ffffff", { map: hm.map, r: 0.5, side: T.DoubleSide }),
+      );
+      out.push(back);
+    }
+    if (kind === "bun" && !hatOn) {
+      const b = sphere(0.36, hm, 28, 20);
+      b.position.copy(headPt(0.42, PI, 1.12));
+      b.scale.multiply(V3(1, 0.92, 0.95));
+      out.push(b);
+      const band = new T.Mesh(new T.TorusGeometry(0.26, 0.05, 10, 28), M(shade(hc[1], -0.05)));
+      band.position.copy(headPt(0.52, PI, 1.06));
+      band.lookAt(headPt(0.52, PI, 2));
+      out.push(band);
+    }
+    if (kind === "curly") {
+      // little curls all over the cap (only below a hat's edge when one is worn)
+      const n = 150;
+      for (let i = 0; i < n; i++) {
+        const y = 1 - (i + 0.5) / n,
+          ph = (i * 2.39996) % (2 * PI) - PI,
+          th = Math.acos(clamp(y, -1, 1)) * 1.05;
+        if (th > edge(ph) + 0.02 || (hatOn && th < 1.15)) continue;
+        const ball = sphere(0.13 + (i % 4) * 0.012, hm, 12, 10);
+        ball.position.copy(headPt(th, ph, 1.08 + (i % 3) * 0.01));
+        out.push(ball);
+      }
+    }
+    return out;
+  }
+
+  // ---- build the figure for a look ----
+  function build(look, opt) {
+    opt = opt || {};
+    const L = look,
+      mats = [],
+      M = mk(mats),
+      sk = AV_SKINS[L.skin] || AV_SKINS.t1,
+      eye = AV_EYES[L.eyes] || AV_EYES.blue,
+      hc = AV_HAIR_COLORS[L.hairColor] || AV_HAIR_COLORS.brown,
+      fig = new T.Group();
+    const skin = M(sk.g[1], { r: 0.58 }),
+      limbM = skin;
+    // head with the face painted on it
+    const headTex = tex(faceCanvas(sk, L, hc));
+    headTex.flipY = false;
+    const head = new T.Mesh(
+      gk("head", () => new T.ParametricGeometry((u, v, t) => headPt(0.004 + v * (PI - 0.008), PI - 2 * PI * u, 1, t), 96, 64)),
+      M("#ffffff", { map: headTex, r: 0.55 }),
+    );
+    fig.add(head);
+    // eyes: white balls with the iris, the pupil and a light
+    [-1, 1].forEach((s) => {
+      const [th, ph] = headAng(0.3 * s, HC - 0.23),
+        P = headPt(th, ph, 0.985),
+        n = headPt(th, ph, 1.5).sub(P).normalize(),
+        g = new T.Group();
+      g.position.copy(P);
+      g.lookAt(P.clone().add(n.clone().add(V3(0, 0, 0.6)).normalize()));
+      const w = sphere(1, M("#FFFFFF", { r: 0.25 }), 28, 20);
+      w.scale.set(0.165, 0.175, 0.085);
+      g.add(w);
+      const ir = sphere(1, M(eye[1], { r: 0.3 }), 24, 16);
+      ir.scale.set(0.11, 0.115, 0.02);
+      ir.position.z = 0.072;
+      g.add(ir);
+      const ir2 = sphere(1, M(eye[0], { r: 0.3 }), 24, 16);
+      ir2.scale.set(0.075, 0.08, 0.02);
+      ir2.position.set(0, -0.012, 0.078);
+      g.add(ir2);
+      const pu = sphere(1, M("#1E2836", { r: 0.2 }), 20, 14);
+      pu.scale.set(0.05, 0.053, 0.02);
+      pu.position.z = 0.084;
+      g.add(pu);
+      const hl = sphere(1, new T.MeshBasicMaterial({ color: 0xffffff }), 12, 8);
+      mats.push(hl.material);
+      hl.scale.set(0.026, 0.026, 0.01);
+      hl.position.set(-0.035, 0.04, 0.094);
+      g.add(hl);
+      // the lid's line over the eye
+      const lid = new T.Mesh(new T.TorusGeometry(0.16, 0.012, 6, 24, PI * 0.8), M("#6E4C3C"));
+      lid.rotation.z = PI * 0.1;
+      lid.scale.set(1, 1.05, 1);
+      lid.position.z = 0.02;
+      g.add(lid);
+      fig.add(g);
+    });
+    // nose: a small soft bump
+    {
+      const [th, ph] = headAng(0, HC - 0.45),
+        nose = sphere(1, skin, 20, 14);
+      nose.scale.set(0.075, 0.07, 0.07);
+      nose.position.copy(headPt(th, ph, 0.995));
+      fig.add(nose);
+    }
+    // ears: small, close to the head
+    [-1, 1].forEach((s) => {
+      const [th] = headAng(0, HC - 0.29),
+        P = headPt(th, (PI / 2) * s, 1.0),
+        e = sphere(1, M(sk.ear, { r: 0.6 }), 20, 14);
+      e.scale.set(0.055, 0.165, 0.115);
+      e.position.set(P.x + 0.012 * s, P.y, P.z - 0.06);
+      e.rotation.y = -0.35 * s;
+      fig.add(e);
+    });
+    // neck
+    const neck = new T.Mesh(new T.CylinderGeometry(0.27, 0.3, 1.0, 28, 1, true), skin);
+    neck.position.set(0, 9.55, -0.02);
+    fig.add(neck);
+
+    // ---- clothes: the top (body from the waist up, sleeves), the bottom (hips, legs), shoes ----
+    const TOP = AV3_TOPS[L.top] || AV3_TOPS["shirt-blue"],
+      BOT = AV3_BOTTOMS[L.bottom] || AV3_BOTTOMS.jeans,
+      SHO = AV3_SHOES[L.shoes] || AV3_SHOES.sneaker;
+    const ctx = { T, M, L, sk, hc, skin, fig, J, mir, lerpV, bodyGeo, bodyUV, bodyR, BODY_Z, limb, tube, ring, sphere, shade, tex, kept, V3, PI, headPt, headAng, shellGeo, R_UP, R_FORE, R_THIGH, R_SHIN, cov: { arm: 0, leg: 0 }, outer: 0 };
+    ctx.frontZ = (xx, y, d) => Math.sqrt(Math.max(0, Math.pow(bodyR(y) + (d || 0), 2) - xx * xx)) * BODY_Z;
+    // the bottom (hips, legs) and the top (body, sleeves); they say how much of the arms and legs they cover
+    BOT(ctx);
+    TOP(ctx);
+    const cov = ctx.cov;
+    // arms: skin where no sleeve is, the hands
+    [-1, 1].forEach((s) => {
+      const S = mir(J.S, s),
+        E = mir(J.E, s),
+        Wr = mir(J.W, s);
+      if (cov.arm < 1) {
+        fig.add(limb(lerpV(S, E, cov.arm * 0.85), E, R_UP, limbM));
+        fig.add(sphere(0.25, limbM, 20, 14).translateX(E.x).translateY(E.y).translateZ(E.z));
+        fig.add(limb(E, Wr, R_FORE, limbM));
+      } else fig.add(limb(lerpV(E, Wr, 0.82), Wr, [[0, 0.19], [1, 0.172]], limbM));
+      const h = hand(s, limbM),
+        d = new T.Vector3().subVectors(Wr, E).normalize();
+      h.position.copy(Wr);
+      h.quaternion.setFromUnitVectors(UP, d.clone().negate());
+      h.rotateY(-0.75 * s);
+      fig.add(h);
+      (ctx.hands = ctx.hands || {})[s] = h;
+    });
+    // legs: skin below shorts or a skirt, socks and shoes
+    [-1, 1].forEach((s) => {
+      const H = mir(J.H, s),
+        K = mir(J.K, s),
+        A = mir(J.A, s);
+      if (cov.leg < 2) {
+        if (cov.leg < 1) fig.add(limb(lerpV(H, K, Math.max(0, cov.leg - 0.12)), K, R_THIGH, limbM));
+        fig.add(sphere(0.3, limbM, 20, 14).translateX(K.x).translateY(K.y).translateZ(K.z));
+        fig.add(limb(K, A, R_SHIN, limbM));
+      }
+      fig.add(shoe(A, s, SHO, M, cov.leg < 2));
+    });
+    // hair
+    const hatOn = !!(L.head && L.head !== "none" && L.head !== "crown" && L.head !== "head-mirror");
+    hairMeshes(L, hc, M, hatOn).forEach((m) => fig.add(m));
+    // a full beard round the jaw and the chin, a moustache over the mouth
+    if (L.beard === "full" || L.beard === "moustache") {
+      const hm = M("#ffffff", { map: tex(hairTexture(hc)), r: 0.55 });
+      if (L.beard === "full") {
+        const top = (ph) => {
+          const a = Math.abs(ph);
+          return headAng(0, HC - lerpTab([[0, 0.8], [0.35, 0.74], [0.75, 0.45], [1.25, 0.2], [1.6, 0.0]], a))[0];
+        };
+        const bg = new T.ParametricGeometry(
+          (u, v, t) => {
+            const ph = 1.62 - 3.24 * u,
+              t0 = top(ph),
+              th = t0 + (PI - 0.02 - t0) * v,
+              k = Math.sin(Math.min(1, v * 1.6) * PI * 0.5);
+            return headPt(th, ph, 1.0 + 0.075 * k * (1 - 0.3 * Math.abs(ph) / 1.62), t);
+          },
+          48,
+          20,
+        );
+        fig.add(new T.Mesh(bg, M("#ffffff", { map: hm.map, r: 0.6, side: T.DoubleSide })));
+      }
+      if (L.face !== "mask")
+      [-1, 1].forEach((s) => {
+        const [th, ph] = headAng(0.11 * s, HC - 0.555),
+          mo = sphere(1, hm, 16, 10);
+        mo.scale.set(0.13, 0.045, 0.05);
+        mo.position.copy(headPt(th, ph, 1.02));
+        mo.rotation.z = -0.25 * s;
+        mo.rotation.y = 0.35 * s;
+        fig.add(mo);
+      });
+    }
+    // what is worn round the neck, on the face, on the head, held in the right hand
+    const NK = AV3_NECKS[L.neck],
+      FC = AV3_FACES[L.face],
+      HD = AV3_HEADS[L.head],
+      HN = AV3_HANDS[L.hand];
+    NK && NK(ctx);
+    FC && FC(ctx);
+    HD && HD(ctx);
+    HN && HN(ctx, ctx.hands[-1]);
+    fig.userData.mats = mats;
+    fig.userData.handR = ctx.hands[-1];
+    return fig;
+  }
+
+  // ---- prints on a top (canvas in body coordinates: at(x, y) -> pixel) ----
+  const strokePts = (g, at, pts, w, col) => {
+    g.beginPath();
+    pts.forEach(([x, y], i) => {
+      const [a, b] = at(x, y);
+      i ? g.lineTo(a, b) : g.moveTo(a, b);
+    });
+    g.strokeStyle = col;
+    g.lineWidth = w;
+    g.lineCap = "round";
+    g.lineJoin = "round";
+    g.stroke();
+  };
+  const fillPts = (g, at, pts, col) => {
+    g.beginPath();
+    pts.forEach(([x, y], i) => {
+      const [a, b] = at(x, y);
+      i ? g.lineTo(a, b) : g.moveTo(a, b);
+    });
+    g.closePath();
+    g.fillStyle = col;
+    g.fill();
+  };
+  const qc = (p0, p1, p2, n) => {
+    const o = [];
+    n = n || 14;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n,
+        k = 1 - t;
+      o.push([k * k * p0[0] + 2 * k * t * p1[0] + t * t * p2[0], k * k * p0[1] + 2 * k * t * p1[1] + t * t * p2[1]]);
+    }
+    return o;
+  };
+  const vNeck = (trim) => (g, at, x) => {
+    fillPts(g, at, [[-0.33, 9.32], [0.33, 9.32], [0.3, 9.2], [0, 8.6], [-0.3, 9.2]], x.sk.g[1]);
+    strokePts(g, at, [[-0.31, 9.21], [0, 8.6], [0.31, 9.21]], 9, trim);
+    // the chest pocket
+    fillPts(g, at, [[0.34, 8.22], [0.7, 8.22], [0.7, 7.86], [0.34, 7.86]], shade(trim, 0.08));
+    strokePts(g, at, [[0.34, 8.22], [0.34, 7.86], [0.7, 7.86], [0.7, 8.22]], 4, trim);
+  };
+  const stripes = (col) => (g, at) => {
+    for (let y = 6.08; y < 9.25; y += 0.32) fillPts(g, at, [[-3, y], [3, y], [3, y + 0.13], [-3, y + 0.13]], col);
+  };
+  const heart = (col) => (g, at) => {
+    const H = (t) => [0.016 * 16 * Math.pow(Math.sin(t), 3), 8.02 + 0.016 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))],
+      pts = [];
+    for (let i = 0; i <= 60; i++) pts.push(H((i / 60) * 2 * PI));
+    fillPts(g, at, pts, col);
+  };
+  const ribs = (col) => (g, at) => {
+    fillPts(g, at, [[-0.07, 8.95], [0.07, 8.95], [0.06, 7.35], [0, 7.28], [-0.06, 7.35]], col);
+    [-1, 1].forEach((s) => {
+      strokePts(g, at, qc([0.08 * s, 9.08], [0.5 * s, 9.12], [0.9 * s, 9.0]), 10, col);
+      for (let i = 0; i < 5; i++) {
+        const y = 8.78 - i * 0.29;
+        strokePts(g, at, qc([0.08 * s, y], [0.55 * s, y + 0.06], [(0.86 - i * 0.03) * s, y - 0.3]), 9, col);
+      }
+    });
+  };
+  const pouch = (col, line) => (g, at) => {
+    fillPts(g, at, [[-0.5, 7.1], [0.5, 7.1], [0.62, 6.38], [-0.62, 6.38]], col);
+    strokePts(g, at, [[-0.5, 7.1], [0.5, 7.1], [0.62, 6.38], [-0.62, 6.38], [-0.5, 7.1]], 4, line);
+  };
+  // a top: the body from the waist up in its colour (printed on a canvas), sleeves short or long
+  const avTop3 = (c, o) => (x) => {
+    o = o || {};
+    const { T, M, fig, J, mir, bodyGeo, BODY_Z } = x,
+      y0 = 5.95,
+      y1 = 9.33,
+      d = (y) => 0.035 - 0.015 * Math.max(0, (y - 8.9) / 0.43);
+    let m;
+    if (o.paint) {
+      const cv = x.kept(`top|${c}|${x.L.top}|${x.sk.g[1]}`, () => {
+        const cv = document.createElement("canvas");
+        cv.width = 1024;
+        cv.height = 1024;
+        const g = cv.getContext("2d");
+        g.fillStyle = c;
+        g.fillRect(0, 0, 1024, 1024);
+        o.paint(
+          g,
+          (px, py) => {
+            const [u, v] = x.bodyUV(px, py, y0, y1, 0.03);
+            return [u * 1024, (1 - v) * 1024];
+          },
+          x,
+        );
+        return cv;
+      });
+      m = M("#ffffff", { map: x.tex(cv), r: 0.72 });
+    } else m = M(c, { r: 0.72 });
+    const body = new T.Mesh(bodyGeo(y0, y1, d), m);
+    body.scale.z = BODY_Z;
+    fig.add(body);
+    const hem = new T.Mesh(new T.TorusGeometry(x.bodyR(y0) + 0.035, 0.035, 8, 64), M(x.shade(c, -0.08), { r: 0.72 }));
+    hem.rotation.x = PI / 2;
+    hem.position.y = y0 + 0.02;
+    hem.scale.y = BODY_Z;
+    fig.add(hem);
+    if (!o.v) {
+      const cl = new T.Mesh(new T.TorusGeometry(0.31, 0.04, 10, 36), M(x.shade(c, -0.1), { r: 0.72 }));
+      cl.rotation.x = PI / 2;
+      cl.position.set(0, 9.22, -0.01);
+      cl.scale.set(1, 0.85, 1);
+      fig.add(cl);
+    }
+    const sl = M(o.sleeve || c, { r: 0.72 }),
+      cuffM = M(x.shade(o.sleeve || c, -0.08), { r: 0.72 });
+    x.cov.arm = o.long ? 1 : 0.48;
+    [-1, 1].forEach((s) => {
+      const S = mir(J.S, s),
+        E = mir(J.E, s),
+        Wr = mir(J.W, s);
+      const sh = x.sphere(0.32, sl, 24, 16);
+      sh.position.set(S.x + 0.02 * s, S.y, S.z);
+      fig.add(sh);
+      if (o.long) {
+        fig.add(x.tube(S, E, [[0, 0.32], [1, 0.285]], sl));
+        fig.add(x.sphere(0.285, sl, 20, 14).translateX(E.x).translateY(E.y).translateZ(E.z));
+        const cuff = x.lerpV(E, Wr, 0.88);
+        fig.add(x.tube(E, cuff, [[0, 0.285], [0.3, 0.295], [1, 0.22]], sl));
+        fig.add(x.ring(cuff, Wr, 0.212, 0.045, cuffM));
+      } else {
+        const end = x.lerpV(S, E, 0.48);
+        fig.add(x.tube(S, end, [[0, 0.32], [1, 0.318]], sl));
+        fig.add(x.ring(end, E, 0.315, 0.035, cuffM));
+      }
+    });
+    o.extra && o.extra(x, m);
+  };
+  // the hood of the hoodie lies round the back of the neck; two cords in front
+  const hood = (c) => (x) => {
+    const { T, M, fig } = x,
+      m = M(c, { r: 0.75 });
+    const h = new T.Mesh(new T.TorusGeometry(0.46, 0.17, 12, 32, PI * 1.25), m);
+    h.rotation.set(PI / 2 + 0.25, 0, PI * 0.875 - PI);
+    h.position.set(0, 9.2, -0.08);
+    h.scale.set(1, 0.85, 1);
+    fig.add(h);
+    const back = x.sphere(1, m, 24, 16);
+    back.scale.set(0.62, 0.48, 0.24);
+    back.position.set(0, 8.82, -0.6);
+    fig.add(back);
+    [-1, 1].forEach((s) => fig.add(x.limb(x.V3(0.13 * s, 9.1, x.frontZ(0.13 * s, 9.1, 0.06)), x.V3(0.15 * s, 8.5, x.frontZ(0.15 * s, 8.5, 0.06)), [[0, 0.022], [1, 0.022]], M("#F4F5F7"), 8)));
+  };
+  // the doctor's coat: open in front over a light blue shirt, long white sleeves, buttons, pockets, pens
+  const coat = (x) => {
+    avTop3("#CFE3F7", { long: !0, sleeve: "#FFFFFF" })(x);
+    const { T, M, fig, bodyR, BODY_Z } = x,
+      wm = M("#FFFFFF", { r: 0.68, side: T.DoubleSide }),
+      gap = (y) => lerpTab([[3.9, 0.07], [7.3, 0.07], [8.2, 0.2], [9.15, 0.58]], y),
+      rad = (y) => Math.max(bodyR(y) + 0.075 + 0.04 * smooth(8.9, 9.15, y) * 0, y < 5.7 ? 1.12 + 0.07 * smooth(5.6, 3.9, y) : 0) + 0.0;
+    const g = new T.ParametricGeometry(
+      (u, v, t) => {
+        const y = 9.15 - v * (9.15 - 3.9),
+          a = gap(y),
+          ph = a + (2 * PI - 2 * a) * (1 - u),
+          r = rad(y);
+        return t.set(r * Math.sin(ph), y, r * Math.cos(ph) * BODY_Z);
+      },
+      72,
+      40,
+    );
+    fig.add(new T.Mesh(g, wm));
+    // the collar at the back of the neck
+    const cl = new T.Mesh(new T.TorusGeometry(0.42, 0.07, 10, 28, PI * 1.3), M("#FFFFFF", { r: 0.68 }));
+    cl.rotation.set(PI / 2 + 0.15, 0, PI * 0.85 - PI);
+    cl.position.set(0, 9.16, -0.04);
+    cl.scale.set(1, 0.8, 1);
+    fig.add(cl);
+    // buttons on the right edge, pockets, pens in the breast pocket
+    const fz = (xx, y) => Math.sqrt(Math.max(0, rad(y) * rad(y) - xx * xx)) * BODY_Z;
+    [7.3, 6.7, 6.1].forEach((y) => {
+      const b = x.sphere(0.045, M("#E3E8EF", { r: 0.4 }), 10, 8),
+        xx = -rad(y) * Math.sin(gap(y)) - 0.08;
+      b.position.set(xx, y, fz(xx, y) + 0.015);
+      fig.add(b);
+    });
+    [-1, 1].forEach((s) => {
+      const pk = new T.Mesh(new T.BoxGeometry(0.42, 0.36, 0.02), M("#F1F4F8", { r: 0.7 })),
+        xx = 0.62 * s;
+      pk.position.set(xx, 5.55, fz(xx, 5.55) + 0.01);
+      pk.rotation.y = 0.5 * s;
+      fig.add(pk);
+    });
+    [["#3B6FD8", 0.46], ["#C8323C", 0.56]].forEach(([c, xx]) => {
+      const pen = new T.Mesh(new T.CylinderGeometry(0.025, 0.025, 0.3, 8), M(c, { r: 0.4 }));
+      pen.position.set(xx, 8.38, fz(xx, 8.38) + 0.02);
+      fig.add(pen);
+    });
+    x.outer = 0.13;
+  };
+  const AV3_TOPS = {
+    "shirt-blue": avTop3("#4C86C6"),
+    "shirt-red": avTop3("#D9534F"),
+    "shirt-green": avTop3("#3FA66B"),
+    "shirt-yellow": avTop3("#F2C230"),
+    "shirt-black": avTop3("#2F3540"),
+    "shirt-stripes": avTop3("#F4F1EA", { paint: stripes("#2D5A9E") }),
+    hoodie: avTop3("#8D96A3", { long: !0, paint: pouch("#848D9A", "#6E7784"), extra: hood("#8D96A3") }),
+    "sweater-heart": avTop3("#B23A48", { long: !0, paint: heart("#FFF2F2") }),
+    "shirt-skeleton": avTop3("#262B36", { paint: ribs("#F4EEDC") }),
+    "scrubs-green": avTop3("#4FAE8E", { v: !0, paint: vNeck("#3E8F73") }),
+    "scrubs-blue": avTop3("#4C86C6", { v: !0, paint: vNeck("#3A6DA8") }),
+    "scrubs-pink": avTop3("#E58BB0", { v: !0, paint: vNeck("#C86E95") }),
+    coat,
+  };
+  // the bottom: hips and legs in its colour
+  const avPants3 = (c, o) => (x) => {
+    o = o || {};
+    const { T, M, fig, J, mir, bodyGeo, BODY_Z } = x,
+      m = M(c, { r: 0.78 });
+    x.cov.leg = o.short ? 0.55 : 2;
+    const hips = new T.Mesh(bodyGeo(4.92, 6.32, 0.014), m);
+    hips.scale.z = BODY_Z;
+    fig.add(hips);
+    [-1, 1].forEach((s) => {
+      const H = mir(J.H, s),
+        K = mir(J.K, s),
+        A = mir(J.A, s),
+        H2 = x.V3(H.x * 0.88, H.y + 0.45, H.z),
+        end = o.short ? x.lerpV(H, K, 0.55) : x.V3(A.x, o.cuff ? 0.72 : 0.6, A.z + 0.02);
+      if (o.short) {
+        fig.add(x.tube(H2, end, [[0, 0.5], [0.25, 0.545], [1, 0.47]], m));
+        fig.add(x.ring(end, K, 0.465, 0.035, M(x.shade(c, -0.08), { r: 0.78 })));
+      } else {
+        fig.add(x.tube(H2, K, [[0, 0.5], [0.2, 0.545], [0.5, 0.48], [1, 0.36]], m));
+        fig.add(x.sphere(0.36, m, 20, 14).translateX(K.x).translateY(K.y).translateZ(K.z));
+        fig.add(x.tube(K, end, o.cuff ? [[0, 0.36], [0.3, 0.37], [0.9, 0.29], [1, 0.25]] : [[0, 0.36], [0.3, 0.37], [1, 0.31]], m));
+        fig.add(x.ring(end, K, o.cuff ? 0.245 : 0.305, o.cuff ? 0.07 : 0.03, M(x.shade(c, -0.08), { r: 0.78 })));
+      }
+    });
+    if (o.cord)
+      [-1, 1].forEach((s) => fig.add(x.limb(x.V3(0.06 * s, 6.22, x.frontZ(0.06 * s, 6.22, 0.03)), x.V3(0.1 * s, 5.8, x.frontZ(0.1 * s, 5.8, 0.05)), [[0, 0.022], [1, 0.022]], M("#F4F5F7"), 8)));
+  };
+  // the skirt: a cone from the waist to above the knees, pleats; bare legs under it
+  const skirt = (x) => {
+    const { T, M, fig, bodyR, BODY_Z } = x;
+    x.cov.leg = 0;
+    const cv = kept("skirt", () => {
+      const cv = document.createElement("canvas");
+      cv.width = 512;
+      cv.height = 64;
+      const g = cv.getContext("2d");
+      g.fillStyle = "#7C5CC4";
+      g.fillRect(0, 0, 512, 64);
+      for (let i = 0; i < 24; i++) {
+        g.fillStyle = i % 2 ? "rgba(90,63,154,0.35)" : "rgba(255,255,255,0.08)";
+        g.fillRect((i * 512) / 24, 0, 512 / 48, 64);
+      }
+      return cv;
+    });
+    const pts = [];
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20,
+        y = 6.32 - t * (6.32 - 3.72);
+      pts.push(new T.Vector2(Math.max(bodyR(Math.max(y, 5.9)) + 0.04, 1.02 + 0.3 * t * t + 0.12 * t) + (y > 5.9 ? 0 : 0), y));
+    }
+    pts.reverse();
+    const sk2 = new T.Mesh(new T.LatheGeometry(pts, 64, -PI, 2 * PI), M("#ffffff", { map: x.tex(cv), r: 0.75, side: T.DoubleSide }));
+    sk2.scale.z = 0.72;
+    fig.add(sk2);
+    const band = new T.Mesh(new T.TorusGeometry(bodyR(6.28) + 0.05, 0.05, 8, 64), M("#5A3F9A", { r: 0.7 }));
+    band.rotation.x = PI / 2;
+    band.position.y = 6.28;
+    band.scale.y = 0.72;
+    fig.add(band);
+  };
+  const AV3_BOTTOMS = {
+    jeans: avPants3("#3E6FA8"),
+    "pants-black": avPants3("#2F3540"),
+    "pants-beige": avPants3("#C9B48E"),
+    joggers: avPants3("#8D96A3", { cuff: !0, cord: !0 }),
+    shorts: avPants3("#5B7FA6", { short: !0 }),
+    "scrubs-green": avPants3("#4FAE8E", { cord: !0 }),
+    "scrubs-blue": avPants3("#4C86C6", { cord: !0 }),
+    "scrubs-pink": avPants3("#E58BB0", { cord: !0 }),
+    skirt,
+  };
+  const AV3_SHOES = {
+    sneaker: { c: "#F4F5F7", sole: "#C9CED6", lace: "#B9C1CC", dark: 0 },
+    "sneaker-red": { c: "#D9534F", sole: "#F4F5F7", lace: "#FFFFFF" },
+    "sneaker-black": { c: "#2F3540", sole: "#F4F5F7", lace: "#C9CED6", dark: 1 },
+    clogs: { c: "#4FAE8E", sole: "#2F7F63", holes: !0, clog: !0 },
+    boots: { c: "#7A4E2E", sole: "#3E2716", boot: !0 },
+  };
+
+  // ---- on the head: hats over the hair (s > hair), a band round the head ----
+  const hatEdge = (tab) => (ph) => lerpTab(tab, Math.abs(ph));
+  // a band along a hat's edge: th from edge - w to edge
+  const bandGeo = (edge, w, sc) =>
+    new T.ParametricGeometry(
+      (u, v, t) => {
+        const ph = PI - 2 * PI * u,
+          e = edge(ph);
+        return headPt(e - w + w * v, ph, sc, t);
+      },
+      72,
+      6,
+    );
+  const dotsTex = (bg, dot) => kept(`dots|${bg}|${dot}`, () => {
+    const cv = document.createElement("canvas");
+    cv.width = 512;
+    cv.height = 256;
+    const g = cv.getContext("2d");
+    g.fillStyle = bg;
+    g.fillRect(0, 0, 512, 256);
+    g.fillStyle = dot;
+    for (let i = 0; i < 70; i++) {
+      g.beginPath();
+      g.arc((i * 97.7) % 512, 20 + ((i * 53.3) % 200), 5, 0, 2 * PI);
+      g.fill();
+    }
+    return cv;
+  });
+  const ribsTex = (bg, line) => kept(`ribs|${bg}|${line}`, () => {
+    const cv = document.createElement("canvas");
+    cv.width = 512;
+    cv.height = 64;
+    const g = cv.getContext("2d");
+    g.fillStyle = bg;
+    g.fillRect(0, 0, 512, 64);
+    g.fillStyle = line;
+    for (let i = 0; i < 48; i++) g.fillRect(i * (512 / 48), 0, 3, 64);
+    return cv;
+  });
+  const hat = (edge, sTop, sEdge, m) => new T.Mesh(shellGeo(edge, (v) => sTop + (sEdge - sTop) * v * v, { su: 72, sv: 24 }), m);
+  const AV3_HEADS = {
+    "op-cap": (x) => {
+      const e = hatEdge([[0, 1.42], [1.2, 1.55], [1.6, 1.6], [2.4, 1.78], [PI, 1.85]]);
+      const t = x.tex(dotsTex("#7FB3E6", "#EAF3FC"));
+      t.wrapS = T.RepeatWrapping;
+      x.fig.add(hat(e, 1.17, 1.115, x.M("#ffffff", { map: t, r: 0.8 })));
+      x.fig.add(new T.Mesh(bandGeo(e, 0.17, 1.125), x.M("#4C86C6", { r: 0.75 })));
+    },
+    beanie: (x) => {
+      const e = hatEdge([[0, 1.5], [1.2, 1.6], [2.4, 1.8], [PI, 1.88]]);
+      x.fig.add(hat(e, 1.19, 1.12, x.M("#ffffff", { map: x.tex(ribsTex("#D9534F", "#BF4440")), r: 0.9 })));
+      x.fig.add(new T.Mesh(bandGeo(e, 0.32, 1.15), x.M("#ffffff", { map: x.tex(ribsTex("#B8403C", "#A0332F")), r: 0.9 })));
+      const pom = x.sphere(0.26, x.M("#F4F1EA", { r: 0.95 }), 20, 14);
+      pom.position.copy(headPt(0.004, 0, 1.19)).add(x.V3(0, 0.2, 0));
+      x.fig.add(pom);
+    },
+    cap: (x) => {
+      const e = hatEdge([[0, 1.4], [1.2, 1.52], [2.4, 1.68], [PI, 1.72]]),
+        cm = x.M("#3FA66B", { r: 0.7 });
+      x.fig.add(hat(e, 1.15, 1.11, cm));
+      const top = x.sphere(0.07, x.M("#2D7D50"), 10, 8);
+      top.position.copy(headPt(0.004, 0, 1.16));
+      x.fig.add(top);
+      // the brim in front, a little bent down
+      const brim = new T.Mesh(
+        new T.ParametricGeometry(
+          (u, v, t) => {
+            const ph = -1.0 + 2.0 * u,
+              P = headPt(e(ph) - 0.02, ph, 1.1),
+              k = Math.sqrt(Math.max(0, 1 - (ph / 1.0) * (ph / 1.0))),
+              out = 0.62 * v * k;
+            return t.set(P.x * (1 + out * 0.6), P.y - 0.12 * v * v * k, P.z + out);
+          },
+          36,
+          8,
+        ),
+        x.M("#2D7D50", { r: 0.7, side: T.DoubleSide }),
+      );
+      x.fig.add(brim);
+    },
+    "head-mirror": (x) => {
+      const pts = [];
+      for (let i = 0; i < 48; i++) {
+        const ph = -PI + (2 * PI * i) / 48;
+        pts.push(headPt(lerpTab([[0, 1.18], [PI / 2, 1.0], [PI, 0.95]], Math.abs(ph)), ph, 1.1));
+      }
+      x.fig.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts, !0), 96, 0.05, 8, !0), x.M("#2B2F3A", { r: 0.5 })));
+      const P = headPt(1.08, 0, 1.12),
+        g = new T.Group();
+      g.position.copy(P);
+      g.rotation.x = -0.25;
+      const disc = new T.Mesh(new T.CylinderGeometry(0.33, 0.33, 0.06, 36), x.M("#D8DEE7", { r: 0.18, m: 0.7 }));
+      disc.rotation.x = PI / 2;
+      disc.position.z = 0.1;
+      g.add(disc);
+      const hole = new T.Mesh(new T.CylinderGeometry(0.07, 0.07, 0.065, 16), x.M("#4A5260", { r: 0.5 }));
+      hole.rotation.x = PI / 2;
+      hole.position.z = 0.105;
+      g.add(hole);
+      const rim = new T.Mesh(new T.TorusGeometry(0.33, 0.025, 8, 36), x.M("#7D8794", { r: 0.3, m: 0.6 }));
+      rim.position.z = 0.1;
+      g.add(rim);
+      x.fig.add(g);
+    },
+    "doctor-hat": (x) => {
+      const e = hatEdge([[0, 1.28], [1.5, 1.35], [PI, 1.45]]),
+        bm = x.M("#2B2F3A", { r: 0.6 });
+      x.fig.add(hat(e, 1.13, 1.11, bm));
+      const top = headPt(0.004, 0, 1.13).y,
+        board = new T.Mesh(new T.BoxGeometry(2.05, 0.07, 2.05), x.M("#1E2229", { r: 0.55 }));
+      board.position.set(0, top + 0.02, 0);
+      board.rotation.y = PI / 4;
+      x.fig.add(board);
+      const gold = x.M("#F2B705", { r: 0.4, m: 0.3 }),
+        btn = new T.Mesh(new T.CylinderGeometry(0.07, 0.07, 0.05, 12), gold);
+      btn.position.set(0, top + 0.08, 0);
+      x.fig.add(btn);
+      const corner = x.V3(1.45, top + 0.04, 0);
+      x.fig.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([x.V3(0, top + 0.08, 0), x.V3(0.8, top + 0.07, 0.02), corner, x.V3(1.47, top - 0.4, 0.02)]), 24, 0.018, 6), gold));
+      const tas = new T.Mesh(new T.CylinderGeometry(0.05, 0.08, 0.3, 10), gold);
+      tas.position.set(1.47, top - 0.55, 0.02);
+      x.fig.add(tas);
+    },
+    crown: (x) => {
+      const gm = x.M("#F2B705", { r: 0.32, m: 0.45 }),
+        band = [],
+        y0 = headPt(1.0, 0, 1).y - 0.04,
+        R = 0.8;
+      for (let i = 0; i <= 10; i++) band.push(new T.Vector2(R + 0.03 * Math.sin((i / 10) * PI) + 0.04 * (i / 10), y0 + i * 0.045));
+      const ring2 = new T.Mesh(new T.LatheGeometry(band, 48), x.M("#F2B705", { r: 0.32, m: 0.45, side: T.DoubleSide }));
+      ring2.scale.z = 0.98;
+      x.fig.add(ring2);
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * 2 * PI,
+          sp = new T.Mesh(new T.ConeGeometry(0.13, 0.42, 4), gm);
+        sp.position.set((R + 0.04) * Math.sin(a), y0 + 0.45 + 0.21, (R + 0.04) * Math.cos(a));
+        sp.rotation.y = a;
+        x.fig.add(sp);
+        const ball = x.sphere(0.055, gm, 10, 8);
+        ball.position.set((R + 0.04) * Math.sin(a), y0 + 0.92, (R + 0.04) * Math.cos(a));
+        x.fig.add(ball);
+      }
+      [["#D9534F", 0], ["#4C86C6", -0.6], ["#3FA66B", 0.6]].forEach(([c, a]) => {
+        const j = x.sphere(0.075, x.M(c, { r: 0.2, m: 0.2 }), 12, 10);
+        j.position.set((R + 0.055) * Math.sin(a), y0 + 0.22, (R + 0.055) * Math.cos(a));
+        x.fig.add(j);
+      });
+    },
+  };
+
+  // ---- on the face: glasses, sunglasses, the OP mask ----
+  const glasses3 = (frame, lens, op) => (x) => {
+    const fm = x.M(frame, { r: 0.35, m: 0.15 }),
+      lm = x.M(lens, { r: 0.1, op, dw: op > 0.8 });
+    const inner = [],
+      eyeP = (s) => {
+        const [th, ph] = headAng(0.3 * s, HC - 0.23);
+        return headPt(th, ph, 1.0);
+      };
+    [-1, 1].forEach((s) => {
+      const c0 = eyeP(s).add(x.V3(0, 0, 0.13)),
+        pts = [];
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * 2 * PI,
+          cx = Math.cos(a),
+          cy = Math.sin(a),
+          k = 0.7;
+        pts.push(x.V3(c0.x + 0.215 * Math.sign(cx) * Math.pow(Math.abs(cx), k), c0.y + 0.175 * Math.sign(cy) * Math.pow(Math.abs(cy), k), c0.z - 0.03 * Math.abs(cx) * s * Math.sign(cx * s)));
+      }
+      x.fig.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts, !0), 64, 0.028, 8, !0), fm));
+      const sh = new T.Shape();
+      pts.forEach((p, i) => (i ? sh.lineTo(p.x - c0.x, p.y - c0.y) : sh.moveTo(p.x - c0.x, p.y - c0.y)));
+      const ln = new T.Mesh(new T.ShapeGeometry(sh, 4), lm);
+      ln.position.copy(c0).add(x.V3(0, 0, -0.01));
+      x.fig.add(ln);
+      inner.push(x.V3(c0.x - 0.2 * s, c0.y + 0.04, c0.z));
+      // the arm back to the ear
+      const out = x.V3(c0.x + 0.22 * s, c0.y + 0.03, c0.z - 0.04),
+        ear = headPt(PI / 2 + 0.05, (PI / 2) * s - 0.05 * s, 1.03);
+      x.fig.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([out, x.V3(out.x + 0.08 * s, out.y, out.z - 0.25), x.V3(ear.x + 0.02 * s, ear.y + 0.05, ear.z + 0.1)]), 16, 0.024, 6), fm));
+    });
+    x.fig.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([inner[0], x.V3(0, inner[0].y + 0.03, inner[0].z + 0.02), inner[1]]), 12, 0.024, 6), fm));
+  };
+  const AV3_FACES = {
+    glasses: glasses3("#2B2F3A", "#DDEBF7", 0.18),
+    "glasses-red": glasses3("#C8323C", "#DDEBF7", 0.18),
+    sunglasses: glasses3("#1E2229", "#1E2836", 0.92),
+    mask: (x) => {
+      const cv = kept("mask", () => {
+        const cv = document.createElement("canvas");
+        cv.width = 256;
+        cv.height = 128;
+        const g = cv.getContext("2d");
+        g.fillStyle = "#BFDDF5";
+        g.fillRect(0, 0, 256, 128);
+        g.fillStyle = "rgba(127,175,216,0.55)";
+        [36, 64, 92].forEach((y) => g.fillRect(0, y, 256, 5));
+        return cv;
+      });
+      const [t0] = headAng(0, HC - 0.36),
+        [t1] = headAng(0, HC - 1.06);
+      const m = new T.Mesh(
+        new T.ParametricGeometry(
+          (u, v, t) => {
+            const ph = 1.2 - 2.4 * u,
+              th = t0 + (t1 - t0) * v;
+            return headPt(th, ph, 1.045 + 0.04 * Math.cos(ph * 1.2) * Math.sin(v * PI), t);
+          },
+          32,
+          16,
+        ),
+        x.M("#ffffff", { map: x.tex(cv), r: 0.85, side: T.DoubleSide }),
+      );
+      x.fig.add(m);
+      [-1, 1].forEach((s) => {
+        const a = headPt(t0 + 0.08, 1.2 * s, 1.05),
+          b = headPt(t1 - 0.12, 1.2 * s, 1.05),
+          ear = headPt(PI / 2 + 0.1, (PI / 2) * s, 1.05);
+        x.fig.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([a, ear, b]), 16, 0.018, 6), x.M("#F4F5F7")));
+      });
+    },
+  };
+
+  // ---- round the neck: stethoscope, bow tie, scarf, medal ----
+  const AV3_NECKS = {
+    stethoscope: (x) => {
+      const o = x.outer || 0.05,
+        P = (xx, y, dz) => x.V3(xx, y, x.frontZ(xx, y, o) + (dz || 0)),
+        tm = x.M("#2E3440", { r: 0.45 }),
+        sm = x.M("#C9CED6", { r: 0.2, m: 0.75 });
+      const path = [P(0.36, 7.9, 0.04), P(0.48, 8.6, 0.03), x.V3(0.5, 9.12, 0.18), x.V3(0.36, 9.27, -0.22), x.V3(0, 9.3, -0.4), x.V3(-0.36, 9.27, -0.22), x.V3(-0.5, 9.12, 0.18), P(-0.46, 8.6, 0.03), P(-0.32, 8.0, 0.04)];
+      x.fig.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(path), 64, 0.04, 8), tm));
+      const cp = new T.Mesh(new T.CylinderGeometry(0.13, 0.13, 0.07, 24), sm);
+      cp.position.copy(P(-0.32, 7.86, 0.08));
+      cp.rotation.x = PI / 2;
+      x.fig.add(cp);
+      const bell = new T.Mesh(new T.CylinderGeometry(0.1, 0.1, 0.02, 24), x.M("#E9EDF2", { r: 0.25, m: 0.3 }));
+      bell.position.copy(cp.position).add(x.V3(0, 0, 0.045));
+      bell.rotation.x = PI / 2;
+      x.fig.add(bell);
+      [-1, 1].forEach((s) => x.fig.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([P(0.36, 7.92, 0.05), P(0.36 + 0.09 * s, 7.7, 0.07), P(0.36 + 0.12 * s, 7.55, 0.09)]), 10, 0.022, 6), sm)));
+    },
+    bowtie: (x) => {
+      const o = x.outer || 0.05,
+        z = x.frontZ(0, 9.08, o) + 0.06,
+        m = x.M("#C8323C", { r: 0.55 });
+      [-1, 1].forEach((s) => {
+        const w = new T.Mesh(new T.ConeGeometry(0.15, 0.3, 4), m);
+        w.rotation.z = (PI / 2) * s;
+        w.rotation.x = PI / 4;
+        w.scale.set(1, 1, 0.6);
+        w.position.set(0.15 * s, 9.08, z);
+        x.fig.add(w);
+      });
+      const k = x.sphere(0.065, x.M("#A82A32", { r: 0.55 }), 12, 10);
+      k.position.set(0, 9.08, z + 0.03);
+      x.fig.add(k);
+    },
+    scarf: (x) => {
+      const cv = kept("scarf", () => {
+        const cv = document.createElement("canvas");
+        cv.width = 256;
+        cv.height = 32;
+        const g = cv.getContext("2d");
+        g.fillStyle = "#E08A2E";
+        g.fillRect(0, 0, 256, 32);
+        g.fillStyle = "#B8691C";
+        for (let i = 0; i < 8; i++) g.fillRect(i * 32, 0, 12, 32);
+        return cv;
+      });
+      const sm = x.M("#ffffff", { map: x.tex(cv), r: 0.9 });
+      const r = new T.Mesh(new T.TorusGeometry(0.42, 0.15, 14, 36), sm);
+      r.rotation.x = PI / 2 - 0.12;
+      r.position.set(0, 9.24, 0.02);
+      r.scale.set(1, 0.85, 1);
+      x.fig.add(r);
+      const o = x.outer || 0.05,
+        tail = new T.Mesh(new T.BoxGeometry(0.3, 1.0, 0.09), x.M("#E08A2E", { r: 0.9 }));
+      tail.position.set(0.28, 8.62, x.frontZ(0.28, 8.62, o) + 0.08);
+      tail.rotation.z = 0.08;
+      x.fig.add(tail);
+      for (let i = 0; i < 5; i++) {
+        const f = new T.Mesh(new T.CylinderGeometry(0.015, 0.015, 0.12, 5), x.M("#F7D9A8"));
+        f.position.set(0.18 + i * 0.05 + 0.04, 8.06, tail.position.z);
+        x.fig.add(f);
+      }
+    },
+    medal: (x) => {
+      const o = x.outer || 0.05,
+        z = (xx, y) => x.frontZ(xx, y, o) + 0.03;
+      [[-1, "#3B6FD8"], [1, "#D9534F"]].forEach(([s, c]) => {
+        const a = x.V3(0.3 * s, 9.18, 0.15),
+          b = x.V3(0.04 * s, 8.02, z(0, 8.02));
+        x.fig.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([a, x.V3(0.24 * s, 8.75, z(0.24 * s, 8.75)), b]), 16, 0.045, 4), x.M(c, { r: 0.7 })));
+      });
+      const md = new T.Mesh(new T.CylinderGeometry(0.22, 0.22, 0.06, 32), x.M("#F2B705", { r: 0.3, m: 0.5 }));
+      md.rotation.x = PI / 2;
+      md.position.set(0, 7.8, z(0, 7.8) + 0.04);
+      x.fig.add(md);
+      const st = new T.Shape();
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * 2 * PI + PI / 2,
+          r = i % 2 ? 0.055 : 0.13;
+        i ? st.lineTo(Math.cos(a) * r, Math.sin(a) * r) : st.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      const star = new T.Mesh(new T.ShapeGeometry(st), x.M("#FFF3C4", { r: 0.4 }));
+      star.position.set(0, 7.8, md.position.z + 0.035);
+      x.fig.add(star);
+    },
+  };
+
+  // ---- in the right hand: book, reflex hammer, skull, scalpel (in the hand's own space: down -y, thumb +z) ----
+  const AV3_HANDS = {
+    book: (x, h) => {
+      const g = new T.Group();
+      const cover = new T.Mesh(new T.BoxGeometry(0.16, 0.8, 0.6), x.M("#C8323C", { r: 0.6 }));
+      g.add(cover);
+      const pages = new T.Mesh(new T.BoxGeometry(0.12, 0.74, 0.58), x.M("#F4F1EA", { r: 0.9 }));
+      pages.position.set(0, 0, 0.025);
+      g.add(pages);
+      const spine = new T.Mesh(new T.BoxGeometry(0.17, 0.8, 0.04), x.M("#8E2028", { r: 0.6 }));
+      spine.position.z = -0.3;
+      g.add(spine);
+      g.position.set(0.17, -0.52, 0.12);
+      h.add(g);
+    },
+    hammer: (x, h) => {
+      const sm = x.M("#AEB6C2", { r: 0.25, m: 0.6 }),
+        a = x.V3(0, -0.3, 0.1),
+        b = x.V3(0, -0.95, 0.62);
+      h.add(x.limb(a, b, [[0, 0.03], [1, 0.03]], sm, 10));
+      const head = new T.Mesh(new T.CylinderGeometry(0.13, 0.13, 0.24, 3), x.M("#D9534F", { r: 0.6 }));
+      head.position.copy(b);
+      head.rotation.z = PI / 2;
+      h.add(head);
+    },
+    skull: (x, h) => {
+      const bone = x.M("#F4EEDC", { r: 0.7 }),
+        dark = x.M("#3A3226", { r: 0.8 }),
+        g = new T.Group();
+      const cr = x.sphere(0.25, bone, 24, 18);
+      cr.scale.multiply(x.V3(0.95, 0.92, 1.05));
+      g.add(cr);
+      const jaw = x.sphere(0.16, bone, 16, 12);
+      jaw.scale.multiply(x.V3(1, 0.7, 0.9));
+      jaw.position.set(0, -0.2, 0.07);
+      g.add(jaw);
+      [-1, 1].forEach((s) => {
+        const e = x.sphere(0.065, dark, 12, 10);
+        e.position.set(0.09 * s, -0.02, 0.21);
+        g.add(e);
+      });
+      const n = x.sphere(0.03, dark, 8, 6);
+      n.position.set(0, -0.11, 0.24);
+      g.add(n);
+      g.position.set(0, -0.62, 0.36);
+      g.rotation.y = 0.3;
+      h.add(g);
+    },
+    scalpel: (x, h) => {
+      const sm = x.M("#AEB6C2", { r: 0.25, m: 0.65 }),
+        a = x.V3(0, -0.32, 0.18),
+        b = x.V3(0, -0.82, 0.52);
+      h.add(x.limb(a, b, [[0, 0.03], [1, 0.03]], sm, 8));
+      const bl = new T.Shape();
+      bl.moveTo(0, 0);
+      bl.lineTo(0.05, 0.02);
+      bl.quadraticCurveTo(0.06, 0.17, 0, 0.24);
+      bl.lineTo(-0.02, 0.02);
+      bl.lineTo(0, 0);
+      const blade = new T.Mesh(new T.ShapeGeometry(bl), x.M("#E9EDF2", { r: 0.15, m: 0.8, side: T.DoubleSide }));
+      blade.position.copy(b);
+      blade.rotation.set(-0.6, PI / 2, PI);
+      h.add(blade);
+    },
+  };
+
+  // ---- the scene: lights, a soft shadow under the feet ----
+  function shadowTex() {
+    return tex(kept("shadow", shadowCanvas));
+  }
+  function shadowCanvas() {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 128;
+    const c = cv.getContext("2d"),
+      g = c.createRadialGradient(64, 64, 0, 64, 64, 64);
+    g.addColorStop(0, "rgba(30,40,54,0.38)");
+    g.addColorStop(1, "rgba(30,40,54,0)");
+    c.fillStyle = g;
+    c.fillRect(0, 0, 128, 128);
+    return cv;
+  }
+  function scene(look, opt) {
+    const sc = new T.Scene(),
+      fig = build(look, opt);
+    sc.add(new T.HemisphereLight(0xffffff, 0x8f8478, 0.7));
+    const key = new T.DirectionalLight(0xffffff, 0.75);
+    key.position.set(-3.5, 7, 8);
+    sc.add(key);
+    const fill = new T.DirectionalLight(0xffffff, 0.28);
+    fill.position.set(6, 3, 5);
+    sc.add(fill);
+    const rim = new T.DirectionalLight(0xffffff, 0.35);
+    rim.position.set(1, 6, -7);
+    sc.add(rim);
+    const sh = new T.Mesh(gk("shadow", () => new T.PlaneGeometry(3.6, 1.6)), new T.MeshBasicMaterial({ map: shadowTex(), transparent: !0, depthWrite: !1 }));
+    sh.rotation.x = -PI / 2;
+    sh.position.y = 0.005;
+    sc.add(sh);
+    sc.add(fig);
+    return { scene: sc, fig };
+  }
+  // the camera on a part of the figure: [centre x, centre y, half height]
+  const VIEWS = { full: [0, 6.28, 6.55], bust: [0, 10.32, 1.86], top: [0, 7.55, 2.1], chest: [0, 9.05, 1.85], legs: [0, 3.2, 3.05], feet: [0, 0.55, 0.85], hand: [-1.9, 5.0, 1.1] };
+  function frame(cam, view, aspect, fig) {
+    let [cx, cy, hh] = VIEWS[view] || VIEWS.full;
+    // the right hand: where it is after the figure's turn
+    if (view === "hand" && fig && fig.userData.handR) {
+      const p = new T.Vector3();
+      fig.updateMatrixWorld(!0);
+      fig.userData.handR.getWorldPosition(p);
+      cx = p.x;
+      cy = p.y - 0.62;
+      hh = 1.0;
+    }
+    const d = hh / Math.tan((cam.fov * PI) / 360);
+    cam.aspect = aspect;
+    cam.position.set(cx, cy + d * 0.04, d);
+    cam.lookAt(cx, cy, 0);
+    cam.updateProjectionMatrix();
+  }
+  function dispose(o) {
+    o.traverse((m) => {
+      m.geometry && !m.geometry.__keep && m.geometry.dispose();
+      if (m.material) {
+        m.material.map && !m.material.map.__keep && m.material.map.dispose();
+        m.material.dispose();
+      }
+    });
+  }
+  return { build, scene, frame, dispose, VIEWS };
+})();
+
+// ---- 3D pictures of the avatar: one renderer off screen draws them one after the other, kept by look and size;
+// the small ones of the last looks are kept on the device for the next start ----
+const av3 = { ok: null, r: null, pics: new Map(), queue: [], busy: !1 },
+  AV3_STORE = "ana:av3pics",
+  av3Usable = () => {
+    if (av3.ok != null) return av3.ok;
+    try {
+      const cv = document.createElement("canvas");
+      av3.ok = !!(AV3D && (cv.getContext("webgl") || cv.getContext("experimental-webgl")));
+    } catch {
+      av3.ok = !1;
+    }
+    if (av3.ok)
+      try {
+        const o = JSON.parse(localStorage.getItem(AV3_STORE) || "{}");
+        Object.keys(o).forEach((k) => typeof o[k] === "string" && o[k].startsWith("data:image/png") && av3.pics.set(k, o[k]));
+      } catch {}
+    return av3.ok;
+  },
+  av3Key = (L) => Object.keys(AV_DEFAULT).map((k) => L[k] || "").join(","),
+  AV3_ROT = { full: 0.35, bust: 0.3, hand: 0.5 },
+  av3Draw = (L, view, w, h) => {
+    if (av3.r && av3.r.getContext().isContextLost()) av3.r = null;
+    if (!av3.r) {
+      av3.r = new THREE.WebGLRenderer({ antialias: !0, alpha: !0, preserveDrawingBuffer: !0 });
+      av3.r.outputEncoding = THREE.sRGBEncoding;
+      av3.r.setClearColor(0, 0);
+    }
+    const r = av3.r,
+      { scene, fig } = AV3D.scene(L),
+      cam = new THREE.PerspectiveCamera(16, w / h, 0.1, 200);
+    fig.rotation.y = AV3_ROT[view] != null ? AV3_ROT[view] : 0.3;
+    r.setSize(w, h, !1);
+    AV3D.frame(cam, view, w / h, fig);
+    r.render(scene, cam);
+    const url = r.domElement.toDataURL("image/png");
+    AV3D.dispose(scene);
+    return url;
+  },
+  av3Save = (k, url) => {
+    if (url.length > 60000) return;
+    try {
+      const o = JSON.parse(localStorage.getItem(AV3_STORE) || "{}"),
+        ks = Object.keys(o).filter((x) => x !== k).slice(-5);
+      const n = {};
+      ks.forEach((x) => (n[x] = o[x]));
+      n[k] = url;
+      localStorage.setItem(AV3_STORE, JSON.stringify(n));
+    } catch {}
+  },
+  av3Pump = () => {
+    if (av3.busy) return;
+    av3.busy = !0;
+    setTimeout(() => {
+      av3.busy = !1;
+      let j;
+      while ((j = av3.queue.shift()) && !j.done.length);
+      if (!j) return;
+      let url = null;
+      try {
+        url = av3Draw(j.L, j.view, j.w, j.h);
+      } catch (e) {
+        console.warn("avatar 3D", e);
+      }
+      if (url) {
+        av3.pics.set(j.k, url);
+        j.w * j.h <= 200 * 200 && j.mine && av3Save(j.k, url);
+      }
+      j.done.forEach((f) => f(url));
+      av3.queue.length && av3Pump();
+    }, 0);
+  },
+  // the picture of a look (view, size in device pixels) as soon as it is drawn
+  useAv3Pic = (L, view, w, h, mine) => {
+    const k = `${view}|${w}x${h}|${av3Key(L)}`,
+      [, tick] = useState(0);
+    useEffect(() => {
+      if (!av3Usable() || av3.pics.has(k)) return;
+      let live = !0;
+      const f = () => live && tick((n) => n + 1),
+        same = av3.queue.find((j) => j.k === k);
+      same ? (same.done.push(f), mine && (same.mine = !0)) : av3.queue.push({ k, L, view, w, h, mine, done: [f] });
+      av3Pump();
+      return () => {
+        live = !1;
+        const j = av3.queue.find((x) => x.k === k);
+        j && (j.done = j.done.filter((g) => g !== f));
+      };
+    }, [k]);
+    return av3.pics.get(k) || null;
+  },
+  avDataAv = (L) =>
+    Object.keys(AV_DEFAULT)
+      .filter((k) => L[k] && L[k] !== AV_DEFAULT[k])
+      .map((k) => k + "=" + L[k])
+      .join(" ");
+// the avatar as a picture: 3D, or the 2D drawing where WebGL is missing. view "full" (whole figure), "bust" (head and
+// shoulders), or a crop for the shop's rows; size = height in px
+function AvatarArt(p) {
+  const { look: lk, view = "full", size = 120, title, mine } = p,
+    L = lk || AV_DEFAULT,
+    w = view === "full" ? Math.round(size * 0.46) : size,
+    dpr = Math.min(3, Math.max(1, (typeof window < "u" && window.devicePixelRatio) || 1)),
+    url = useAv3Pic(L, view, Math.round(w * dpr), Math.round(size * dpr), mine);
+  if (!av3Usable()) return React.createElement(AvatarArt2D, p);
+  const t = { "data-av": avDataAv(L), style: { display: "block", width: w, height: size } };
+  return url
+    ? React.createElement("img", { ...t, src: url, width: w, height: size, alt: title || "", "aria-hidden": title ? undefined : "true", draggable: !1 })
+    : React.createElement("span", { ...t, role: title ? "img" : undefined, "aria-label": title || undefined, "aria-hidden": title ? undefined : "true" });
+}
+// the avatar large in 3D, turned by swiping (the shop's avatar tab, a friend's card)
+function Avatar3DView({ look: lk, size = 240, title }) {
+  const L = lk || AV_DEFAULT,
+    k = av3Key(L),
+    w = Math.round(size * 0.5),
+    cv = useRef(null),
+    st = useRef({ rot: 0.35, r: null, scene: null, fig: null, cam: null, drag: null }),
+    draw = () => {
+      const s = st.current;
+      if (!s.r || !s.fig) return;
+      s.fig.rotation.y = s.rot;
+      AV3D.frame(s.cam, "full", w / size, s.fig);
+      s.r.render(s.scene, s.cam);
+    };
+  useEffect(() => {
+    if (!av3Usable() || !cv.current) return;
+    const s = st.current;
+    try {
+      s.r = new THREE.WebGLRenderer({ canvas: cv.current, antialias: !0, alpha: !0 });
+    } catch {
+      return;
+    }
+    s.r.outputEncoding = THREE.sRGBEncoding;
+    s.r.setClearColor(0, 0);
+    s.r.setPixelRatio(Math.min(2.5, window.devicePixelRatio || 1));
+    s.r.setSize(w, size, !1);
+    s.cam = new THREE.PerspectiveCamera(16, w / size, 0.1, 200);
+    return () => {
+      s.scene && AV3D.dispose(s.scene);
+      s.scene = s.fig = null;
+      s.r.dispose();
+      s.r.forceContextLoss && s.r.forceContextLoss();
+      s.r = null;
+    };
+  }, []);
+  useEffect(() => {
+    const s = st.current;
+    if (!s.r) return;
+    s.scene && AV3D.dispose(s.scene);
+    try {
+      const o = AV3D.scene(L);
+      s.scene = o.scene;
+      s.fig = o.fig;
+      draw();
+    } catch (e) {
+      console.warn("avatar 3D", e);
+    }
+  }, [k]);
+  if (!av3Usable()) return React.createElement(AvatarArt2D, { look: L, size, title });
+  const up = () => (st.current.drag = null);
+  return React.createElement("canvas", {
+    ref: cv,
+    width: w,
+    height: size,
+    role: "img",
+    "aria-label": title || undefined,
+    "data-av": avDataAv(L),
+    "data-avatar-3d": "1",
+    onPointerDown: (e) => {
+      st.current.drag = { x: e.clientX, rot: st.current.rot };
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {}
+    },
+    onPointerMove: (e) => {
+      const d = st.current.drag;
+      d && ((st.current.rot = d.rot + (e.clientX - d.x) * 0.012), draw());
+    },
+    onPointerUp: up,
+    onPointerCancel: up,
+    style: { display: "block", width: w, height: size, touchAction: "pan-y", cursor: "grab" },
+  });
+}
 // the avatar's head and shoulders in a circle (home screen, leaderboards); a button when it can be tapped
-function AvatarBadge({ look, size = 36, onClick, label }) {
+function AvatarBadge({ look, size = 36, onClick, label, mine }) {
   const st = {
       display: "inline-flex",
       width: size,
@@ -15126,7 +16723,7 @@ function AvatarBadge({ look, size = 36, onClick, label }) {
       cursor: onClick ? "pointer" : "default",
       verticalAlign: "middle",
     },
-    inner = React.createElement(AvatarArt, { look, view: "bust", size });
+    inner = React.createElement(AvatarArt, { look, view: "bust", size, mine });
   return onClick
     ? React.createElement("button", { type: "button", onClick, "aria-label": label, "data-avatar-badge": "1", style: st }, inner)
     : React.createElement("span", { "aria-hidden": "true", "data-avatar-badge": "1", style: st }, inner);
@@ -15144,7 +16741,7 @@ function AvatarCard({ who, onClose, extra }) {
     e(
       "div",
       { onClick: (v) => v.stopPropagation(), className: "ana-body", style: { background: C.card, color: C.ink, borderRadius: 20, padding: "14px 16px 14px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 12px 40px rgba(0,0,0,0.3)" } },
-      e("div", { style: { display: "flex", justifyContent: "center", background: `linear-gradient(180deg, ${C.blueBg}, ${C.card})`, borderRadius: 16, padding: "12px 0 6px" } }, e(AvatarArt, { look: who.look, size: 300, title: _T("Avatar von {0}", who.name) })),
+      e("div", { style: { display: "flex", justifyContent: "center", background: `linear-gradient(180deg, ${C.blueBg}, ${C.card})`, borderRadius: 16, padding: "12px 0 6px" } }, e(Avatar3DView, { look: who.look, size: 300, title: _T("Avatar von {0}", who.name) })),
       e("div", { className: "ana-display", style: { fontSize: 20, fontWeight: 700, marginTop: 8 } }, who.name, who.me ? e("span", { style: { fontSize: 14, color: C.inkSoft, fontWeight: 600 } }, " \xB7 ", _T("du")) : null),
       e(
         "div",
@@ -15206,7 +16803,7 @@ function AvatarLooks({ progress: s, onLook }) {
     e(
       "div",
       { style: { display: "flex", gap: 12, alignItems: "flex-end" } },
-      e("div", { style: { flex: "0 0 auto", background: `linear-gradient(180deg, ${C.blueBg}, ${C.card})`, borderRadius: 14, padding: "8px 6px 2px" } }, e(AvatarArt, { look: L, size: 236, title: _T("Dein Avatar") })),
+      e("div", { style: { flex: "0 0 auto", background: `linear-gradient(180deg, ${C.blueBg}, ${C.card})`, borderRadius: 14, padding: "8px 6px 2px" } }, e(Avatar3DView, { look: L, size: 236, title: _T("Dein Avatar") }), av3Usable() && e("div", { className: "ana-body", style: { fontSize: 11, color: C.inkSoft, textAlign: "center", margin: "2px 0 2px" } }, _T("Zum Drehen wischen"))),
       e(
         "div",
         { style: { flex: 1, minWidth: 0, paddingBottom: 6 } },
@@ -18720,7 +20317,7 @@ function FriendsScreen({ onExit: r, onAccount: ac, look: myLook }) {
           style: { display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "8px 4px", background: f.me ? C.blueBg : "none", border: "none", borderRadius: 10, cursor: "pointer", color: C.ink },
         },
         React.createElement("span", { className: "ana-display", style: { minWidth: 30, textAlign: "center", fontSize: place <= 3 && v > 0 ? 20 : 15, fontWeight: 700, color: C.inkSoft } }, place <= 3 && v > 0 ? CLOUD_MEDAL[place - 1] : place),
-        React.createElement(AvatarBadge, { look: f.me ? myLook || AV_DEFAULT : avLook(f.look, !0), size: 38 }),
+        React.createElement(AvatarBadge, { look: f.me ? myLook || AV_DEFAULT : avLook(f.look, !0), size: 38, mine: !!f.me }),
         React.createElement(
           "span",
           { style: { flex: 1, minWidth: 0 } },
@@ -19558,7 +21155,7 @@ function HomeScreen({
         React.createElement(
           "div",
           { className: "ana-display", style: { fontSize: 24, fontWeight: 700, color: C.ink, lineHeight: 1.1 } },
-          goAvatar && React.createElement("span", { style: { marginRight: 9, display: "inline-block", verticalAlign: "-10px" } }, React.createElement(AvatarBadge, { look: avLook(s), size: 40, onClick: goAvatar, label: _T("Dein Avatar") })),
+          goAvatar && React.createElement("span", { style: { marginRight: 9, display: "inline-block", verticalAlign: "-10px" } }, React.createElement(AvatarBadge, { look: avLook(s), size: 40, onClick: goAvatar, label: _T("Dein Avatar"), mine: !0 })),
           s.avatar ? React.createElement("span", { style: { marginRight: 6 } }, s.avatar) : null,
           _T("Anatomia"),
           React.createElement("span", { style: { color: C.artery } }, "."),
