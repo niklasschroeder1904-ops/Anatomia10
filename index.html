@@ -15145,6 +15145,7 @@ const AV3D = (() => {
   const mk = (list) => (h, o) => {
     o = o || {};
     const m = new T.MeshStandardMaterial({ color: o.map ? 0xffffff : col(h), roughness: o.r != null ? o.r : 0.62, metalness: o.m || 0 });
+    m.envMapIntensity = o.env != null ? o.env : o.m || (o.r != null && o.r < 0.4) ? 1 : 0.55;
     if (o.map) m.map = o.map;
     if (o.op != null) {
       m.transparent = true;
@@ -15193,12 +15194,12 @@ const AV3D = (() => {
     };
 
   // ---- the head: an egg, wide above, narrow towards the chin; angles th (0 at the top) and ph (0 in front) ----
-  const HC = 10.48,
-    HA = 0.84,
-    HZ = 0.82,
-    HBT = 1.2,
-    HBB = 1.13,
-    headW = (th) => 1 - 0.38 * smooth(1.6, 2.9, th);
+  const HC = 10.37,
+    HA = 0.95,
+    HZ = 0.9,
+    HBT = 1.08,
+    HBB = 1.0,
+    headW = (th) => 1 - 0.24 * smooth(1.8, 3.0, th);
   function headPt(th, ph, s, v) {
     const h = Math.sin(th) * headW(th),
       dy = Math.cos(th) * (th < PI / 2 ? HBT : HBB);
@@ -15235,10 +15236,10 @@ const AV3D = (() => {
 
   // ---- the body: a lathe (round, flattened front to back) ----
   const BODY = [
-      [0.001, 4.92], [0.45, 4.95], [0.75, 5.05], [0.93, 5.25], [1.02, 5.55], [1.04, 5.9], [0.96, 6.3], [0.93, 6.7], [0.97, 7.2],
-      [1.03, 7.7], [1.07, 8.2], [1.1, 8.55], [1.09, 8.78], [1.03, 8.95], [0.9, 9.07], [0.7, 9.16], [0.48, 9.23], [0.32, 9.28], [0.001, 9.33],
+      [0.001, 5.02], [0.45, 5.05], [0.78, 5.16], [0.93, 5.38], [0.99, 5.68], [0.98, 5.95], [0.9, 6.35], [0.86, 6.7], [0.9, 7.2],
+      [0.99, 7.7], [1.07, 8.15], [1.13, 8.5], [1.12, 8.72], [1.05, 8.9], [0.9, 9.04], [0.68, 9.14], [0.46, 9.21], [0.3, 9.26], [0.001, 9.3],
     ],
-    BODY_Z = 0.62,
+    BODY_Z = 0.58,
     bodyCurve = new T.SplineCurve(BODY.map(([r, y]) => new T.Vector2(r, y))),
     bodyPts = bodyCurve.getPoints(160),
     bodyR = (y) => {
@@ -15327,19 +15328,19 @@ const AV3D = (() => {
 
   // ---- the joints of the figure (left side, x > 0; the right side mirrored) ----
   const J = {
-    S: V3(1.2, 8.52, 0),
-    E: V3(1.5, 6.92, -0.1),
-    W: V3(1.62, 5.38, 0.22),
-    H: V3(0.52, 5.3, 0),
-    K: V3(0.5, 2.95, 0.04),
-    A: V3(0.47, 0.62, -0.02),
+    S: V3(1.22, 8.5, 0),
+    E: V3(1.47, 6.86, -0.12),
+    W: V3(1.57, 5.36, 0.2),
+    H: V3(0.5, 5.4, 0),
+    K: V3(0.47, 3.0, 0.05),
+    A: V3(0.45, 0.62, -0.02),
   };
   const mir = (v, s) => V3(v.x * s, v.y, v.z);
   const lerpV = (a, b, t) => new T.Vector3().lerpVectors(a, b, t);
-  const R_UP = [[0, 0.3], [0.3, 0.295], [1, 0.25]],
-    R_FORE = [[0, 0.245], [0.22, 0.258], [1, 0.172]],
-    R_THIGH = [[0, 0.5], [0.4, 0.44], [1, 0.31]],
-    R_SHIN = [[0, 0.31], [0.25, 0.345], [0.7, 0.26], [1, 0.2]];
+  const R_UP = [[0, 0.28], [0.3, 0.275], [1, 0.225]],
+    R_FORE = [[0, 0.225], [0.22, 0.235], [1, 0.155]],
+    R_THIGH = [[0, 0.47], [0.4, 0.41], [1, 0.28]],
+    R_SHIN = [[0, 0.28], [0.25, 0.315], [0.7, 0.235], [1, 0.18]];
 
   // ---- a hand, hanging along -y from the wrist: palm, four fingers side by side and a little bent, the thumb in front ----
   function hand(s, m) {
@@ -15387,18 +15388,26 @@ const AV3D = (() => {
         g.add(me);
         return me;
       };
-    loaf(0.86, [[0, 0.235], [0.55, 0.255], [1, 0.23]], 1, 0.26, 0.07, -0.3, M(o.sole, { r: 0.72 }));
-    loaf(0.8, [[0, 0.215], [0.45, 0.235], [1, 0.205]], 0.96, 0.78, 0.22, -0.27, cm);
-    // the collar round the ankle (the leg goes into it)
-    if (!o.clog) {
-      g.add(tube(V3(0, 0.22, -0.06), V3(0, 0.56, -0.04), [[0, 0.235], [1, 0.225]], cm));
-      g.add(ring(V3(0, 0.56, -0.04), V3(0, 1, -0.04), 0.218, 0.042, M(shade(c, o.dark ? 0.12 : -0.1), { r: 0.6 })));
+    loaf(0.88, [[0, 0.24], [0.55, 0.255], [1, 0.235]], 1.02, 0.4, 0.09, -0.31, M(o.sole, { r: 0.6 }));
+    loaf(0.8, [[0, 0.21], [0.45, 0.228], [1, 0.198]], 0.96, 0.74, 0.25, -0.27, cm);
+    // the collar round the ankle (low), a heel tab and a stripe on each side
+    if (!o.clog && !o.boot) {
+      g.add(tube(V3(0, 0.24, -0.08), V3(0, 0.44, -0.07), [[0, 0.225], [1, 0.215]], cm));
+      g.add(ring(V3(0, 0.44, -0.07), V3(0, 1, -0.07), 0.212, 0.04, M(shade(c, o.dark ? 0.12 : -0.1), { r: 0.6 })));
+      const tab = new T.Mesh(gk("tab", () => new T.BoxGeometry(0.11, 0.16, 0.05)), M(o.stripe || shade(c, -0.15), { r: 0.6 }));
+      tab.position.set(0, 0.45, -0.3);
+      g.add(tab);
+      if (o.stripe)
+        [-1, 1].forEach((k) => {
+          const pts = [V3(0.215 * k, 0.17, -0.14), V3(0.225 * k, 0.28, 0.02), V3(0.205 * k, 0.33, 0.2)];
+          g.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 12, 0.028, 6), M(o.stripe, { r: 0.5 })));
+        });
     }
     if (o.lace)
       [0.14, 0.24, 0.34].forEach((z, i) => {
         const b = new T.Mesh(new T.CylinderGeometry(0.018, 0.018, 0.2, 8), M(o.lace, { r: 0.5 }));
         b.rotation.z = PI / 2;
-        b.position.set(0, 0.49 - i * 0.06, z);
+        b.position.set(0, 0.47 - i * 0.055, z);
         g.add(b);
       });
     if (o.holes)
@@ -15412,7 +15421,7 @@ const AV3D = (() => {
     if (o.boot) {
       g.add(tube(V3(0, 0.3, -0.04), V3(0, 1.62, -0.04), [[0, 0.255], [1, 0.275]], cm));
       g.add(ring(V3(0, 1.62, -0.04), V3(0, 2, -0.04), 0.275, 0.04, M(shade(c, -0.15))));
-    } else if (sock) g.add(tube(V3(0, o.clog ? 0.25 : 0.5, -0.04), V3(0, 0.95, -0.02), [[0, 0.215], [1, 0.205]], M("#F4F5F7", { r: 0.85 })));
+    } else if (sock) g.add(tube(V3(0, o.clog ? 0.25 : 0.4, -0.05), V3(0, 1.0, -0.02), [[0, 0.2], [1, 0.19]], M("#F4F5F7", { r: 0.9 })));
     g.position.set(A.x, 0, A.z);
     g.rotation.y = 0.07 * s;
     return g;
@@ -15454,75 +15463,79 @@ const AV3D = (() => {
       }
       return out;
     };
-    // blush
-    [-1, 1].forEach((s) => {
-      const [a, b] = at(0.47 * s, -0.49),
-        g = c.createRadialGradient(a, b, 0, a, b, 46);
-      g.addColorStop(0, "rgba(243,154,152,0.55)");
-      g.addColorStop(1, "rgba(243,154,152,0)");
+    const glow = (x, y, rx, ry, col, a) => {
+      const [u, v] = at(x, y),
+        g = c.createRadialGradient(u, v, 0, u, v, rx);
+      g.addColorStop(0, col.replace("A", a));
+      g.addColorStop(1, col.replace("A", 0));
       c.fillStyle = g;
       c.beginPath();
-      c.ellipse(a, b, 46, 30, 0, 0, 2 * PI);
+      c.ellipse(u, v, rx, ry, 0, 0, 2 * PI);
       c.fill();
-    });
+    };
+    // soft colour: warm cheeks and nose tip
+    [-1, 1].forEach((s) => glow(0.5 * s, -0.42, 52, 34, "rgba(240,140,140,A)", 0.32));
+    glow(0, -0.36, 26, 20, "rgba(230,130,120,A)", 0.18);
     // stubble: a soft shadow over the jaw and the upper lip
     if (L.beard === "stubble") {
       c.save();
-      c.globalAlpha = 0.3;
+      c.globalAlpha = 0.26;
       c.fillStyle = hc[1];
       path(
         [
-          ...curve([-0.62, -0.43], [-0.6, -1.0], [0, -1.17], 20),
-          ...curve([0, -1.17], [0.6, -1.0], [0.62, -0.43], 20),
-          ...curve([0.62, -0.43], [0.42, -0.69], [0.2, -0.65], 10),
-          ...curve([0.2, -0.65], [0, -0.52], [-0.2, -0.65], 10),
-          ...curve([-0.2, -0.65], [-0.42, -0.69], [-0.62, -0.43], 10),
+          ...curve([-0.66, -0.34], [-0.62, -0.88], [0, -0.97], 20),
+          ...curve([0, -0.97], [0.62, -0.88], [0.66, -0.34], 20),
+          ...curve([0.66, -0.34], [0.42, -0.6], [0.2, -0.56], 10),
+          ...curve([0.2, -0.5], [0, -0.44], [-0.2, -0.5], 10),
+          ...curve([-0.2, -0.56], [-0.42, -0.6], [-0.66, -0.34], 10),
         ],
         true,
       );
       c.fill();
       c.restore();
     }
-    // the mouth: open, smiling, upper teeth and the tongue
-    const mouth = [...curve([-0.19, -0.585], [0, -0.625], [0.19, -0.585], 18), ...curve([0.19, -0.585], [0.17, -0.76], [0, -0.765], 14), ...curve([0, -0.765], [-0.17, -0.76], [-0.19, -0.585], 14)];
+    // the mouth: a soft smile, a little open, upper teeth, the tongue below
+    const mouth = [...curve([-0.2, -0.55], [0, -0.585], [0.2, -0.55], 18), ...curve([0.2, -0.55], [0.15, -0.68], [0, -0.69], 14), ...curve([0, -0.69], [-0.15, -0.68], [-0.2, -0.55], 14)];
     path(mouth, true);
-    c.fillStyle = "#9A3631";
+    c.fillStyle = "#8C3434";
     c.fill();
     c.save();
     c.clip();
-    path([...curve([-0.21, -0.575], [0, -0.615], [0.21, -0.575], 18), ...curve([0.21, -0.63], [0, -0.665], [-0.21, -0.63], 18)], true);
-    c.fillStyle = "#FFFFFF";
+    path([...curve([-0.18, -0.55], [0, -0.58], [0.18, -0.55], 18), ...curve([0.18, -0.6], [0, -0.625], [-0.18, -0.6], 18)], true);
+    c.fillStyle = "#FBFBF8";
     c.fill();
-    const [tx, ty] = at(0, -0.735);
-    c.fillStyle = "#E8767A";
+    const [tx, ty] = at(0, -0.665);
+    c.fillStyle = "#D9686E";
     c.beginPath();
-    c.ellipse(tx, ty, 34, 16, 0, 0, 2 * PI);
+    c.ellipse(tx, ty, 30, 13, 0, 0, 2 * PI);
     c.fill();
     c.restore();
     path(mouth, true);
-    c.strokeStyle = "#7A2622";
-    c.lineWidth = 3;
+    c.strokeStyle = "#7A2B2B";
+    c.lineWidth = 2.2;
     c.stroke();
-    // corners of the mouth
+    // the lower lip: a soft light line under the mouth; the corners
+    path(curve([-0.1, -0.705], [0, -0.725], [0.1, -0.705], 12));
+    c.strokeStyle = "rgba(205,120,110,0.45)";
+    c.lineWidth = 5;
+    c.lineCap = "round";
+    c.stroke();
     [-1, 1].forEach((s) => {
-      path(curve([0.185 * s, -0.585], [0.215 * s, -0.56], [0.225 * s, -0.54], 6));
+      path(curve([0.2 * s, -0.55], [0.225 * s, -0.535], [0.235 * s, -0.515], 6));
       c.strokeStyle = shade(sk.line, 0.1);
-      c.lineWidth = 2.4;
+      c.lineWidth = 2;
       c.stroke();
     });
-    // the brows
+    // the brows: thicker inside, a fine tail outside
     [-1, 1].forEach((s) => {
-      path(curve([0.15 * s, -0.05], [0.29 * s, 0.035], [0.43 * s, -0.03], 16));
-      c.strokeStyle = hc[1];
-      c.lineCap = "round";
-      c.lineWidth = 9;
-      c.stroke();
+      const top = curve([0.12 * s, 0.1], [0.3 * s, 0.185], [0.47 * s, 0.085], 18),
+        bot = curve([0.46 * s, 0.075], [0.3 * s, 0.145], [0.125 * s, 0.05], 18);
+      path([...top, ...bot], true);
+      c.fillStyle = shade(hc[1], 0.04);
+      c.fill();
     });
-    // a soft line under the nose
-    path(curve([-0.06, -0.51], [0, -0.53], [0.06, -0.51], 8));
-    c.strokeStyle = "rgba(150,90,70,0.35)";
-    c.lineWidth = 3;
-    c.stroke();
+    // the nose: two small shadows
+    [-1, 1].forEach((s) => glow(0.045 * s, -0.405, 7, 5, "rgba(120,60,50,A)", 0.35));
     return cv;
   }
 
@@ -15534,10 +15547,10 @@ const AV3D = (() => {
     return e;
   };
   const HAIR_EDGE = {
-    short: edgeTab([[0, 1.37], [0.55, 1.39], [0.95, 1.5], [1.18, 1.74], [1.38, 1.58], [1.75, 1.62], [2.3, 1.95], [PI, 2.05]], 0.07),
-    long: edgeTab([[0, 1.37], [0.55, 1.39], [0.95, 1.5], [1.18, 1.8], [1.4, 1.75], [PI, 1.9]], 0.06),
-    bun: edgeTab([[0, 1.25], [0.6, 1.3], [1.1, 1.55], [1.4, 1.6], [2.3, 1.9], [PI, 2.0]]),
-    curly: edgeTab([[0, 1.36], [0.6, 1.38], [1.05, 1.55], [1.4, 1.62], [2.3, 1.95], [PI, 2.05]]),
+    short: edgeTab([[0, 1.15], [0.55, 1.18], [0.95, 1.42], [1.2, 1.78], [1.4, 1.58], [1.75, 1.62], [2.3, 1.98], [PI, 2.1]]),
+    long: edgeTab([[0, 1.15], [0.55, 1.18], [0.95, 1.42], [1.2, 1.85], [1.4, 1.8], [PI, 1.95]]),
+    bun: edgeTab([[0, 1.12], [0.6, 1.16], [1.1, 1.45], [1.4, 1.58], [2.3, 1.95], [PI, 2.05]]),
+    curly: edgeTab([[0, 1.2], [0.6, 1.22], [1.05, 1.45], [1.4, 1.6], [2.3, 1.98], [PI, 2.1]]),
   };
   function hairTexture(hc) {
     return kept("hair|" + hc[0], () => hairTextureNew(hc));
@@ -15567,11 +15580,37 @@ const AV3D = (() => {
     c.globalAlpha = 1;
     return cv;
   }
+  // a lock: a strip on the head from (th0, ph0) to (th1, ph1), raised in the middle, narrowing to its tip
+  const lockGeo = (th0, ph0, th1, ph1, w, h, s0) =>
+    gk(`lock|${[th0, ph0, th1, ph1, w, h, s0].map((n) => n.toFixed(3)).join(",")}`, () =>
+      new T.ParametricGeometry(
+        (u, v, t) => {
+          const th = th0 + (th1 - th0) * v,
+            ph = ph0 + (ph1 - ph0) * v + (u - 0.5) * w * (1 - 0.82 * v * v),
+            bump = h * Math.sin(PI * u) * (1 - 0.55 * v);
+          return headPt(th, ph, s0 + bump, t);
+        },
+        8,
+        14,
+      ),
+    );
+  const LOCKS = {
+    // the short cut: a fringe swept to the side, a little height on top
+    short: [
+      ...[-0.72, -0.48, -0.24, 0, 0.24, 0.48, 0.72].map((p, i) => [0.62, p * 0.7, 1.3 + (i % 2) * 0.05, p + 0.3, 0.42, 0.07, 1.055]),
+      ...[-0.5, -0.17, 0.17, 0.5].map((p) => [0.3, p * 2.2, 0.8, p * 0.9 + 0.12, 0.5, 0.045, 1.065]),
+    ],
+    long: [
+      ...[-0.6, -0.36, -0.12].map((p) => [0.7, p * 0.4 - 0.2, 1.28, p - 0.05, 0.4, 0.06, 1.05]),
+      ...[0.12, 0.36, 0.6].map((p) => [0.7, p * 0.4 - 0.2, 1.26, p + 0.1, 0.4, 0.06, 1.05]),
+    ],
+    bun: [-0.55, -0.2, 0.2, 0.55].map((p) => [1.15, p, 0.3, p * 0.5 + PI, 0.45, 0.04, 1.04]),
+  };
   function hairMeshes(L, hc, M, hatOn) {
     const out = [],
       kind = L.hair;
     if (kind === "bald") return out;
-    const hm = M("#ffffff", { map: tex(hairTexture(hc)), r: 0.48 });
+    const hm = M("#ffffff", { map: tex(hairTexture(hc)), r: 0.4, env: 1 });
     const edge = HAIR_EDGE[kind] || HAIR_EDGE.short,
       vol = kind === "curly" ? 0.05 : kind === "bun" ? 0.03 : 0.05;
     const cap = new T.Mesh(
@@ -15579,16 +15618,21 @@ const AV3D = (() => {
       hm,
     );
     out.push(cap);
+    const lm = M("#ffffff", { map: hm.map, r: 0.42, side: T.DoubleSide, env: 1 });
+    (LOCKS[kind] || []).forEach(([t0, p0, t1, p1, w, h, s0]) => {
+      if (hatOn && Math.min(t0, t1) < 1.0 && kind !== "long") return;
+      out.push(new T.Mesh(lockGeo(t0, p0, t1, p1, w, h, s0), lm));
+    });
     if (kind === "long") {
       // down the back and the sides to the shoulders
       const back = new T.Mesh(
         new T.ParametricGeometry(
           (u, v, t) => {
-            const ph = PI + (2 * PI - 2.3) * (u - 0.5),
+            const ph = PI + (2 * PI - 1.9) * (u - 0.5),
               th = 1.45,
               top = headPt(th, ph, 1.07),
               a = Math.abs(((ph + PI) % (2 * PI)) - PI),
-              y1 = lerpTab([[1.15, 9.0], [1.6, 8.75], [PI, 8.55]], a),
+              y1 = lerpTab([[0.95, 9.05], [1.4, 8.8], [PI, 8.55]], a),
               y = top.y + (y1 - top.y) * v,
               k = 1.0 + 0.1 * smooth(0, 0.6, v) - 0.06 * smooth(0.85, 1, v);
             return t.set(top.x * k, y, top.z * k - 0.04 * v);
@@ -15646,62 +15690,80 @@ const AV3D = (() => {
       M("#ffffff", { map: headTex, r: 0.55 }),
     );
     fig.add(head);
-    // eyes: white balls with the iris, the pupil and a light
+    // eyes: glossy balls with the iris, the pupil, two lights, a lash line over them
     [-1, 1].forEach((s) => {
-      const [th, ph] = headAng(0.3 * s, HC - 0.23),
-        P = headPt(th, ph, 0.985),
+      const [th, ph] = headAng(0.315 * s, HC - 0.17),
+        P = headPt(th, ph, 0.982),
         n = headPt(th, ph, 1.5).sub(P).normalize(),
         g = new T.Group();
       g.position.copy(P);
-      g.lookAt(P.clone().add(n.clone().add(V3(0, 0, 0.6)).normalize()));
-      const w = sphere(1, M("#FFFFFF", { r: 0.25 }), 28, 20);
-      w.scale.set(0.165, 0.175, 0.085);
+      g.lookAt(P.clone().add(n.clone().add(V3(0, 0, 0.7)).normalize()));
+      const w = sphere(1, M("#FFFFFF", { r: 0.12 }), 28, 20);
+      w.scale.set(0.168, 0.182, 0.09);
       g.add(w);
-      const ir = sphere(1, M(eye[1], { r: 0.3 }), 24, 16);
-      ir.scale.set(0.11, 0.115, 0.02);
-      ir.position.z = 0.072;
+      const ir = sphere(1, M(eye[1], { r: 0.18 }), 24, 16);
+      ir.scale.set(0.125, 0.13, 0.02);
+      ir.position.z = 0.075;
       g.add(ir);
-      const ir2 = sphere(1, M(eye[0], { r: 0.3 }), 24, 16);
-      ir2.scale.set(0.075, 0.08, 0.02);
-      ir2.position.set(0, -0.012, 0.078);
+      const ir2 = sphere(1, M(eye[0], { r: 0.18 }), 24, 16);
+      ir2.scale.set(0.092, 0.097, 0.02);
+      ir2.position.set(0, -0.012, 0.082);
       g.add(ir2);
-      const pu = sphere(1, M("#1E2836", { r: 0.2 }), 20, 14);
-      pu.scale.set(0.05, 0.053, 0.02);
-      pu.position.z = 0.084;
+      const pu = sphere(1, M("#141A24", { r: 0.15 }), 20, 14);
+      pu.scale.set(0.052, 0.056, 0.02);
+      pu.position.z = 0.089;
       g.add(pu);
-      const hl = sphere(1, new T.MeshBasicMaterial({ color: 0xffffff }), 12, 8);
-      mats.push(hl.material);
-      hl.scale.set(0.026, 0.026, 0.01);
-      hl.position.set(-0.035, 0.04, 0.094);
-      g.add(hl);
-      // the lid's line over the eye
-      const lid = new T.Mesh(new T.TorusGeometry(0.16, 0.012, 6, 24, PI * 0.8), M("#6E4C3C"));
-      lid.rotation.z = PI * 0.1;
-      lid.scale.set(1, 1.05, 1);
-      lid.position.z = 0.02;
+      [
+        [0.034, -0.042, 0.05],
+        [0.016, 0.036, -0.036],
+      ].forEach(([r, x, y]) => {
+        const hl = sphere(1, new T.MeshBasicMaterial({ color: 0xffffff }), 12, 8);
+        mats.push(hl.material);
+        hl.scale.set(r, r, 0.01);
+        hl.position.set(x, y, 0.1);
+        g.add(hl);
+      });
+      // the upper lid (skin) over the top of the eye, the lash line along its edge, a little wing outside
+      const lid = new T.Mesh(gk("lid", () => new T.SphereGeometry(1, 28, 10, 0, 2 * PI, 0, PI * 0.24)), skin);
+      lid.scale.set(0.176, 0.192, 0.098);
+      lid.rotation.x = 0.1;
       g.add(lid);
+      const lash = new T.Mesh(gk("lash", () => new T.TorusGeometry(1, 0.1, 8, 32, PI * 0.86)), M("#2A1E1A", { r: 0.5 }));
+      lash.scale.set(0.16, 0.168, 0.16);
+      lash.rotation.set(-0.05, 0, PI * 0.07);
+      lash.position.set(0, 0.02, 0.05);
+      g.add(lash);
+      const wing = sphere(1, lash.material, 10, 8);
+      wing.scale.set(0.05, 0.018, 0.02);
+      wing.position.set(0.175 * s, 0.055, 0.03);
+      wing.rotation.z = 0.5 * s;
+      g.add(wing);
+      const low = new T.Mesh(new T.TorusGeometry(0.19, 0.007, 6, 24, PI * 0.6), M(shade(sk.line, 0.15), { r: 0.6 }));
+      low.rotation.z = PI + PI * 0.2;
+      low.position.z = 0.02;
+      g.add(low);
       fig.add(g);
     });
     // nose: a small soft bump
     {
-      const [th, ph] = headAng(0, HC - 0.45),
+      const [th, ph] = headAng(0, HC - 0.36),
         nose = sphere(1, skin, 20, 14);
-      nose.scale.set(0.075, 0.07, 0.07);
+      nose.scale.set(0.062, 0.058, 0.062);
       nose.position.copy(headPt(th, ph, 0.995));
       fig.add(nose);
     }
     // ears: small, close to the head
     [-1, 1].forEach((s) => {
-      const [th] = headAng(0, HC - 0.29),
+      const [th] = headAng(0, HC - 0.22),
         P = headPt(th, (PI / 2) * s, 1.0),
         e = sphere(1, M(sk.ear, { r: 0.6 }), 20, 14);
-      e.scale.set(0.055, 0.165, 0.115);
+      e.scale.set(0.05, 0.15, 0.1);
       e.position.set(P.x + 0.012 * s, P.y, P.z - 0.06);
       e.rotation.y = -0.35 * s;
       fig.add(e);
     });
     // neck
-    const neck = new T.Mesh(new T.CylinderGeometry(0.27, 0.3, 1.0, 28, 1, true), skin);
+    const neck = new T.Mesh(gk("neck", () => new T.CylinderGeometry(0.245, 0.275, 1.0, 28, 1, true)), skin);
     neck.position.set(0, 9.55, -0.02);
     fig.add(neck);
 
@@ -15722,14 +15784,15 @@ const AV3D = (() => {
         Wr = mir(J.W, s);
       if (cov.arm < 1) {
         fig.add(limb(lerpV(S, E, cov.arm * 0.85), E, R_UP, limbM));
-        fig.add(sphere(0.25, limbM, 20, 14).translateX(E.x).translateY(E.y).translateZ(E.z));
+        fig.add(sphere(0.225, limbM, 20, 14).translateX(E.x).translateY(E.y).translateZ(E.z));
         fig.add(limb(E, Wr, R_FORE, limbM));
-      } else fig.add(limb(lerpV(E, Wr, 0.82), Wr, [[0, 0.19], [1, 0.172]], limbM));
+      } else fig.add(limb(lerpV(E, Wr, 0.82), Wr, [[0, 0.17], [1, 0.155]], limbM));
       const h = hand(s, limbM),
         d = new T.Vector3().subVectors(Wr, E).normalize();
       h.position.copy(Wr);
       h.quaternion.setFromUnitVectors(UP, d.clone().negate());
       h.rotateY(-0.75 * s);
+      h.scale.setScalar(0.92);
       fig.add(h);
       (ctx.hands = ctx.hands || {})[s] = h;
     });
@@ -15740,7 +15803,7 @@ const AV3D = (() => {
         A = mir(J.A, s);
       if (cov.leg < 2) {
         if (cov.leg < 1) fig.add(limb(lerpV(H, K, Math.max(0, cov.leg - 0.12)), K, R_THIGH, limbM));
-        fig.add(sphere(0.3, limbM, 20, 14).translateX(K.x).translateY(K.y).translateZ(K.z));
+        fig.add(sphere(0.275, limbM, 20, 14).translateX(K.x).translateY(K.y).translateZ(K.z));
         fig.add(limb(K, A, R_SHIN, limbM));
       }
       fig.add(shoe(A, s, SHO, M, cov.leg < 2));
@@ -15754,7 +15817,7 @@ const AV3D = (() => {
       if (L.beard === "full") {
         const top = (ph) => {
           const a = Math.abs(ph);
-          return headAng(0, HC - lerpTab([[0, 0.8], [0.35, 0.74], [0.75, 0.45], [1.25, 0.2], [1.6, 0.0]], a))[0];
+          return headAng(0, HC - lerpTab([[0, 0.72], [0.35, 0.68], [0.75, 0.42], [1.25, 0.18], [1.6, 0.0]], a))[0];
         };
         const bg = new T.ParametricGeometry(
           (u, v, t) => {
@@ -15771,7 +15834,7 @@ const AV3D = (() => {
       }
       if (L.face !== "mask")
       [-1, 1].forEach((s) => {
-        const [th, ph] = headAng(0.11 * s, HC - 0.555),
+        const [th, ph] = headAng(0.1 * s, HC - 0.525),
           mo = sphere(1, hm, 16, 10);
         mo.scale.set(0.13, 0.045, 0.05);
         mo.position.copy(headPt(th, ph, 1.02));
@@ -15907,19 +15970,19 @@ const AV3D = (() => {
       const S = mir(J.S, s),
         E = mir(J.E, s),
         Wr = mir(J.W, s);
-      const sh = x.sphere(0.32, sl, 24, 16);
+      const sh = x.sphere(0.3, sl, 24, 16);
       sh.position.set(S.x + 0.02 * s, S.y, S.z);
       fig.add(sh);
       if (o.long) {
-        fig.add(x.tube(S, E, [[0, 0.32], [1, 0.285]], sl));
-        fig.add(x.sphere(0.285, sl, 20, 14).translateX(E.x).translateY(E.y).translateZ(E.z));
+        fig.add(x.tube(S, E, [[0, 0.3], [1, 0.262]], sl));
+        fig.add(x.sphere(0.262, sl, 20, 14).translateX(E.x).translateY(E.y).translateZ(E.z));
         const cuff = x.lerpV(E, Wr, 0.88);
-        fig.add(x.tube(E, cuff, [[0, 0.285], [0.3, 0.295], [1, 0.22]], sl));
-        fig.add(x.ring(cuff, Wr, 0.212, 0.045, cuffM));
+        fig.add(x.tube(E, cuff, [[0, 0.262], [0.3, 0.268], [1, 0.2]], sl));
+        fig.add(x.ring(cuff, Wr, 0.193, 0.042, cuffM));
       } else {
         const end = x.lerpV(S, E, 0.48);
-        fig.add(x.tube(S, end, [[0, 0.32], [1, 0.318]], sl));
-        fig.add(x.ring(end, E, 0.315, 0.035, cuffM));
+        fig.add(x.tube(S, end, [[0, 0.3], [1, 0.292]], sl));
+        fig.add(x.ring(end, E, 0.29, 0.032, cuffM));
       }
     });
     o.extra && o.extra(x, m);
@@ -15945,7 +16008,7 @@ const AV3D = (() => {
     const { T, M, fig, bodyR, BODY_Z } = x,
       wm = M("#FFFFFF", { r: 0.68, side: T.DoubleSide }),
       gap = (y) => lerpTab([[3.9, 0.07], [7.3, 0.07], [8.2, 0.2], [9.15, 0.58]], y),
-      rad = (y) => Math.max(bodyR(y) + 0.075 + 0.04 * smooth(8.9, 9.15, y) * 0, y < 5.7 ? 1.12 + 0.07 * smooth(5.6, 3.9, y) : 0) + 0.0;
+      rad = (y) => Math.max(bodyR(y) + 0.075 + 0.04 * smooth(8.9, 9.15, y) * 0, y < 5.8 ? 1.04 + 0.08 * smooth(5.7, 3.9, y) : 0) + 0.0;
     const g = new T.ParametricGeometry(
       (u, v, t) => {
         const y = 9.15 - v * (9.15 - 3.9),
@@ -16007,7 +16070,7 @@ const AV3D = (() => {
     const { T, M, fig, J, mir, bodyGeo, BODY_Z } = x,
       m = M(c, { r: 0.78 });
     x.cov.leg = o.short ? 0.55 : 2;
-    const hips = new T.Mesh(bodyGeo(4.92, 6.32, 0.014), m);
+    const hips = new T.Mesh(bodyGeo(5.02, 6.4, 0.014), m);
     hips.scale.z = BODY_Z;
     fig.add(hips);
     [-1, 1].forEach((s) => {
@@ -16015,15 +16078,21 @@ const AV3D = (() => {
         K = mir(J.K, s),
         A = mir(J.A, s),
         H2 = x.V3(H.x * 0.88, H.y + 0.45, H.z),
-        end = o.short ? x.lerpV(H, K, 0.55) : x.V3(A.x, o.cuff ? 0.72 : 0.6, A.z + 0.02);
+        end = o.short ? x.lerpV(H, K, 0.55) : x.V3(A.x, o.cuff ? 0.7 : o.roll ? 0.86 : 0.6, A.z + 0.02);
       if (o.short) {
-        fig.add(x.tube(H2, end, [[0, 0.5], [0.25, 0.545], [1, 0.47]], m));
-        fig.add(x.ring(end, K, 0.465, 0.035, M(x.shade(c, -0.08), { r: 0.78 })));
+        fig.add(x.tube(H2, end, [[0, 0.47], [0.25, 0.51], [1, 0.45]], m));
+        fig.add(x.ring(end, K, 0.445, 0.035, M(x.shade(c, -0.08), { r: 0.8 })));
       } else {
-        fig.add(x.tube(H2, K, [[0, 0.5], [0.2, 0.545], [0.5, 0.48], [1, 0.36]], m));
-        fig.add(x.sphere(0.36, m, 20, 14).translateX(K.x).translateY(K.y).translateZ(K.z));
-        fig.add(x.tube(K, end, o.cuff ? [[0, 0.36], [0.3, 0.37], [0.9, 0.29], [1, 0.25]] : [[0, 0.36], [0.3, 0.37], [1, 0.31]], m));
-        fig.add(x.ring(end, K, o.cuff ? 0.245 : 0.305, o.cuff ? 0.07 : 0.03, M(x.shade(c, -0.08), { r: 0.78 })));
+        fig.add(x.tube(H2, K, [[0, 0.47], [0.2, 0.51], [0.5, 0.44], [1, 0.33]], m));
+        fig.add(x.sphere(0.33, m, 20, 14).translateX(K.x).translateY(K.y).translateZ(K.z));
+        fig.add(x.tube(K, end, o.cuff ? [[0, 0.33], [0.3, 0.335], [0.9, 0.255], [1, 0.22]] : [[0, 0.33], [0.3, 0.335], [1, 0.275]], m));
+        if (o.roll) {
+          // the rolled cuff: wider, the lighter inside of the cloth
+          const rm = M(o.roll, { r: 0.85 });
+          fig.add(x.tube(x.V3(end.x, end.y - 0.02, end.z), x.V3(end.x, end.y + 0.16, end.z), [[0, 0.295], [1, 0.3]], rm));
+          fig.add(x.ring(x.V3(end.x, end.y + 0.16, end.z), K, 0.297, 0.022, rm));
+          fig.add(x.ring(x.V3(end.x, end.y - 0.02, end.z), K, 0.292, 0.022, rm));
+        } else fig.add(x.ring(end, K, o.cuff ? 0.22 : 0.272, o.cuff ? 0.065 : 0.03, M(x.shade(c, -0.08), { r: 0.8 })));
       }
     });
     if (o.cord)
@@ -16063,9 +16132,9 @@ const AV3D = (() => {
     fig.add(band);
   };
   const AV3_BOTTOMS = {
-    jeans: avPants3("#3E6FA8"),
+    jeans: avPants3("#3E6FA8", { roll: "#7FA6D3" }),
     "pants-black": avPants3("#2F3540"),
-    "pants-beige": avPants3("#C9B48E"),
+    "pants-beige": avPants3("#C9B48E", { roll: "#DDCDAE" }),
     joggers: avPants3("#8D96A3", { cuff: !0, cord: !0 }),
     shorts: avPants3("#5B7FA6", { short: !0 }),
     "scrubs-green": avPants3("#4FAE8E", { cord: !0 }),
@@ -16074,9 +16143,9 @@ const AV3D = (() => {
     skirt,
   };
   const AV3_SHOES = {
-    sneaker: { c: "#F4F5F7", sole: "#C9CED6", lace: "#B9C1CC", dark: 0 },
-    "sneaker-red": { c: "#D9534F", sole: "#F4F5F7", lace: "#FFFFFF" },
-    "sneaker-black": { c: "#2F3540", sole: "#F4F5F7", lace: "#C9CED6", dark: 1 },
+    sneaker: { c: "#F7F8FA", sole: "#FFFFFF", lace: "#D5DBE3", stripe: "#8FA8C4", dark: 0 },
+    "sneaker-red": { c: "#D9534F", sole: "#FFFFFF", lace: "#FFFFFF", stripe: "#FFFFFF" },
+    "sneaker-black": { c: "#2F3540", sole: "#FFFFFF", lace: "#C9CED6", stripe: "#FFFFFF", dark: 1 },
     clogs: { c: "#4FAE8E", sole: "#2F7F63", holes: !0, clog: !0 },
     boots: { c: "#7A4E2E", sole: "#3E2716", boot: !0 },
   };
@@ -16237,7 +16306,7 @@ const AV3D = (() => {
       lm = x.M(lens, { r: 0.1, op, dw: op > 0.8 });
     const inner = [],
       eyeP = (s) => {
-        const [th, ph] = headAng(0.3 * s, HC - 0.23);
+        const [th, ph] = headAng(0.315 * s, HC - 0.17);
         return headPt(th, ph, 1.0);
       };
     [-1, 1].forEach((s) => {
@@ -16280,8 +16349,8 @@ const AV3D = (() => {
         [36, 64, 92].forEach((y) => g.fillRect(0, y, 256, 5));
         return cv;
       });
-      const [t0] = headAng(0, HC - 0.36),
-        [t1] = headAng(0, HC - 1.06);
+      const [t0] = headAng(0, HC - 0.3),
+        [t1] = headAng(0, HC - 0.93);
       const m = new T.Mesh(
         new T.ParametricGeometry(
           (u, v, t) => {
@@ -16473,17 +16542,67 @@ const AV3D = (() => {
     c.fillRect(0, 0, 128, 128);
     return cv;
   }
-  function scene(look, opt) {
+  // a soft photo studio as the light around the figure (reflections in hair, eyes, metal): made once per renderer
+  const ENVS = [];
+  function envFor(r) {
+    const have = ENVS.find((e) => e[0] === r);
+    if (have) return have[1];
+    let tx = null;
+    try {
+      const pm = new T.PMREMGenerator(r),
+        st = new T.Scene(),
+        cv = document.createElement("canvas");
+      cv.width = 16;
+      cv.height = 256;
+      const g = cv.getContext("2d"),
+        gr = g.createLinearGradient(0, 0, 0, 256);
+      gr.addColorStop(0, "#ffffff");
+      gr.addColorStop(0.45, "#eef1f5");
+      gr.addColorStop(0.6, "#c9cfd8");
+      gr.addColorStop(1, "#7d8590");
+      g.fillStyle = gr;
+      g.fillRect(0, 0, 16, 256);
+      const sky = new T.CanvasTexture(cv);
+      sky.encoding = T.sRGBEncoding;
+      st.add(new T.Mesh(new T.SphereGeometry(30, 32, 16), new T.MeshBasicMaterial({ map: sky, side: T.BackSide })));
+      [
+        [-12, 12, 16, 14, 14, 1.0],
+        [16, 6, 10, 8, 12, 0.55],
+        [2, 14, -16, 16, 8, 0.8],
+      ].forEach(([x, y, z, w, h, k]) => {
+        const pl = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ color: new T.Color(k, k, k), side: T.DoubleSide }));
+        pl.position.set(x, y, z);
+        pl.lookAt(0, 6, 0);
+        st.add(pl);
+      });
+      tx = pm.fromScene(st, 0.035).texture;
+      pm.dispose();
+      sky.dispose();
+    } catch (e) {}
+    ENVS.push([r, tx]);
+    ENVS.length > 4 && ENVS.shift();
+    return tx;
+  }
+  // how a renderer draws the figure: filmic colours
+  function setup(r) {
+    r.outputEncoding = T.sRGBEncoding;
+    r.toneMapping = T.ACESFilmicToneMapping;
+    r.toneMappingExposure = 0.88;
+    r.setClearColor(0, 0);
+  }
+  function scene(look, r) {
     const sc = new T.Scene(),
-      fig = build(look, opt);
-    sc.add(new T.HemisphereLight(0xffffff, 0x8f8478, 0.7));
-    const key = new T.DirectionalLight(0xffffff, 0.75);
+      fig = build(look);
+    const env = r ? envFor(r) : null;
+    env && (sc.environment = env);
+    sc.add(new T.HemisphereLight(0xffffff, 0x8f8478, env ? 0.25 : 0.7));
+    const key = new T.DirectionalLight(0xfff6ee, env ? 0.85 : 0.75);
     key.position.set(-3.5, 7, 8);
     sc.add(key);
-    const fill = new T.DirectionalLight(0xffffff, 0.28);
+    const fill = new T.DirectionalLight(0xeef4ff, env ? 0.2 : 0.28);
     fill.position.set(6, 3, 5);
     sc.add(fill);
-    const rim = new T.DirectionalLight(0xffffff, 0.35);
+    const rim = new T.DirectionalLight(0xffffff, env ? 0.55 : 0.35);
     rim.position.set(1, 6, -7);
     sc.add(rim);
     const sh = new T.Mesh(gk("shadow", () => new T.PlaneGeometry(3.6, 1.6)), new T.MeshBasicMaterial({ map: shadowTex(), transparent: !0, depthWrite: !1 }));
@@ -16521,13 +16640,13 @@ const AV3D = (() => {
       }
     });
   }
-  return { build, scene, frame, dispose, VIEWS };
+  return { build, scene, frame, dispose, setup, VIEWS };
 })();
 
 // ---- 3D pictures of the avatar: one renderer off screen draws them one after the other, kept by look and size;
 // the small ones of the last looks are kept on the device for the next start ----
 const av3 = { ok: null, r: null, pics: new Map(), queue: [], busy: !1 },
-  AV3_STORE = "ana:av3pics",
+  AV3_STORE = "ana:av3pics:2",
   av3Usable = () => {
     if (av3.ok != null) return av3.ok;
     try {
@@ -16538,6 +16657,7 @@ const av3 = { ok: null, r: null, pics: new Map(), queue: [], busy: !1 },
     }
     if (av3.ok)
       try {
+        localStorage.removeItem("ana:av3pics");
         const o = JSON.parse(localStorage.getItem(AV3_STORE) || "{}");
         Object.keys(o).forEach((k) => typeof o[k] === "string" && o[k].startsWith("data:image/png") && av3.pics.set(k, o[k]));
       } catch {}
@@ -16549,11 +16669,10 @@ const av3 = { ok: null, r: null, pics: new Map(), queue: [], busy: !1 },
     if (av3.r && av3.r.getContext().isContextLost()) av3.r = null;
     if (!av3.r) {
       av3.r = new THREE.WebGLRenderer({ antialias: !0, alpha: !0, preserveDrawingBuffer: !0 });
-      av3.r.outputEncoding = THREE.sRGBEncoding;
-      av3.r.setClearColor(0, 0);
+      AV3D.setup(av3.r);
     }
     const r = av3.r,
-      { scene, fig } = AV3D.scene(L),
+      { scene, fig } = AV3D.scene(L, r),
       cam = new THREE.PerspectiveCamera(16, w / h, 0.1, 200);
     fig.rotation.y = AV3_ROT[view] != null ? AV3_ROT[view] : 0.3;
     r.setSize(w, h, !1);
@@ -16656,8 +16775,7 @@ function Avatar3DView({ look: lk, size = 240, title }) {
     } catch {
       return;
     }
-    s.r.outputEncoding = THREE.sRGBEncoding;
-    s.r.setClearColor(0, 0);
+    AV3D.setup(s.r);
     s.r.setPixelRatio(Math.min(2.5, window.devicePixelRatio || 1));
     s.r.setSize(w, size, !1);
     s.cam = new THREE.PerspectiveCamera(16, w / size, 0.1, 200);
@@ -16674,7 +16792,7 @@ function Avatar3DView({ look: lk, size = 240, title }) {
     if (!s.r) return;
     s.scene && AV3D.dispose(s.scene);
     try {
-      const o = AV3D.scene(L);
+      const o = AV3D.scene(L, s.r);
       s.scene = o.scene;
       s.fig = o.fig;
       draw();
