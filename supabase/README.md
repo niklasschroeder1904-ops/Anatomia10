@@ -18,16 +18,22 @@ Supabase-Projekt („Anatomia“, Region Frankfurt, kostenloser Tarif).
 | `profiles` | Spitzname, Freundescode, Gruppe (`grp`), in der weltweiten Rangliste zeigen (`public`) | nur man selbst (andere sehen den Namen über die Ranglisten) |
 | `progress` | der ganze Lernfortschritt als JSON, mit Revision | nur man selbst |
 | `friends` | Freundschaften (in beide Richtungen) | nur man selbst |
-| `stats` | XP gesamt, XP der Woche, Serie – bei jedem Abgleich aus dem Fortschritt berechnet | niemand direkt, nur über die Ranglisten |
+| `stats` | XP gesamt, XP der Woche, Serie, Avatar (`look`: Aussehen und Kleidung) – bei jedem Abgleich aus dem Fortschritt berechnet | niemand direkt, nur über die Ranglisten |
 
 Funktionen: `add_friend(code)`, `remove_friend(id)`, `leaderboard(week_start, today)`
-(Spitzname, XP gesamt, XP der Woche, Serie von mir und meinen Freunden),
+(Spitzname, XP gesamt, XP der Woche, Serie und Avatar von mir und meinen Freunden),
 `global_board(period, lim)` (weltweite Rangliste: wie viele dabei sind, mein Platz, die ersten 50;
 Woche ab Montag nach deutscher Zeit), `group_board(period)` (die Gruppen – Medizinstudium,
 Ärztinnen & Ärzte, Zahnmedizin, Pflege, Physiotherapie, Rettungsdienst, andere Gesundheitsberufe,
 Selbststudium – nach XP pro Person, die gelernt hat; dazu mein Platz in meiner Gruppe),
 `delete_account()`. Wer `profiles.public` ausschaltet, steht
 nicht in der Liste der anderen, sieht aber den eigenen Platz.
+
+Der Avatar: Die App speichert Hautfarbe, Augen, Frisur, Haarfarbe, Bart und die angezogenen
+Sachen aus dem Shop im Fortschritt (`avSkin`, `avTop`, …). `avatar_of(d)` nimmt daraus nur die
+bekannten Teile, jeder ein kurzer Name aus Kleinbuchstaben, Ziffern und Bindestrichen; die
+Ranglisten (`leaderboard`, `global_board`, `group_board`) geben ihn als `look` mit. Was die App
+nicht kennt, zeichnet sie in der Grundform.
 
 ## Abgleich
 

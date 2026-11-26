@@ -313,3 +313,112 @@ alter table public.reports enable row level security;
 revoke all on public.reports from anon, authenticated;
 create index if not exists reports_ip on public.reports (ip_hash, created_at);
 create index if not exists reports_unsent on public.reports (created_at) where emailed_at is null;
+
+-- ---- 5. avatars: each account's avatar (looks and clothes from its progress), shown in the leaderboards ----
+
+alter table public.stats add column if not exists look jsonb;
+
+-- the avatar in a progress (avSkin, avTop, ...): only the known parts, each a short name of lower-case letters, digits
+-- and dashes (the app draws what it knows and the default for the rest)
+create or replace function public.avatar_of(d jsonb) returns jsonb
+language sql immutable set search_path = '' as $$
+  select coalesce(jsonb_object_agg(k.slot, d ->> k.field), '{}'::jsonb)
+    from (values ('skin', 'avSkin'), ('eyes', 'avEyes'), ('hair', 'avHair'), ('hairColor', 'avHairColor'), ('beard', 'avBeard'),
+                 ('top', 'avTop'), ('bottom', 'avBottom'), ('shoes', 'avShoes'), ('head', 'avHead'), ('face', 'avFace'),
+                 ('neck', 'avNeck'), ('hand', 'avHand')) k (slot, field)
+   where jsonb_typeof(d -> k.field) = 'string' and (d ->> k.field) ~ '^[a-z0-9-]{1,24}$';
+$$;
+
+-- an account's numbers from its progress, now with its avatar
+create or replace function public.stats_put(uid uuid, d jsonb) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  ws date := date_trunc('week', public.berlin_today())::date;
+  a text := to_char(ws, 'YYYY-MM-DD'); z text := to_char(ws + 6, 'YYYY-MM-DD');
+  x bigint := public.num(d ->> 'xp'); w bigint;
+begin
+  w := coalesce((select sum(public.num(l.value)) from jsonb_each_text(case when jsonb_typeof(d -> 'log') = 'object' then d -> 'log' else '{}'::jsonb end) l where l.key between a and z), 0)
+     + coalesce((select sum(public.num(l.value)) from jsonb_each_text(case when jsonb_typeof(d -> 'xlog') = 'object' then d -> 'xlog' else '{}'::jsonb end) l where l.key between a and z), 0);
+  if x > 10000000 then x := 0; end if;
+  if w > 100000 then w := 0; end if;
+  insert into public.stats (user_id, xp, week_start, week_xp, streak, last_day, look, updated_at)
+  values (uid, x, ws, w, public.num(d ->> 'streak'), left(coalesce(d ->> 'lastDay', ''), 10), public.avatar_of(d), now())
+  on conflict (user_id) do update set xp = excluded.xp, week_start = excluded.week_start, week_xp = excluded.week_xp,
+    streak = excluded.streak, last_day = excluded.last_day, look = excluded.look, updated_at = now();
+end $$;
+
+-- the leaderboard of me and my friends, with everyone's avatar (a new column: the function is made anew)
+drop function if exists public.leaderboard(date, date);
+create function public.leaderboard(week_start date, today date)
+returns table (id uuid, name text, me boolean, xp bigint, week_xp bigint, streak bigint, look jsonb)
+language sql stable security definer set search_path = '' as $$
+  with people as (
+    select auth.uid() as id where auth.uid() is not null
+    union
+    select f.friend_id from public.friends f where f.user_id = auth.uid()
+  )
+  select p.id, pr.name, p.id = auth.uid(),
+         public.num(g.data ->> 'xp'),
+         coalesce((select sum(public.num(l.value)) from jsonb_each_text(case when jsonb_typeof(g.data -> 'log') = 'object' then g.data -> 'log' else '{}'::jsonb end) l
+                    where l.key >= to_char(week_start, 'YYYY-MM-DD') and l.key <= to_char(today, 'YYYY-MM-DD')), 0)::bigint
+       + coalesce((select sum(public.num(l.value)) from jsonb_each_text(case when jsonb_typeof(g.data -> 'xlog') = 'object' then g.data -> 'xlog' else '{}'::jsonb end) l
+                    where l.key >= to_char(week_start, 'YYYY-MM-DD') and l.key <= to_char(today, 'YYYY-MM-DD')), 0)::bigint,
+         case when coalesce(g.data ->> 'lastDay', '') >= to_char(today - 1, 'YYYY-MM-DD') then public.num(g.data ->> 'streak') else 0 end,
+         case when g.data is null then '{}'::jsonb else public.avatar_of(g.data) end
+    from people p
+    join public.profiles pr on pr.id = p.id
+    left join public.progress g on g.user_id = p.id;
+$$;
+
+-- the global leaderboard, with the avatars of the first ones
+create or replace function public.global_board(period text, lim integer default 50) returns json
+language sql stable security definer set search_path = '' as $$
+  with cur as (select date_trunc('week', public.berlin_today())::date ws, public.berlin_today() td),
+  v as (
+    select s.user_id, p.name, p.public, s.look,
+           case when period = 'week' then case when s.week_start = (select ws from cur) then s.week_xp else 0 end else s.xp end val,
+           case when s.last_day >= to_char((select td from cur) - 1, 'YYYY-MM-DD') then s.streak else 0 end streak
+      from public.stats s join public.profiles p on p.id = s.user_id
+  ),
+  shown as (select * from v where val > 0 and (public or user_id = auth.uid())),
+  ranked as (select user_id, name, val, streak, look, rank() over (order by val desc) rk from shown)
+  select json_build_object(
+    'total', (select count(*) from shown),
+    'me', (select json_build_object('rank', rk, 'value', val, 'streak', streak) from ranked where user_id = auth.uid()),
+    'top', coalesce((select json_agg(json_build_object('rank', t.rk, 'name', t.name, 'value', t.val, 'streak', t.streak, 'look', coalesce(t.look, '{}'::jsonb), 'me', t.user_id = auth.uid()) order by t.rk, t.name)
+                       from (select * from ranked order by rk, name limit greatest(1, least(coalesce(lim, 50), 100))) t), '[]'::json))
+  where auth.uid() is not null;
+$$;
+
+-- the groups compared, with the avatars of the first ones of my group
+create or replace function public.group_board(period text) returns json
+language sql stable security definer set search_path = '' as $$
+  with cur as (select date_trunc('week', public.berlin_today())::date ws, public.berlin_today() td),
+  v as (
+    select s.user_id, p.name, p.public, p.grp, s.look,
+           case when period = 'week' then case when s.week_start = (select ws from cur) then s.week_xp else 0 end else s.xp end val,
+           case when s.last_day >= to_char((select td from cur) - 1, 'YYYY-MM-DD') then s.streak else 0 end streak
+      from public.stats s join public.profiles p on p.id = s.user_id
+     where p.grp is not null
+  ),
+  mine as (select grp from public.profiles where id = auth.uid()),
+  g as (select grp, count(*) n, sum(val) total, round(avg(val))::bigint per from v where val > 0 and public group by grp),
+  gr as (select grp, n, total, per, rank() over (order by per desc, total desc) rk from g),
+  mem as (select user_id, name, val, streak, look, rank() over (order by val desc) rk from v
+           where grp = (select grp from mine) and val > 0 and (public or user_id = auth.uid()))
+  select json_build_object(
+    'mine', (select grp from mine),
+    'groups', coalesce((select json_agg(json_build_object('grp', grp, 'n', n, 'total', total, 'per', per, 'rank', rk) order by rk, grp) from gr), '[]'::json),
+    'me', (select json_build_object('rank', rk, 'value', val) from mem where user_id = auth.uid()),
+    'size', (select count(*) from mem),
+    'top', coalesce((select json_agg(json_build_object('rank', t.rk, 'name', t.name, 'value', t.val, 'streak', t.streak, 'look', coalesce(t.look, '{}'::jsonb), 'me', t.user_id = auth.uid()) order by t.rk, t.name)
+                       from (select * from mem order by rk, name limit 10) t), '[]'::json))
+  where auth.uid() is not null;
+$$;
+
+revoke execute on function public.avatar_of(jsonb), public.stats_put(uuid, jsonb) from public, anon, authenticated;
+revoke execute on function public.leaderboard(date, date), public.global_board(text, integer), public.group_board(text) from public, anon;
+grant execute on function public.leaderboard(date, date), public.global_board(text, integer), public.group_board(text) to authenticated;
+
+-- the avatars of the accounts that have progress already
+select public.stats_put(user_id, data) from public.progress;

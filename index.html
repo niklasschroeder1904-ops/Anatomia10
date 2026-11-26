@@ -11862,6 +11862,19 @@ const STORAGE_KEY = "anatomia-v1",
     pathSkin: "knochen",
     title: null,
     avatar: null,
+    // the avatar (see AvatarArt): looks chosen freely, clothes and things bought in the shop; null = the default
+    avSkin: null,
+    avEyes: null,
+    avHair: null,
+    avHairColor: null,
+    avBeard: null,
+    avTop: null,
+    avBottom: null,
+    avShoes: null,
+    avHead: null,
+    avFace: null,
+    avNeck: null,
+    avHand: null,
     fx: null,
     level: "alle",
     claimed: [],
@@ -12047,16 +12060,16 @@ const STORAGE_KEY = "anatomia-v1",
     { id: "path-silber", cat: "Lernpfad", icon: "\u{1F948}", name: _T("Lernpfad „Silber“"), desc: _T("Metallisch gl\xE4nzende Wirbel"), price: 280, apply: { pathSkin: "silber" } },
     { id: "path-lava", cat: "Lernpfad", icon: "\u{1F30B}", name: _T("Lernpfad „Lava“"), desc: _T("Gl\xFChende Wirbel von Gelb nach Rot"), price: 350, apply: { pathSkin: "lava" } },
     { id: "path-regenbogen", cat: "Lernpfad", icon: "\u{1F308}", name: _T("Lernpfad „Regenbogen“"), desc: _T("Jeder Wirbel in allen Farben"), price: 600, apply: { pathSkin: "regenbogen" } },
-    { id: "ava-knochen", cat: "Avatar", icon: "\u{1F9B4}", name: _T("Avatar Knochen"), desc: _T("Erscheint neben deinem Namen oben"), price: 80, apply: { avatar: "\u{1F9B4}" } },
-    { id: "ava-schaedel", cat: "Avatar", icon: "\u{1F480}", name: _T("Avatar Sch\xE4del"), desc: _T("F\xFCr echte Osteologen"), price: 120, apply: { avatar: "\u{1F480}" } },
-    { id: "ava-herz", cat: "Avatar", icon: "\u{1FAC0}", name: _T("Avatar Herz"), desc: _T("Anatomisch korrekt"), price: 150, apply: { avatar: "\u{1FAC0}" } },
-    { id: "ava-lunge", cat: "Avatar", icon: "\u{1FAC1}", name: _T("Avatar Lunge"), desc: _T("Tief durchatmen"), price: 150, apply: { avatar: "\u{1FAC1}" } },
-    { id: "ava-gehirn", cat: "Avatar", icon: "\u{1F9E0}", name: _T("Avatar Gehirn"), desc: _T("F\xFCr Neuro-Fans"), price: 180, apply: { avatar: "\u{1F9E0}" } },
-    { id: "ava-auge", cat: "Avatar", icon: "\u{1F441}️", name: _T("Avatar Auge"), desc: _T("Den Blick f\xFCrs Detail"), price: 180, apply: { avatar: "\u{1F441}️" } },
-    { id: "ava-zahn", cat: "Avatar", icon: "\u{1F9B7}", name: _T("Avatar Zahn"), desc: _T("32 Gr\xFCnde zu l\xE4cheln"), price: 120, apply: { avatar: "\u{1F9B7}" } },
-    { id: "ava-mikroskop", cat: "Avatar", icon: "\u{1F52C}", name: _T("Avatar Mikroskop"), desc: _T("F\xFCr Histologie-Liebhaber"), price: 250, apply: { avatar: "\u{1F52C}" } },
-    { id: "ava-dna", cat: "Avatar", icon: "\u{1F9EC}", name: _T("Avatar DNA"), desc: _T("Bis ins kleinste Molek\xFCl"), price: 300, apply: { avatar: "\u{1F9EC}" } },
-    { id: "ava-krone", cat: "Avatar", icon: "\u{1F451}", name: _T("Avatar Krone"), desc: _T("K\xF6nig oder K\xF6nigin der Anatomie"), price: 900, apply: { avatar: "\u{1F451}" } },
+    { id: "ava-knochen", cat: "Abzeichen", icon: "\u{1F9B4}", name: _T("Knochen-Abzeichen"), desc: _T("Erscheint neben deinem Namen oben"), price: 80, apply: { avatar: "\u{1F9B4}" } },
+    { id: "ava-schaedel", cat: "Abzeichen", icon: "\u{1F480}", name: _T("Sch\xE4del-Abzeichen"), desc: _T("F\xFCr echte Osteologen"), price: 120, apply: { avatar: "\u{1F480}" } },
+    { id: "ava-herz", cat: "Abzeichen", icon: "\u{1FAC0}", name: _T("Herz-Abzeichen"), desc: _T("Anatomisch korrekt"), price: 150, apply: { avatar: "\u{1FAC0}" } },
+    { id: "ava-lunge", cat: "Abzeichen", icon: "\u{1FAC1}", name: _T("Lungen-Abzeichen"), desc: _T("Tief durchatmen"), price: 150, apply: { avatar: "\u{1FAC1}" } },
+    { id: "ava-gehirn", cat: "Abzeichen", icon: "\u{1F9E0}", name: _T("Gehirn-Abzeichen"), desc: _T("F\xFCr Neuro-Fans"), price: 180, apply: { avatar: "\u{1F9E0}" } },
+    { id: "ava-auge", cat: "Abzeichen", icon: "\u{1F441}️", name: _T("Augen-Abzeichen"), desc: _T("Den Blick f\xFCrs Detail"), price: 180, apply: { avatar: "\u{1F441}️" } },
+    { id: "ava-zahn", cat: "Abzeichen", icon: "\u{1F9B7}", name: _T("Zahn-Abzeichen"), desc: _T("32 Gr\xFCnde zu l\xE4cheln"), price: 120, apply: { avatar: "\u{1F9B7}" } },
+    { id: "ava-mikroskop", cat: "Abzeichen", icon: "\u{1F52C}", name: _T("Mikroskop-Abzeichen"), desc: _T("F\xFCr Histologie-Liebhaber"), price: 250, apply: { avatar: "\u{1F52C}" } },
+    { id: "ava-dna", cat: "Abzeichen", icon: "\u{1F9EC}", name: _T("DNA-Abzeichen"), desc: _T("Bis ins kleinste Molek\xFCl"), price: 300, apply: { avatar: "\u{1F9EC}" } },
+    { id: "ava-krone", cat: "Abzeichen", icon: "\u{1F451}", name: _T("Kronen-Abzeichen"), desc: _T("K\xF6nig oder K\xF6nigin der Anatomie"), price: 900, apply: { avatar: "\u{1F451}" } },
     { id: "fx-konfetti", cat: "Effekte", icon: "\u{1F389}", name: _T("Konfetti bei Erfolg"), desc: _T("Bunter Regen nach bestandenen Lektionen"), price: 250, apply: { fx: "konfetti" } },
     { id: "fx-sterne", cat: "Effekte", icon: "\u{1F31F}", name: _T("Sternenregen"), desc: _T("Goldene Sterne nach jedem Erfolg"), price: 300, apply: { fx: "sterne" } },
     { id: "fx-herzen", cat: "Effekte", icon: "\u{1F496}", name: _T("Herzregen"), desc: _T("Herzen f\xFCr jedes Erfolgserlebnis"), price: 300, apply: { fx: "herzen" } },
@@ -12108,8 +12121,52 @@ const STORAGE_KEY = "anatomia-v1",
     { id: "xp2-30", cat: "Hilfen", icon: "\u{1F680}", name: _T("Doppel-XP \xB7 30 Min."), desc: _T("Doppelte XP f\xFCr 30 Minuten \xB7 50 Taler gespart"), price: 250, boost: 30 },
     { id: "xp2-60", cat: "Hilfen", icon: "\u{1F680}", name: _T("Doppel-XP \xB7 1 Stunde"), desc: _T("Doppelte XP f\xFCr eine Stunde \xB7 200 Taler gespart"), price: 400, boost: 60 },
     { id: "xp2-180", cat: "Hilfen", icon: "\u{1F680}", name: _T("Doppel-XP \xB7 3 Stunden"), desc: _T("Doppelte XP f\xFCr drei Stunden \xB7 900 Taler gespart"), price: 900, boost: 180 },
+    // the avatar: clothes and things for it (av: the part of the figure the row shows), bought with Taler
+    { id: "av-scrubs-green", cat: "OP-Kleidung", av: "top", icon: "\u{1FA7A}", name: _T("OP-Kleidung Gr\xFCn"), desc: _T("Kasack und Hose wie im OP"), price: 260, apply: { avTop: "scrubs-green", avBottom: "scrubs-green" } },
+    { id: "av-scrubs-blue", cat: "OP-Kleidung", av: "top", icon: "\u{1FA7A}", name: _T("OP-Kleidung Blau"), desc: _T("Kasack und Hose in Klinikblau"), price: 260, apply: { avTop: "scrubs-blue", avBottom: "scrubs-blue" } },
+    { id: "av-scrubs-pink", cat: "OP-Kleidung", av: "top", icon: "\u{1FA7A}", name: _T("OP-Kleidung Rosa"), desc: _T("Kasack und Hose in Rosa"), price: 260, apply: { avTop: "scrubs-pink", avBottom: "scrubs-pink" } },
+    { id: "av-coat", cat: "Oberteile", av: "top", icon: "\u{1F97C}", name: _T("Arztkittel"), desc: _T("Wei\xDFer Kittel mit Stiften in der Brusttasche"), price: 350, apply: { avTop: "coat" } },
+    { id: "av-shirt-skeleton", cat: "Oberteile", av: "top", icon: "\u{1F480}", name: _T("Skelett-Shirt"), desc: _T("Rippen und Brustbein zum Anziehen"), price: 250, apply: { avTop: "shirt-skeleton" } },
+    { id: "av-sweater-heart", cat: "Oberteile", av: "top", icon: "\u2764\uFE0F", name: _T("Pulli mit Herz"), desc: _T("F\xFCr echte Herzensangelegenheiten"), price: 200, apply: { avTop: "sweater-heart" } },
+    { id: "av-hoodie", cat: "Oberteile", av: "top", icon: "\u{1F9E5}", name: _T("Kapuzenpulli"), desc: _T("Gem\xFCtlich durch die Lernnacht"), price: 180, apply: { avTop: "hoodie" } },
+    { id: "av-shirt-stripes", cat: "Oberteile", av: "top", icon: "\u{1F455}", name: _T("Ringelshirt"), desc: _T("Blau-wei\xDF gestreift"), price: 120, apply: { avTop: "shirt-stripes" } },
+    { id: "av-shirt-black", cat: "Oberteile", av: "top", icon: "\u{1F455}", name: _T("T-Shirt Schwarz"), desc: _T("Schlicht und schwarz"), price: 80, apply: { avTop: "shirt-black" } },
+    { id: "av-shirt-red", cat: "Oberteile", av: "top", icon: "\u{1F455}", name: _T("T-Shirt Rot"), desc: _T("Knallrot wie Arterienblut"), price: 60, apply: { avTop: "shirt-red" } },
+    { id: "av-shirt-green", cat: "Oberteile", av: "top", icon: "\u{1F455}", name: _T("T-Shirt Gr\xFCn"), desc: _T("Frisches Gr\xFCn"), price: 60, apply: { avTop: "shirt-green" } },
+    { id: "av-shirt-yellow", cat: "Oberteile", av: "top", icon: "\u{1F455}", name: _T("T-Shirt Gelb"), desc: _T("Sonnengelb"), price: 60, apply: { avTop: "shirt-yellow" } },
+    { id: "av-pants-black", cat: "Hosen & R\xF6cke", av: "legs", icon: "\u{1F456}", name: _T("Schwarze Hose"), desc: _T("Passt zu allem"), price: 60, apply: { avBottom: "pants-black" } },
+    { id: "av-pants-beige", cat: "Hosen & R\xF6cke", av: "legs", icon: "\u{1F456}", name: _T("Chino"), desc: _T("Helle Stoffhose"), price: 60, apply: { avBottom: "pants-beige" } },
+    { id: "av-joggers", cat: "Hosen & R\xF6cke", av: "legs", icon: "\u{1F456}", name: _T("Jogginghose"), desc: _T("Bequem zum Lernen"), price: 90, apply: { avBottom: "joggers" } },
+    { id: "av-shorts", cat: "Hosen & R\xF6cke", av: "legs", icon: "\u{1FA73}", name: _T("Shorts"), desc: _T("F\xFCr warme Tage"), price: 80, apply: { avBottom: "shorts" } },
+    { id: "av-skirt", cat: "Hosen & R\xF6cke", av: "legs", icon: "\u{1F457}", name: _T("Rock"), desc: _T("Lila Rock, knapp \xFCber dem Knie"), price: 100, apply: { avBottom: "skirt" } },
+    { id: "av-sneaker-red", cat: "Schuhe", av: "feet", icon: "\u{1F45F}", name: _T("Rote Sneaker"), desc: _T("Mit wei\xDFer Sohle"), price: 80, apply: { avShoes: "sneaker-red" } },
+    { id: "av-sneaker-black", cat: "Schuhe", av: "feet", icon: "\u{1F45F}", name: _T("Schwarze Sneaker"), desc: _T("Mit wei\xDFer Sohle"), price: 80, apply: { avShoes: "sneaker-black" } },
+    { id: "av-clogs", cat: "Schuhe", av: "feet", icon: "\u{1F97F}", name: _T("OP-Clogs"), desc: _T("Gr\xFCne Klinikschuhe mit L\xF6chern"), price: 120, apply: { avShoes: "clogs" } },
+    { id: "av-boots", cat: "Schuhe", av: "feet", icon: "\u{1F97E}", name: _T("Stiefel"), desc: _T("Braune Lederstiefel"), price: 150, apply: { avShoes: "boots" } },
+    { id: "av-op-cap", cat: "Kopf", av: "bust", icon: "\u{1F9E2}", name: _T("OP-Haube"), desc: _T("H\xE4lt die Haare aus dem OP-Feld"), price: 120, apply: { avHead: "op-cap" } },
+    { id: "av-beanie", cat: "Kopf", av: "bust", icon: "\u{1F9E2}", name: _T("M\xFCtze"), desc: _T("Rote Strickm\xFCtze mit Bommel"), price: 100, apply: { avHead: "beanie" } },
+    { id: "av-cap", cat: "Kopf", av: "bust", icon: "\u{1F9E2}", name: _T("Basecap"), desc: _T("Gr\xFCne Kappe"), price: 100, apply: { avHead: "cap" } },
+    { id: "av-head-mirror", cat: "Kopf", av: "bust", icon: "\u{1FA9E}", name: _T("Stirnspiegel"), desc: _T("Der Klassiker der HNO"), price: 250, apply: { avHead: "head-mirror" } },
+    { id: "av-doctor-hat", cat: "Kopf", av: "bust", icon: "\u{1F393}", name: _T("Doktorhut"), desc: _T("F\xFCr den Abschluss"), price: 500, apply: { avHead: "doctor-hat" } },
+    { id: "av-crown", cat: "Kopf", av: "bust", icon: "\u{1F451}", name: _T("Krone"), desc: _T("K\xF6nig oder K\xF6nigin der Anatomie"), price: 1000, apply: { avHead: "crown" } },
+    { id: "av-glasses", cat: "Gesicht", av: "bust", icon: "\u{1F453}", name: _T("Brille"), desc: _T("Schwarzes Gestell"), price: 80, apply: { avFace: "glasses" } },
+    { id: "av-glasses-red", cat: "Gesicht", av: "bust", icon: "\u{1F453}", name: _T("Rote Brille"), desc: _T("Rotes Gestell"), price: 100, apply: { avFace: "glasses-red" } },
+    { id: "av-sunglasses", cat: "Gesicht", av: "bust", icon: "\u{1F576}\uFE0F", name: _T("Sonnenbrille"), desc: _T("Ganz l\xE4ssig"), price: 150, apply: { avFace: "sunglasses" } },
+    { id: "av-mask", cat: "Gesicht", av: "bust", icon: "\u{1F637}", name: _T("OP-Maske"), desc: _T("Mund-Nasen-Schutz"), price: 100, apply: { avFace: "mask" } },
+    { id: "av-bowtie", cat: "Hals", av: "bust", icon: "\u{1F380}", name: _T("Fliege"), desc: _T("Rote Fliege am Kragen"), price: 100, apply: { avNeck: "bowtie" } },
+    { id: "av-scarf", cat: "Hals", av: "bust", icon: "\u{1F9E3}", name: _T("Schal"), desc: _T("Warm durch den Winter"), price: 120, apply: { avNeck: "scarf" } },
+    { id: "av-stethoscope", cat: "Hals", av: "bust", icon: "\u{1FA7A}", name: _T("Stethoskop"), desc: _T("Zum Abh\xF6ren von Herz und Lunge"), price: 300, apply: { avNeck: "stethoscope" } },
+    { id: "av-medal", cat: "Hals", av: "bust", icon: "\u{1F947}", name: _T("Goldmedaille"), desc: _T("F\xFCr echte Champions"), price: 700, apply: { avNeck: "medal" } },
+    { id: "av-book", cat: "In der Hand", av: "hand", icon: "\u{1F4D5}", name: _T("Anatomie-Buch"), desc: _T("Das Lehrbuch immer dabei"), price: 150, apply: { avHand: "book" } },
+    { id: "av-scalpel", cat: "In der Hand", av: "hand", icon: "\u{1F52A}", name: _T("Skalpell"), desc: _T("F\xFCr den Pr\xE4parierkurs"), price: 150, apply: { avHand: "scalpel" } },
+    { id: "av-hammer", cat: "In der Hand", av: "hand", icon: "\u{1F528}", name: _T("Reflexhammer"), desc: _T("Testet den Patellarsehnenreflex"), price: 200, apply: { avHand: "hammer" } },
+    { id: "av-skull", cat: "In der Hand", av: "hand", icon: "\u{1F480}", name: _T("Sch\xE4del"), desc: _T("Sein oder Nichtsein"), price: 350, apply: { avHand: "skull" } },
+    { id: "av-hair-pink", cat: "Haarfarben", av: "bust", icon: "\u{1F497}", name: _T("Haare Pink"), desc: _T("Neue Haarfarbe, danach jederzeit w\xE4hlbar"), price: 150, apply: { avHairColor: "pink" } },
+    { id: "av-hair-blue", cat: "Haarfarben", av: "bust", icon: "\u{1F499}", name: _T("Haare Blau"), desc: _T("Neue Haarfarbe, danach jederzeit w\xE4hlbar"), price: 150, apply: { avHairColor: "blue" } },
+    { id: "av-hair-green", cat: "Haarfarben", av: "bust", icon: "\u{1F49A}", name: _T("Haare Gr\xFCn"), desc: _T("Neue Haarfarbe, danach jederzeit w\xE4hlbar"), price: 150, apply: { avHairColor: "green" } },
+    { id: "av-hair-purple", cat: "Haarfarben", av: "bust", icon: "\u{1F49C}", name: _T("Haare Lila"), desc: _T("Neue Haarfarbe, danach jederzeit w\xE4hlbar"), price: 150, apply: { avHairColor: "purple" } },
   ],
-  SHOP_CATS = ["Hintergrund", "Lernpfad", "Avatar", "Effekte", "Hilfen"],
+  SHOP_CATS = ["Hintergrund", "Lernpfad", "OP-Kleidung", "Oberteile", "Hosen & R\xF6cke", "Schuhe", "Kopf", "Gesicht", "Hals", "In der Hand", "Haarfarben", "Abzeichen", "Effekte", "Hilfen"],
   // XP levels: every level has a title, shown on the menu. The titles are earned with XP only (they used to be bought)
   XP_LEVELS = [
     { xp: 0, title: _T("Neuling"), icon: "\u{1F331}" },
@@ -14542,6 +14599,625 @@ function bmArmPlain(i, st) {
     s("path", { d: m(BMF.HAND), ...limb }),
     !st && s("path", { d: m("M 50.4,229.4 C 53.2,230.8 57.4,230.8 61.2,229.2"), ...ln("#D9A386", 0.55) }),
     !st && s("path", { d: m("M 52.3,236.6 L 52.2,240 M 55.4,236.8 L 55.4,240.6 M 58.5,236.4 L 58.5,239.6"), ...ln("#C98F72", 0.5) }),
+  );
+}
+// a colour made darker (a < 0) or lighter (a > 0)
+const avShade = (h, a) => {
+    const n = parseInt(h.slice(1), 16),
+      f = (v) => Math.round(a < 0 ? v * (1 + a) : v + (255 - v) * a),
+      r = f(n >> 16),
+      g = f((n >> 8) & 255),
+      b = f(n & 255);
+    return "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1).toUpperCase();
+  },
+  // ---- tops: the body from the neckline to the hips, the sleeves (short or long), prints ----
+  AV_NECK_ROUND = "M 60,71 L 107.5,71 C 110,80.5 130,80.5 132.5,71 L 180,71 L 180,203 L 60,203 Z",
+  AV_NECK_V = "M 60,71 L 107,71 L 120,91 L 133,71 L 180,71 L 180,203 L 60,203 Z",
+  avTop = (c, o = {}) => ({
+    back: o.hood
+      ? (x) => [x.P("M 97.5,82 C 95.5,64 104,52.5 120,52.5 C 136,52.5 144.5,64 142.5,82 Z", { fill: avShade(c, -0.12), stroke: avShade(c, -0.35), strokeWidth: 0.8 })]
+      : null,
+    draw: (x) => {
+      const d = avShade(c, -0.3),
+        sl = o.long ? 207 : 110,
+        neck = o.v ? AV_NECK_V : AV_NECK_ROUND;
+      return [
+        x.e("g", { key: x.key(), clipPath: x.ref("B") }, x.P(neck, { fill: c }), ...(o.stripes ? o.stripes.map((y) => x.band(y, y + 6, { fill: o.stripeColor }, "B")) : []), x.P(neck, { fill: x.ref("sh") })),
+        x.band(70, sl, { fill: c }, "A"),
+        ...(o.stripes && !o.long ? [x.band(92, 98, { fill: o.stripeColor }, "A")] : []),
+        x.band(70, sl, { fill: x.ref("sh") }, "A"),
+        x.band(sl - 3.5, sl, { fill: d, opacity: 0.55 }, "A"),
+        x.P(o.v ? "M 107,71.6 L 120,91.6 L 133,71.6" : "M 107.5,71.6 C 110,81.2 130,81.2 132.5,71.6", x.ln(d, 1.7)),
+        x.band(198.5, 203, { fill: d, opacity: 0.5 }),
+        ...(o.pocket ? [x.P("M 128.5,100 L 139.5,100 L 139.5,112.5 C 136,114 132,114 128.5,112.5 Z", { fill: "none", stroke: d, strokeWidth: 0.8 })] : []),
+        ...(o.hood
+          ? [
+              x.P("M 114.5,78 L 113.5,104", x.ln("#F2F4F8", 1)),
+              x.P("M 125.5,78 L 126.5,104", x.ln("#F2F4F8", 1)),
+              x.E(113.5, 105, 0.9, 1.3, { fill: "#F2F4F8" }),
+              x.E(126.5, 105, 0.9, 1.3, { fill: "#F2F4F8" }),
+              x.P("M 101,162 L 139,162 L 144,191 L 96,191 Z", { fill: avShade(c, -0.08), stroke: d, strokeWidth: 0.8, strokeLinejoin: "round" }),
+            ]
+          : []),
+        ...(o.print ? o.print(x) : []),
+      ];
+    },
+  }),
+  // a heart on the chest, ribs of a skeleton
+  avHeartPrint = (col) => (x) => [
+    x.P("M 120,131 C 112,125 108,120 108,115 C 108,111 111,108.6 114.4,108.6 C 116.8,108.6 118.8,110 120,112 C 121.2,110 123.2,108.6 125.6,108.6 C 129,108.6 132,111 132,115 C 132,120 128,125 120,131 Z", { fill: col }),
+  ],
+  avRibsPrint = (x) => [
+    x.P("M 118.2,84 L 121.8,84 L 121.4,132 L 120,137 L 118.6,132 Z", { fill: "#F4F1EA" }),
+    ...[92, 100, 108, 116, 124, 132].flatMap((y, i) => x.PP(`M 117.6,${y} C 110,${y - 3} 101,${y - 1} 94.5,${y + 7 + i * 0.6}`, x.ln("#F4F1EA", 2.1))),
+    ...x.PP("M 116.8,82.6 C 108,81 98,82.4 89,83.4", x.ln("#F4F1EA", 2.6)),
+  ],
+  // the white coat over a light blue shirt: open in a V at the top, long sleeves, pockets, a pen
+  AV_COAT = "M 120,150 L 108.6,96 C 107.6,88 107.4,80 108,72.4 C 100,74.4 92,76.4 85.6,79.6 C 79.6,84 77.8,94 79.4,106 C 81.4,128 82.4,160 82.4,195 C 81.4,235 79,272 77,307 C 92,310 106,310.5 120,310.5 Z",
+  AV_TOPS = {
+    "shirt-blue": avTop("#4C86C6"),
+    "shirt-red": avTop("#D9534F"),
+    "shirt-green": avTop("#3FA66B"),
+    "shirt-yellow": avTop("#F2C230"),
+    "shirt-black": avTop("#2F3540"),
+    "shirt-stripes": avTop("#F4F1EA", { stripes: [96, 108, 120, 132, 144, 156, 168, 180, 192], stripeColor: "#2D5A9E" }),
+    hoodie: avTop("#8D96A3", { long: !0, hood: !0 }),
+    "sweater-heart": avTop("#B23A48", { long: !0, print: avHeartPrint("#FFF2F2") }),
+    "shirt-skeleton": avTop("#262B36", { print: avRibsPrint }),
+    "scrubs-green": avTop("#4FAE8E", { v: !0, pocket: !0 }),
+    "scrubs-blue": avTop("#4C86C6", { v: !0, pocket: !0 }),
+    "scrubs-pink": avTop("#E58BB0", { v: !0, pocket: !0 }),
+    coat: {
+      draw: (x) => [
+        ...avTop("#CFE3F7").draw(x),
+        ...x.PP(AV_COAT, { fill: "#FFFFFF", stroke: "#AEB8C6", strokeWidth: 0.9, strokeLinejoin: "round" }),
+        ...x.PP(AV_COAT, { fill: x.ref("sh") }),
+        x.band(70, 207, { fill: "#FFFFFF" }, "A"),
+        x.band(70, 207, { fill: x.ref("sh") }, "A"),
+        x.band(201, 207, { fill: "#D5DCE6" }, "A"),
+        ...x.PP("M 108.3,73.2 L 113.2,86 L 110.6,92.4 L 118.6,146", x.ln("#B9C3D0", 0.8)),
+        ...[162, 188, 214, 240].map((y) => x.E(117.6, y, 1.25, 1.25, { fill: "#E3E8EF", stroke: "#97A3B3", strokeWidth: 0.45 })),
+        ...x.PP("M 86.6,213 L 104,213 L 104.4,233 L 87,233", { fill: "none", stroke: "#AEB8C6", strokeWidth: 0.8, strokeLinejoin: "round" }),
+        x.P("M 130.5,106 L 142,106 L 142,118 L 130.5,118", { fill: "none", stroke: "#AEB8C6", strokeWidth: 0.8, strokeLinejoin: "round" }),
+        x.P("M 134,99.5 L 134,109", x.ln("#3B6FD8", 1.5)),
+        x.P("M 137.6,100.5 L 137.6,109", x.ln("#D9534F", 1.5)),
+      ],
+    },
+  },
+  // ---- trousers and skirts ----
+  avPants = (c, o = {}) => ({
+    draw: (x) => {
+      const d = avShade(c, -0.3),
+        y1 = o.short ? 268 : 386;
+      return [
+        x.band(195, y1, { fill: c }),
+        x.band(195, y1, { fill: x.ref("sh") }),
+        x.band(195, 201, { fill: d, opacity: 0.55 }),
+        x.band(y1 - 3.5, y1, { fill: d, opacity: 0.45 }),
+        x.P("M 120,201 L 120,213", x.ln(d, 0.8)),
+        ...x.PP(o.short ? "M 101.5,217 C 102.5,240 103,255 103.2,265" : "M 101.5,217 C 103,260 104,300 105,383", x.ln(d, 0.6, 0.55)),
+        ...x.PP("M 87.4,203 C 91,206.5 94,210 95.6,215", x.ln(d, 0.8, 0.8)),
+        ...(o.drawstring ? [x.P("M 116,201 L 114.6,210 M 124,201 L 125.4,210", x.ln("#F2F4F8", 0.8))] : []),
+      ];
+    },
+  }),
+  AV_BOTTOMS = {
+    jeans: avPants("#3E6FA8"),
+    "pants-black": avPants("#2F3540"),
+    "pants-beige": avPants("#C9B48E"),
+    joggers: avPants("#8D96A3", { drawstring: !0 }),
+    shorts: avPants("#5B7FA6", { short: !0 }),
+    "scrubs-green": avPants("#4FAE8E", { drawstring: !0 }),
+    "scrubs-blue": avPants("#4C86C6", { drawstring: !0 }),
+    "scrubs-pink": avPants("#E58BB0", { drawstring: !0 }),
+    skirt: {
+      draw: (x) => [
+        x.P("M 84.6,195 L 155.4,195 C 158,224 161.6,254 164.6,283 C 145,289 95,289 75.4,283 C 78.4,254 82,224 84.6,195 Z", { fill: "#7C5CC4", stroke: "#5A3F9A", strokeWidth: 0.9, strokeLinejoin: "round" }),
+        x.P("M 84.6,195 L 155.4,195 C 158,224 161.6,254 164.6,283 C 145,289 95,289 75.4,283 C 78.4,254 82,224 84.6,195 Z", { fill: x.ref("sh") }),
+        x.band(195, 201, { fill: "#5A3F9A", opacity: 0.6 }),
+        x.P("M 104,203 C 102,230 100,258 99,286 M 136,203 C 138,230 140,258 141,286", x.ln("#5A3F9A", 0.6, 0.55)),
+      ],
+    },
+  },
+  // ---- shoes: the foot drawn bigger in the shoe's colour, a sole, laces ----
+  avShoe = (c, sole, lace, o = {}) => ({
+    draw: (x) => [
+      ...(o.boot ? [x.band(338, 392, { fill: c }), x.band(338, 343, { fill: avShade(c, -0.3), opacity: 0.7 })] : []),
+      ...x.PP(x.FOOT, { fill: "none", stroke: avShade(c, -0.42), strokeWidth: 3.4, strokeLinejoin: "round" }),
+      ...x.PP(x.FOOT, { fill: c, stroke: c, strokeWidth: 1.7, strokeLinejoin: "round" }),
+      ...x.PP("M 93.2,405.4 C 95.2,410.6 110.6,411.4 114,407.2", x.ln(sole, 2.4)),
+      ...(lace ? x.PP("M 99,391.4 L 110.4,391.4 M 98.6,395.6 L 110.8,395.6", x.ln(lace, 0.9)) : []),
+      ...(o.holes ? [0, 1, 2].flatMap((i) => x.EE(100 + i * 4, 396, 0.8, 0.8, { fill: avShade(c, -0.35) })) : []),
+    ],
+  }),
+  AV_SHOES = {
+    sneaker: avShoe("#F4F5F7", "#B9C1CC", "#9AA4B2"),
+    "sneaker-red": avShoe("#D9534F", "#F4F5F7", "#FFFFFF"),
+    "sneaker-black": avShoe("#2F3540", "#F4F5F7", "#C9CED6"),
+    clogs: avShoe("#4FAE8E", "#2F7F63", null, { holes: !0 }),
+    boots: avShoe("#7A4E2E", "#3E2716", null, { boot: !0 }),
+  },
+  // ---- on the head ----
+  AV_HEADS = {
+    "op-cap": {
+      draw: (x) => [
+        x.P("M 101.2,33 C 100.6,20 109,11 120,11 C 131,11 139.4,20 138.8,33 C 132,29.6 126,29 120,29 C 114,29 108,29.6 101.2,33 Z", { fill: "#7FB3E6", stroke: "#4C86C6", strokeWidth: 0.8 }),
+        x.P("M 101.2,33 C 108,29.4 132,29.4 138.8,33 L 138.6,29.6 C 132,26 108,26 101.4,29.6 Z", { fill: "#4C86C6" }),
+        ...[[110, 18], [120, 15], [130, 18], [106, 24], [115, 22], [125, 22], [134, 24]].map(([a, b]) => x.E(a, b, 0.9, 0.9, { fill: "#FFFFFF", opacity: 0.7 })),
+      ],
+    },
+    "doctor-hat": {
+      draw: (x) => [
+        x.P("M 104.6,27 C 104.6,19.6 111,15.6 120,15.6 C 129,15.6 135.4,19.6 135.4,27 Z", { fill: "#2B2F3A" }),
+        x.P("M 95,15.2 L 120,7.4 L 145,15.2 L 120,23 Z", { fill: "#1E2229", stroke: "#3A404D", strokeWidth: 0.6, strokeLinejoin: "round" }),
+        x.E(120, 15.2, 1.6, 1.2, { fill: "#F2B705" }),
+        x.P("M 120,15.2 L 139.6,17.6 L 140.6,30", x.ln("#F2B705", 0.9)),
+        x.P("M 139.4,29 L 141.8,29 L 142.4,35 L 138.8,35 Z", { fill: "#F2B705" }),
+      ],
+    },
+    crown: {
+      flat: !0,
+      draw: (x) => [
+        x.P("M 105.6,22 L 104.6,6.6 L 112,13.6 L 120,3 L 128,13.6 L 135.4,6.6 L 134.4,22 C 125,20 115,20 105.6,22 Z", { fill: "#F2B705", stroke: "#B98A04", strokeWidth: 0.8, strokeLinejoin: "round" }),
+        x.P("M 105.6,22 C 115,20 125,20 134.4,22 L 134.2,18.4 C 125,16.6 115,16.6 105.8,18.4 Z", { fill: "#D99E04" }),
+        x.E(120, 13.6, 1.8, 1.8, { fill: "#D9534F", stroke: "#8E2F2B", strokeWidth: 0.4 }),
+        x.E(111.4, 19.2, 1.2, 1.2, { fill: "#4C86C6" }),
+        x.E(128.6, 19.2, 1.2, 1.2, { fill: "#3FA66B" }),
+        x.E(120, 3.4, 1.2, 1.2, { fill: "#FFF3C4" }),
+      ],
+    },
+    "head-mirror": {
+      draw: (x) => [
+        x.P("M 101.6,28.6 C 108,24.6 132,24.6 138.4,28.6", x.ln("#2B2F3A", 2.2)),
+        x.E(120, 21.6, 6.6, 6.2, { fill: "#D8DEE7", stroke: "#7D8794", strokeWidth: 0.8 }),
+        x.E(118, 19.8, 3, 2.4, { fill: "#FFFFFF", opacity: 0.8 }),
+        x.E(120, 21.6, 1.3, 1.3, { fill: "#4A5260" }),
+      ],
+    },
+    beanie: {
+      draw: (x) => [
+        x.P("M 100.8,31 C 100.2,17.6 108.6,9 120,9 C 131.4,9 139.8,17.6 139.2,31 Z", { fill: "#D9534F", stroke: "#A83A37", strokeWidth: 0.8 }),
+        x.P("M 100.6,31.6 L 139.4,31.6 L 139.2,25.6 C 128,23.6 112,23.6 100.8,25.6 Z", { fill: "#B8403C" }),
+        x.P("M 106,25 L 106,31 M 111,24.4 L 111,31 M 116,24 L 116,31 M 121,24 L 121,31 M 126,24.2 L 126,31 M 131,24.6 L 131,31 M 136,25.2 L 136,31", x.ln("#A0332F", 0.6, 0.7)),
+        x.E(120, 7.6, 4.4, 3.6, { fill: "#F4F1EA", stroke: "#D6D1C6", strokeWidth: 0.5 }),
+      ],
+    },
+    cap: {
+      draw: (x) => [
+        x.P("M 101.4,29.6 C 101,17.6 109,10.4 120,10.4 C 131,10.4 139,17.6 138.6,29.6 Z", { fill: "#3FA66B", stroke: "#2D7D50", strokeWidth: 0.8 }),
+        x.P("M 98.6,29 C 107,33 133,33 141.4,29 C 136,35.4 104,35.4 98.6,29 Z", { fill: "#2D7D50" }),
+        x.E(120, 10.8, 1.4, 1, { fill: "#2D7D50" }),
+        x.P("M 120,11.4 L 120,29.4", x.ln("#2D7D50", 0.6, 0.6)),
+      ],
+    },
+  },
+  // ---- on the face ----
+  AV_GLASS = "M 107,44 C 108.2,43 115.8,43 117,44 C 117.9,45.3 117.9,49.7 116.7,50.7 C 115,51.7 109,51.7 107.3,50.7 C 106.1,49.7 106.1,45.3 107,44 Z",
+  avGlasses = (frame, fill, op) => ({
+    draw: (x) => [
+      ...x.PP(AV_GLASS, { fill, opacity: op, stroke: frame, strokeWidth: 1 }),
+      ...(op > 0.5 ? x.PP("M 108.4,45 L 111,45", x.ln("#FFFFFF", 0.9, 0.6)) : []),
+      x.P("M 117,46.2 C 118.6,45.2 121.4,45.2 123,46.2", x.ln(frame, 0.9)),
+      ...x.PP("M 106.6,46.4 L 102.2,45.6", x.ln(frame, 0.9)),
+    ],
+  }),
+  AV_FACES = {
+    glasses: avGlasses("#2B2F3A", "#FFFFFF", 0.15),
+    "glasses-red": avGlasses("#C8323C", "#FFFFFF", 0.15),
+    sunglasses: avGlasses("#1E2229", "#1E2836", 0.92),
+    mask: {
+      draw: (x) => [
+        x.P("M 107.6,49.6 C 112,48.2 128,48.2 132.4,49.6 L 131.6,58.4 C 128.4,63 111.6,63 108.4,58.4 Z", { fill: "#BFDDF5", stroke: "#7FAFD8", strokeWidth: 0.7, strokeLinejoin: "round" }),
+        x.P("M 110,52.6 C 115,51.6 125,51.6 130,52.6 M 110.4,55.6 C 115,54.8 125,54.8 129.6,55.6 M 111,58.4 C 116,57.8 124,57.8 129,58.4", x.ln("#8FBCE0", 0.6)),
+        ...x.PP("M 107.8,50.4 L 101.8,46.6 M 108.4,57.8 L 102.2,49.4", x.ln("#E8EEF5", 0.7)),
+      ],
+    },
+  },
+  // ---- around the neck (drawn over the top) ----
+  AV_NECKS = {
+    stethoscope: {
+      draw: (x) => [
+        x.P("M 109.6,73.6 C 104.6,84 104,100 107.6,114 C 108.6,118 108.8,121 108.6,124", x.ln("#2E3440", 2.3)),
+        x.P("M 130.4,73.6 C 135.4,84 136,98 133.6,108", x.ln("#2E3440", 2.3)),
+        x.P("M 133.6,108 C 132.4,113 130,116 127.4,117 M 133.6,108 C 134.8,113 137.2,116 139.6,117", x.ln("#AEB6C2", 1.2)),
+        x.E(127.2, 117.4, 1, 1, { fill: "#2E3440" }),
+        x.E(139.8, 117.4, 1, 1, { fill: "#2E3440" }),
+        x.E(108.6, 128.6, 4.4, 4.4, { fill: "#C9CED6", stroke: "#7D8794", strokeWidth: 0.8 }),
+        x.E(108.6, 128.6, 2.4, 2.4, { fill: "#E9EDF2", stroke: "#9AA4B2", strokeWidth: 0.5 }),
+      ],
+    },
+    bowtie: {
+      draw: (x) => [
+        x.P("M 112.6,73.4 L 120,77 L 112.6,80.6 Z M 127.4,73.4 L 120,77 L 127.4,80.6 Z", { fill: "#C8323C", stroke: "#8E2028", strokeWidth: 0.6, strokeLinejoin: "round" }),
+        x.E(120, 77, 1.6, 1.8, { fill: "#A82A32" }),
+      ],
+    },
+    scarf: {
+      draw: (x) => [
+        x.P("M 107.6,66 C 112,73 128,73 132.4,66 L 135,74 C 129,81 111,81 105,74 Z", { fill: "#E08A2E", stroke: "#B8691C", strokeWidth: 0.7, strokeLinejoin: "round" }),
+        x.P("M 124.6,76.4 L 131.6,112 L 125,113.6 L 119.6,78.2 Z", { fill: "#E08A2E", stroke: "#B8691C", strokeWidth: 0.7, strokeLinejoin: "round" }),
+        x.P("M 121.2,86 L 127.2,85 M 122.6,95 L 128.8,94 M 124,104 L 130.2,103", x.ln("#F7D9A8", 1.4)),
+      ],
+    },
+    medal: {
+      draw: (x) => [
+        x.P("M 110.4,73.4 L 118,108", x.ln("#3B6FD8", 3)),
+        x.P("M 129.6,73.4 L 122,108", x.ln("#D9534F", 3)),
+        x.E(120, 113.4, 6.4, 6.4, { fill: "#F2B705", stroke: "#B98A04", strokeWidth: 0.9 }),
+        x.P("M 120,108.6 L 121.5,111.9 L 125,112.2 L 122.4,114.6 L 123.1,118 L 120,116.3 L 116.9,118 L 117.6,114.6 L 115,112.2 L 118.5,111.9 Z", { fill: "#FFF3C4" }),
+      ],
+    },
+  },
+  // ---- in the hand (the hand on the viewer's left) ----
+  avHandAt = () => bmPtA(55.4, 236),
+  AV_HANDS = {
+    book: {
+      draw: (x) => {
+        const [a, b] = avHandAt();
+        return [
+          x.e("g", { key: x.key(), transform: `translate(${a - 13},${b - 22}) rotate(-6 12 18)` },
+            x.e("rect", { x: 0, y: 0, width: 22, height: 30, rx: 2, fill: "#C8323C", stroke: "#8E2028", strokeWidth: 0.8 }),
+            x.e("rect", { x: 3, y: 0, width: 2, height: 30, fill: "#8E2028", opacity: 0.6 }),
+            x.e("rect", { x: 7, y: 6, width: 12, height: 6, rx: 1, fill: "#F4F1EA" }),
+            x.e("path", { d: "M 9,24 C 11,20 14,20 16,24", fill: "none", stroke: "#F4F1EA", strokeWidth: 1.2, strokeLinecap: "round" })),
+        ];
+      },
+    },
+    hammer: {
+      draw: (x) => {
+        const [a, b] = avHandAt();
+        return [
+          x.e("g", { key: x.key(), transform: `translate(${a},${b}) rotate(-28)` },
+            x.e("rect", { x: -1.3, y: -30, width: 2.6, height: 40, rx: 1.2, fill: "#AEB6C2", stroke: "#7D8794", strokeWidth: 0.5 }),
+            x.e("path", { d: "M -9,-34 L 9,-34 L 0,-26 Z", fill: "#D9534F", stroke: "#8E2028", strokeWidth: 0.7, strokeLinejoin: "round" })),
+        ];
+      },
+    },
+    skull: {
+      draw: (x) => {
+        const [a, b] = avHandAt();
+        return [
+          x.e("g", { key: x.key(), transform: `translate(${a - 2},${b - 16})` },
+            x.e("path", { d: "M -9,0 C -9,-8 -4,-12 1,-12 C 6,-12 11,-8 11,0 C 11,4 9,6 7,7 L 7,11 L -5,11 L -5,7 C -7,6 -9,4 -9,0 Z", fill: "#F4EEDC", stroke: "#B59D6C", strokeWidth: 0.8, strokeLinejoin: "round" }),
+            x.e("ellipse", { cx: -3.4, cy: 0.6, rx: 2.6, ry: 3, fill: "#3A3226" }),
+            x.e("ellipse", { cx: 5.4, cy: 0.6, rx: 2.6, ry: 3, fill: "#3A3226" }),
+            x.e("path", { d: "M 1,4 L -0.4,6.6 L 2.4,6.6 Z", fill: "#3A3226" }),
+            x.e("path", { d: "M -3,9 L -3,11 M 0,9 L 0,11 M 3,9 L 3,11 M 6,9 L 6,11", stroke: "#B59D6C", strokeWidth: 0.6 })),
+        ];
+      },
+    },
+    scalpel: {
+      draw: (x) => {
+        const [a, b] = avHandAt();
+        return [
+          x.e("g", { key: x.key(), transform: `translate(${a},${b}) rotate(-20)` },
+            x.e("rect", { x: -1.6, y: -6, width: 3.2, height: 20, rx: 1.2, fill: "#AEB6C2", stroke: "#7D8794", strokeWidth: 0.5 }),
+            x.e("path", { d: "M -1.6,-6 L 1.6,-6 C 1.6,-11 0.6,-16 -1.6,-19 Z", fill: "#E9EDF2", stroke: "#7D8794", strokeWidth: 0.5 })),
+        ];
+      },
+    },
+  },
+  // ---- hair: in front (over the head) and, for long hair, behind ----
+  AV_HAIR_SHORT = "M 102.3,34 C 101.4,27 103.2,20.4 107.4,16.6 C 110.8,13.6 115.2,12.6 120,12.6 C 124.8,12.6 129.2,13.6 132.6,16.6 C 136.8,20.4 138.6,27 137.7,34 C 136.4,29.2 134.4,26 131.4,24.4 C 129.6,26.6 126.4,27.4 123.2,26 C 121.4,27.8 118.2,28 115.8,26.4 C 113,27.8 109.8,27 108.4,24.8 C 105.6,26.6 103.4,29.6 102.3,34 Z",
+  avHairShort = (x) => [
+    x.P(AV_HAIR_SHORT, { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.8, strokeLinejoin: "round" }),
+    x.P("M 108.6,17.6 C 111.6,15.4 115.4,14.6 119,14.6", x.ln("#FFFFFF", 1.2, 0.25)),
+  ],
+  AV_HAIRS = {
+    short: { draw: avHairShort },
+    long: {
+      back: (x) => [x.P("M 101.4,28 C 98.6,46 97.4,68 96.4,92 C 103,97 111,97 117,92.6 L 123,92.6 C 129,97 137,97 143.6,92 C 142.6,68 141.4,46 138.6,28 Z", { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.8, strokeLinejoin: "round" })],
+      draw: (x) => [
+        ...avHairShort(x),
+        ...x.PP("M 102.4,32 C 100.8,40 100.6,50 101.6,58 C 102.4,52 103.2,44 104.4,36 Z", { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.6 }),
+      ],
+    },
+    bun: {
+      draw: (x) => [
+        x.E(120, 10, 7.6, 6.4, { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.8 }),
+        x.P("M 102.3,34 C 101.4,26 104,18.6 109,15.4 C 112.4,13.4 116,12.8 120,12.8 C 124,12.8 127.6,13.4 131,15.4 C 136,18.6 138.6,26 137.7,34 C 134,26.4 128,23.6 120,23.4 C 112,23.6 106,26.4 102.3,34 Z", { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.8, strokeLinejoin: "round" }),
+        x.P("M 109,17.6 C 112,15.6 115.6,14.8 119,14.8", x.ln("#FFFFFF", 1.2, 0.25)),
+      ],
+    },
+    curly: {
+      draw: (x) => [
+        x.P("M 102.4,34 C 101.4,26 104,18 110,14.6 C 113,13 116.4,12.4 120,12.4 C 123.6,12.4 127,13 130,14.6 C 136,18 138.6,26 137.6,34 Z", { fill: x.ref("hr") }),
+        ...[[103.6, 31, 3.6], [104.2, 24.6, 4], [108, 18.6, 4.4], [113.6, 14.8, 4.6], [120, 13.4, 4.8], [126.4, 14.8, 4.6], [132, 18.6, 4.4], [135.8, 24.6, 4], [136.4, 31, 3.6], [112, 22.6, 3.6], [120, 21.4, 3.8], [128, 22.6, 3.6]].map(([a, b, r]) =>
+          x.E(a, b, r, r * 0.9, { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.6 }),
+        ),
+      ],
+    },
+    bald: { draw: (x) => [x.E(113, 20, 5, 2.6, { fill: "#FFFFFF", opacity: 0.25 })] },
+  },
+  // ---- beards: stubble and a full beard under the mouth, a moustache over it ----
+  AV_BEARD = "M 102.6,45 C 103,53 106,58.6 110,61.6 C 113,63.8 116.6,64.8 120,64.8 C 123.4,64.8 127,63.8 130,61.6 C 134,58.6 137,53 137.4,45 C 135,50.4 132,53.4 128,54.8 C 125,55.8 122,54.4 120,55 C 118,54.4 115,55.8 112,54.8 C 108,53.4 105,50.4 102.6,45 Z",
+  AV_MOUSTACHE = "M 113.8,55 C 115.8,53.2 118.8,53.6 120,54.8 C 121.2,53.6 124.2,53.2 126.2,55 C 124.6,56.6 121.6,56.4 120,55.6 C 118.4,56.4 115.4,56.6 113.8,55 Z",
+  AV_BEARDS_UNDER = (x) =>
+    x.L.beard === "stubble"
+      ? [x.P(AV_BEARD, { fill: x.hc[1], opacity: 0.22 })]
+      : x.L.beard === "full"
+        ? [x.P(AV_BEARD, { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.6 })]
+        : [],
+  AV_BEARDS_OVER = (x) => (x.L.beard === "full" || x.L.beard === "moustache" ? [x.P(AV_MOUSTACHE, { fill: x.ref("hr"), stroke: x.hc[1], strokeWidth: 0.5 })] : []);
+
+// ---- the avatar: the figure of the home screen (same face and shape) with free looks (skin, eyes, hair, beard) and
+// clothes and things from the shop. Shapes are written in the figure's old coordinates and go through its cartoon map
+// (bmW for the body, bmWA for the arms), so the clothes follow the figure. Each piece of clothing has a slot.
+const AV_SKINS = {
+    t1: { g: ["#FCE4D3", "#F7D0B6", "#EAB596"], line: "#9C6B52", ear: "#F6CDB1", earIn: "#D49C80", fold: "#C98F72", fold2: "#D9A386" },
+    t2: { g: ["#F6D3B8", "#EDBB98", "#DCA07A"], line: "#8E5E45", ear: "#EBBF9F", earIn: "#C48A6B", fold: "#B98163", fold2: "#C9946F" },
+    t3: { g: ["#E8B98F", "#D9A074", "#C4855A"], line: "#7E5038", ear: "#DDA77D", earIn: "#B07550", fold: "#A66C48", fold2: "#B57D55" },
+    t4: { g: ["#D19C6E", "#BE8457", "#A56C43"], line: "#6B4128", ear: "#C48A5C", earIn: "#93593A", fold: "#8E5736", fold2: "#9C6641" },
+    t5: { g: ["#A8714A", "#925E3A", "#7A4B2C"], line: "#4F2F1C", ear: "#9A6640", earIn: "#6E4127", fold: "#5E3820", fold2: "#6B4127" },
+    t6: { g: ["#7A4E33", "#664029", "#523220"], line: "#3A2213", ear: "#6E472E", earIn: "#4A2C1A", fold: "#3E2515", fold2: "#4A2C19" },
+  },
+  AV_EYES = { blue: ["#8CBDF0", "#3A6DB3"], green: ["#9ED79A", "#3E8A4E"], brown: ["#C8935F", "#6B3F1E"], grey: ["#C3CBD6", "#6B7787"] },
+  AV_HAIR_COLORS = {
+    black: ["#2B2320", "#16110F"], darkbrown: ["#4A3328", "#2F1F17"], brown: ["#6E4A37", "#4E3326"], lightbrown: ["#9A6B4A", "#704A31"],
+    blond: ["#E2BC6E", "#B8913F"], red: ["#B5522E", "#86391E"], grey: ["#B7B9BD", "#8A8D93"], white: ["#F1F0EC", "#C9C7C0"],
+    pink: ["#F08BB8", "#C25C8B"], blue: ["#5A8FE0", "#2F5DA8"], green: ["#58B98A", "#2F7F57"], purple: ["#9B72E0", "#6A47AE"],
+  },
+  // what each slot can hold: the free looks and the clothes; an unknown value counts as the default
+  AV_DEFAULT = { skin: "t1", eyes: "blue", hair: "short", hairColor: "brown", beard: "none", top: "shirt-blue", bottom: "jeans", shoes: "sneaker", head: "none", face: "none", neck: "none", hand: "none" },
+  AV_KEYS = { skin: "avSkin", eyes: "avEyes", hair: "avHair", hairColor: "avHairColor", beard: "avBeard", top: "avTop", bottom: "avBottom", shoes: "avShoes", head: "avHead", face: "avFace", neck: "avNeck", hand: "avHand" };
+let AV_N = 0;
+const avWc = new Map(),
+  avWAc = new Map(),
+  avW = (d) => avWc.get(d) || (avWc.set(d, bmW(d)), avWc.get(d)),
+  avWA = (d) => avWAc.get(d) || (avWAc.set(d, bmWA(d)), avWAc.get(d)),
+  avGY = (y) => +bmLerp(BM_GY, y).toFixed(2),
+  // the look of a progress (or of a leaderboard row from the server: {skin, eyes, ...})
+  avLook = (s, server) => {
+    const o = {};
+    Object.keys(AV_DEFAULT).forEach((k) => {
+      const v = s ? (server ? s[k] : s[AV_KEYS[k]]) : null;
+      o[k] = typeof v === "string" && /^[a-z0-9-]{1,24}$/.test(v) ? v : AV_DEFAULT[k];
+    });
+    return o;
+  };
+
+// the picture: view "full" (whole figure) or "bust" (head and shoulders, for lists); size = height in px
+function AvatarArt({ look: lk, view = "full", size = 120, title }) {
+  const u = useRef(null);
+  u.current || (u.current = "av" + ++AV_N);
+  const id = u.current,
+    L = lk || AV_DEFAULT,
+    e = React.createElement,
+    sk = AV_SKINS[L.skin] || AV_SKINS.t1,
+    eye = AV_EYES[L.eyes] || AV_EYES.blue,
+    hc = AV_HAIR_COLORS[L.hairColor] || AV_HAIR_COLORS.brown,
+    ref = (n) => `url(#${id}${n})`,
+    n = { k: 0 },
+    key = () => "k" + n.k++,
+    P = (d, t) => e("path", { key: key(), d: avW(d), ...t }),
+    PP = (d, t) => [P(d, t), P(bmMirror(d), t)],
+    PA = (d, t) => e("path", { key: key(), d: avWA(d), ...t }),
+    PPA = (d, t) => [PA(d, t), PA(bmMirror(d), t)],
+    E = (cx, cy, rx, ry, t) => {
+      const [x, y] = bmPt(cx, cy),
+        sy = bmLerp(BM_GY, cy + 0.5) - bmLerp(BM_GY, cy - 0.5);
+      return e("ellipse", { key: key(), cx: x, cy: y, rx: +(rx * bmLerp(BM_SX, cy)).toFixed(2), ry: +(ry * sy).toFixed(2), ...t });
+    },
+    EE = (cx, cy, rx, ry, t) => [E(cx, cy, rx, ry, t), E(240 - cx, cy, rx, ry, t)],
+    // a band of the body (y in old coordinates) or of the arms, in one colour, clipped to the outline
+    band = (y0, y1, t, clip = "B") => e("g", { key: key(), clipPath: ref(clip) }, e("rect", { x: 0, y: avGY(y0), width: 240, height: avGY(y1) - avGY(y0), ...t })),
+    skin = { fill: ref("sk"), stroke: sk.line, strokeWidth: 1, strokeLinejoin: "round" },
+    limb = { fill: ref("lm"), stroke: sk.line, strokeWidth: 1, strokeLinejoin: "round" },
+    ln = (c, w, o) => ({ fill: "none", stroke: c, strokeWidth: w, strokeLinecap: "round", strokeLinejoin: "round", opacity: o == null ? 1 : o }),
+    st = (a) => a.map(([o, c, op], i) => e("stop", { key: i, offset: o, stopColor: c, stopOpacity: op == null ? 1 : op })),
+    lin = (nm, a, x2 = "1", y2 = "0") => e("linearGradient", { key: nm, id: id + nm, x1: "0", y1: "0", x2, y2 }, st(a)),
+    rad = (nm, a, cx = "0.42", cy = "0.36", r = "0.7") => e("radialGradient", { key: nm, id: id + nm, cx, cy, r }, st(a)),
+    FOOT = "M 97.5,384 C 98,390 95,394 94,399 C 92.5,404 95,409.5 100,410 C 105,410.5 111,410.5 113,408 C 115,402 113,396 112,390 L 112,384 Z",
+    top = AV_TOPS[L.top] ? L.top : AV_DEFAULT.top,
+    T = AV_TOPS[top],
+    B = AV_BOTTOMS[L.bottom] || AV_BOTTOMS[AV_DEFAULT.bottom],
+    S = AV_SHOES[L.shoes] || AV_SHOES[AV_DEFAULT.shoes],
+    H = AV_HEADS[L.head],
+    F = AV_FACES[L.face],
+    N = AV_NECKS[L.neck],
+    HD = AV_HANDS[L.hand],
+    hair = AV_HAIRS[L.hair] ? L.hair : AV_DEFAULT.hair,
+    ctx = { e, P, PP, PA, PPA, E, EE, band, ln, ref, key, sk, hc, id, FOOT, L };
+  const defs = e(
+    "defs",
+    { key: "defs" },
+    lin("sk", [["0%", sk.g[0]], ["55%", sk.g[1]], ["100%", sk.g[2]]]),
+    lin("lm", [["0%", sk.g[0]], ["55%", sk.g[1]], ["100%", sk.g[2]]]),
+    rad("ir", [["0%", eye[0]], ["100%", eye[1]]]),
+    lin("hr", [["0%", hc[0]], ["100%", hc[1]]], "0.4", "1"),
+    // light from the upper left on the clothes
+    lin("sh", [["0%", "#FFFFFF", 0.22], ["50%", "#FFFFFF", 0], ["100%", "#1E2836", 0.16]]),
+    e("radialGradient", { key: "sd", id: id + "sd", cx: "0.5", cy: "0.5", r: "0.5" }, st([["0%", "#1E2836", 0.24], ["100%", "#1E2836", 0]])),
+    e("clipPath", { key: "cB", id: id + "B" }, e("path", { d: avW(BM_BODY) })),
+    e("clipPath", { key: "cA", id: id + "A" }, e("path", { d: avWA(BMF.ARM) }), e("path", { d: avWA(bmMirror(BMF.ARM)) })),
+  );
+  const parts = [
+    E(120, 411, 40, 4.6, { fill: ref("sd") }),
+    // behind the figure: long hair, a hood
+    ...(AV_HAIRS[hair].back ? AV_HAIRS[hair].back(ctx) : []),
+    ...(T.back ? T.back(ctx) : []),
+    // the body, arms, ears
+    P(BM_BODY, skin),
+    ...PPA(BMF.ARM, limb),
+    ...PP("M 101.8,37.2 C 97.6,36.2 95.4,40.4 95.8,45.2 C 96.2,49.8 98.6,52.6 101.9,51.8", { fill: sk.ear, stroke: sk.line, strokeWidth: 0.9 }),
+    ...PP("M 99.8,40.2 C 98.4,42.4 98.6,46.6 100.3,48.8", ln(sk.earIn, 0.7)),
+    // legs and feet: trousers, shoes
+    ...B.draw(ctx),
+    ...PP(FOOT, limb),
+    ...S.draw(ctx),
+    // the top over the trousers, its sleeves over the arms
+    ...T.draw(ctx),
+    // hands
+    ...PPA(BMF.THUMB, limb),
+    ...PPA(BMF.HAND, limb),
+    ...PPA("M 50.4,229.4 C 53.2,230.8 57.4,230.8 61.2,229.2", ln(sk.fold2, 0.55)),
+    ...PPA("M 52.3,236.6 L 52.2,240 M 55.4,236.8 L 55.4,240.6 M 58.5,236.4 L 58.5,239.6", ln(sk.fold, 0.5)),
+    ...(N && N.under ? N.draw(ctx) : []),
+    ...(T.over ? T.over(ctx) : []),
+    ...(N && !N.under ? N.draw(ctx) : []),
+    ...(HD ? HD.draw(ctx) : []),
+    // the face (as on the home screen)
+    ...AV_BEARDS_UNDER(ctx),
+    ...PP("M 107.6,42.6 C 109.8,41 113.6,40.8 116.2,42.2", ln(hc[1], 1.1)),
+    ...EE(112, 46.8, 3.7, 3.1, { fill: "#FFFFFF", stroke: "#8A6A55", strokeWidth: 0.5 }),
+    ...EE(112.2, 47.1, 2.3, 2.4, { fill: ref("ir") }),
+    ...EE(112.2, 47.2, 1.1, 1.15, { fill: "#1E2836" }),
+    ...EE(113.1, 46.1, 0.65, 0.65, { fill: "#FFFFFF" }),
+    ...PP("M 108.3,46.2 C 109.7,43.7 114.3,43.7 115.7,46.2", ln("#6E4C3C", 0.75)),
+    ...EE(107.4, 52.4, 3, 1.6, { fill: "#F39A98", opacity: 0.38 }),
+    P("M 120.8,46.8 C 120.6,49.4 119.2,51.6 117.8,52.6 C 118.8,53.8 121.4,53.8 122.4,52.8", ln(sk.fold, 0.85)),
+    P("M 114.6,56.4 C 117,57.4 123,57.4 125.4,56.4 C 124,59.8 116,59.8 114.6,56.4 Z", { fill: "#B9443F", stroke: "#8E2F2B", strokeWidth: 0.55 }),
+    P("M 115.8,56.9 C 118,57.6 122,57.6 124.2,56.9 L 123.8,57.9 C 121.6,58.5 118.4,58.5 116.2,57.9 Z", { fill: "#FFFFFF" }),
+    P("M 117.6,59.1 C 119,58.3 121,58.3 122.4,59.1 C 121.2,59.7 118.8,59.7 117.6,59.1 Z", { fill: "#EC7C80" }),
+    ...AV_BEARDS_OVER(ctx),
+    // hair, then what is worn on the head and the face
+    ...AV_HAIRS[hair].draw(ctx, !!(H && H.flat)),
+    ...(F ? F.draw(ctx) : []),
+    ...(H ? H.draw(ctx) : []),
+  ];
+  // the whole figure, or head and shoulders
+  const vb = AV_VIEWS[view] || AV_VIEWS.full,
+    w = view === "full" ? Math.round((size * 168) / 418) : size;
+  return e(
+    "svg",
+    {
+      viewBox: vb,
+      width: w,
+      height: size,
+      role: title ? "img" : undefined,
+      "aria-label": title || undefined,
+      "aria-hidden": title ? undefined : "true",
+      // what differs from the default look (for tests)
+      "data-av": Object.keys(AV_DEFAULT).filter((k) => L[k] && L[k] !== AV_DEFAULT[k]).map((k) => k + "=" + L[k]).join(" "),
+      style: { display: "block", overflow: "hidden" },
+    },
+    defs,
+    e("g", null, parts),
+  );
+}
+// small crops of the figure for the shop's rows (what a piece looks like on you)
+const AV_VIEWS = { full: "36 0 168 418", bust: "74 4 92 92", top: "50 74 140 140", legs: "70 206 100 206", feet: "78 350 84 84", hand: "14 198 84 84" },
+  // the slot keys of an item's apply ({ avTop: "coat" } -> { top: "coat" })
+  avApplyLook = (a) => {
+    const o = {};
+    Object.entries(a || {}).forEach(([k, v]) => {
+      const slot = Object.keys(AV_KEYS).find((x) => AV_KEYS[x] === k);
+      slot && (o[slot] = v);
+    });
+    return o;
+  };
+// the avatar's head and shoulders in a circle (home screen, leaderboards); a button when it can be tapped
+function AvatarBadge({ look, size = 36, onClick, label }) {
+  const st = {
+      display: "inline-flex",
+      width: size,
+      height: size,
+      flex: `0 0 ${size}px`,
+      borderRadius: "50%",
+      overflow: "hidden",
+      padding: 0,
+      border: "none",
+      background: C.blueBg,
+      boxShadow: `inset 0 0 0 1.5px ${C.line}`,
+      cursor: onClick ? "pointer" : "default",
+      verticalAlign: "middle",
+    },
+    inner = React.createElement(AvatarArt, { look, view: "bust", size });
+  return onClick
+    ? React.createElement("button", { type: "button", onClick, "aria-label": label, "data-avatar-badge": "1", style: st }, inner)
+    : React.createElement("span", { "aria-hidden": "true", "data-avatar-badge": "1", style: st }, inner);
+}
+// someone's avatar, large, with the name, XP and streak (tapped in a leaderboard)
+function AvatarCard({ who, onClose, extra }) {
+  const e = React.createElement;
+  useEffect(() => {
+    const k = (v) => v.key === "Escape" && onClose();
+    return (window.addEventListener("keydown", k), () => window.removeEventListener("keydown", k));
+  }, []);
+  return e(
+    "div",
+    { role: "dialog", "aria-modal": "true", "data-avatar-card": "1", onClick: onClose, style: { position: "fixed", inset: 0, background: "rgba(15,20,30,0.55)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 } },
+    e(
+      "div",
+      { onClick: (v) => v.stopPropagation(), className: "ana-body", style: { background: C.card, color: C.ink, borderRadius: 20, padding: "14px 16px 14px", width: "100%", maxWidth: 320, textAlign: "center", boxShadow: "0 12px 40px rgba(0,0,0,0.3)" } },
+      e("div", { style: { display: "flex", justifyContent: "center", background: `linear-gradient(180deg, ${C.blueBg}, ${C.card})`, borderRadius: 16, padding: "12px 0 6px" } }, e(AvatarArt, { look: who.look, size: 300, title: _T("Avatar von {0}", who.name) })),
+      e("div", { className: "ana-display", style: { fontSize: 20, fontWeight: 700, marginTop: 8 } }, who.name, who.me ? e("span", { style: { fontSize: 14, color: C.inkSoft, fontWeight: 600 } }, " \xB7 ", _T("du")) : null),
+      e(
+        "div",
+        { style: { fontSize: 14, color: C.inkSoft, marginTop: 2 } },
+        `${fmtN(who.value || 0)} XP`,
+        who.streak > 0 ? ` \xB7 \u{1F525} ${who.streak === 1 ? _T("1 Tag Serie") : _T("{0} Tage Serie", who.streak)}` : "",
+      ),
+      extra || null,
+      e("div", null),
+      e("button", { onClick: onClose, "data-avatar-close": "1", className: "ana-display", style: { marginTop: 12, padding: "10px 26px", borderRadius: 999, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontSize: 15, fontWeight: 700, cursor: "pointer" } }, _T("Schlie\xDFen")),
+    ),
+  );
+}
+// the shop's avatar tab, at the top: your avatar and the free looks (skin, eyes, hair, beard; bought hair colours too)
+function AvatarLooks({ progress: s, onLook }) {
+  const e = React.createElement,
+    L = avLook(s),
+    own = s.owned || [],
+    sw = (k, v, col, label, on) =>
+      e("button", {
+        key: v,
+        type: "button",
+        onClick: () => onLook(AV_KEYS[k], v),
+        "aria-label": label,
+        "aria-pressed": on ? "true" : "false",
+        "data-look": `${k}:${v}`,
+        title: label,
+        style: { width: 30, height: 30, borderRadius: "50%", background: col, border: `2px solid ${on ? C.ink : "rgba(30,40,54,0.18)"}`, boxShadow: on ? `0 0 0 2px ${C.card} inset` : "none", cursor: "pointer", padding: 0, flex: "0 0 30px" },
+      }),
+    chip = (k, v, label, on) =>
+      e(
+        "button",
+        {
+          key: v,
+          type: "button",
+          onClick: () => onLook(AV_KEYS[k], v),
+          "aria-pressed": on ? "true" : "false",
+          "data-look": `${k}:${v}`,
+          className: "ana-display",
+          style: { padding: "6px 11px", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", border: `1.5px solid ${on ? C.ink : C.line}`, background: on ? C.ink : C.card, color: on ? C.paper : C.ink },
+        },
+        label,
+      ),
+    row = (label, kids) =>
+      e(
+        "div",
+        { style: { marginTop: 10 } },
+        e("div", { className: "ana-display", style: { fontSize: 12, fontWeight: 700, color: C.inkSoft, letterSpacing: 0.6, marginBottom: 6 } }, label.toUpperCase()),
+        e("div", { style: { display: "flex", flexWrap: "wrap", gap: 7 } }, kids),
+      ),
+    HAIR = { short: _T("Kurz"), long: _T("Lang"), bun: _T("Dutt"), curly: _T("Locken"), bald: _T("Glatze") },
+    BEARD = { none: _T("Ohne"), stubble: _T("Stoppeln"), moustache: _T("Schnurrbart"), full: _T("Vollbart") },
+    EYES = { blue: _T("Blau"), green: _T("Gr\xFCn"), brown: _T("Braun"), grey: _T("Grau") },
+    HC = { black: _T("Schwarz"), darkbrown: _T("Dunkelbraun"), brown: _T("Braun"), lightbrown: _T("Hellbraun"), blond: _T("Blond"), red: _T("Rot"), grey: _T("Grau"), white: _T("Wei\xDF") },
+    fun = SHOP.filter((x) => x.apply && x.apply.avHairColor && own.includes(x.id));
+  return e(
+    "div",
+    { "data-avatar-looks": "1", style: { background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 16, padding: "12px 14px 14px", marginBottom: 16 } },
+    e(
+      "div",
+      { style: { display: "flex", gap: 12, alignItems: "flex-end" } },
+      e("div", { style: { flex: "0 0 auto", background: `linear-gradient(180deg, ${C.blueBg}, ${C.card})`, borderRadius: 14, padding: "8px 6px 2px" } }, e(AvatarArt, { look: L, size: 236, title: _T("Dein Avatar") })),
+      e(
+        "div",
+        { style: { flex: 1, minWidth: 0, paddingBottom: 6 } },
+        e("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, _T("Dein Avatar")),
+        e("div", { className: "ana-body", style: { fontSize: 13, color: C.inkSoft, marginTop: 4, lineHeight: 1.4 } }, _T("Aussehen kostenlos w\xE4hlen, Kleidung und mehr unten mit Talern kaufen. Deine Freunde sehen deinen Avatar in der Rangliste.")),
+      ),
+    ),
+    row(_T("Hautfarbe"), Object.keys(AV_SKINS).map((v, i) => sw("skin", v, AV_SKINS[v].g[1], _T("Hautfarbe {0}", i + 1), L.skin === v))),
+    row(_T("Augen"), Object.keys(AV_EYES).map((v) => sw("eyes", v, AV_EYES[v][1], EYES[v], L.eyes === v))),
+    row(_T("Frisur"), Object.keys(HAIR).map((v) => chip("hair", v, HAIR[v], L.hair === v))),
+    row(_T("Haarfarbe"), [
+      ...Object.keys(HC).map((v) => sw("hairColor", v, AV_HAIR_COLORS[v][0], HC[v], L.hairColor === v)),
+      ...fun.map((x) => sw("hairColor", x.apply.avHairColor, AV_HAIR_COLORS[x.apply.avHairColor][0], x.name, L.hairColor === x.apply.avHairColor)),
+    ]),
+    row(_T("Bart"), Object.keys(BEARD).map((v) => chip("beard", v, BEARD[v], L.beard === v))),
   );
 }
 // ---- pictures for the basics lessons: planes and axes, directions, movements, organ systems, cavities, tissues ----
@@ -17894,7 +18570,7 @@ function GroupsView({ gb, week, busy, loading, pick, setPick, setGrp, line, name
 }
 // the leaderboards: of your friends, of the groups (medical students, nursing, ...) or of everyone; this week or all
 // time. Friends: add one by code, invite with your own. Groups: compared by the XP per person, with your place in yours
-function FriendsScreen({ onExit: r, onAccount: ac }) {
+function FriendsScreen({ onExit: r, onAccount: ac, look: myLook }) {
   const cl = useCloud(),
     u = cl.user,
     [week, setWeek] = useState(!0),
@@ -17914,6 +18590,7 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
     [bad, setBad] = useState(null),
     [good, setGood] = useState(null),
     [open, setOpen] = useState(null),
+    [card, setCard] = useState(null),
     [loading, setLoading] = useState(!1),
     load = async (force) => {
       if (!CLOUD.user) return;
@@ -18025,19 +18702,21 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
         React.createElement(Btn, { color: CLOUD_BLUE, dark: "#1864AB", onClick: ac, "data-friends-login": "1" }, _T("Anmelden oder registrieren")),
       ),
     );
-  // one line of a leaderboard: place (a medal for the first three), name, XP, streak
-  const line = (f, place, v, last, onTap, on) =>
+  // one line of a leaderboard: place (a medal for the first three), avatar, name, XP, streak; tapped, the avatar large
+  // (for a friend with the button to remove them)
+  const line = (f, place, v, last, onTap) =>
     React.createElement(
       "div",
       { key: f.id || `${place}-${f.name}`, "data-board-row": f.me ? "me" : "friend", style: { borderBottom: last ? "none" : `1px solid ${C.line}` } },
       React.createElement(
         "button",
         {
-          onClick: onTap,
+          onClick: () => setCard({ ...f, value: v, friend: !!onTap && !f.me }),
           className: "ana-body",
-          style: { display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "10px 4px", background: f.me ? C.blueBg : "none", border: "none", borderRadius: 10, cursor: onTap ? "pointer" : "default", color: C.ink },
+          style: { display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "8px 4px", background: f.me ? C.blueBg : "none", border: "none", borderRadius: 10, cursor: "pointer", color: C.ink },
         },
         React.createElement("span", { className: "ana-display", style: { minWidth: 30, textAlign: "center", fontSize: place <= 3 && v > 0 ? 20 : 15, fontWeight: 700, color: C.inkSoft } }, place <= 3 && v > 0 ? CLOUD_MEDAL[place - 1] : place),
+        React.createElement(AvatarBadge, { look: f.me ? myLook || AV_DEFAULT : avLook(f.look, !0), size: 38 }),
         React.createElement(
           "span",
           { style: { flex: 1, minWidth: 0 } },
@@ -18047,16 +18726,6 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
         ),
         React.createElement("span", { className: "ana-display", "data-board-xp": v, style: { fontSize: 16, fontWeight: 700, color: C.ink, whiteSpace: "nowrap" } }, `${fmtN(v)} XP`),
       ),
-      on &&
-        React.createElement(
-          "div",
-          { style: { padding: "0 4px 10px 44px" } },
-          React.createElement(
-            "button",
-            { onClick: () => drop(f), disabled: busy, "data-drop-friend": "1", className: "ana-body", style: { background: "none", border: `1.5px solid ${C.bad}`, color: C.bad, borderRadius: 10, padding: "6px 12px", fontSize: 13.5, cursor: "pointer" } },
-            _T("Aus der Freundesliste entfernen"),
-          ),
-        ),
     );
   const top = (g && g.top) || [],
     meIn = top.some((x) => x.me),
@@ -18064,6 +18733,18 @@ function FriendsScreen({ onExit: r, onAccount: ac }) {
   return React.createElement(
     "div",
     { style: { minHeight: PAGE_H, paddingBottom: 30 } },
+    card &&
+      React.createElement(AvatarCard, {
+        who: { name: card.name, me: card.me, value: card.value, streak: card.streak, look: card.me ? myLook || AV_DEFAULT : avLook(card.look, !0) },
+        onClose: () => setCard(null),
+        extra: card.friend
+          ? React.createElement(
+              "button",
+              { onClick: () => (setCard(null), drop(card)), disabled: busy, "data-drop-friend": "1", className: "ana-body", style: { marginTop: 10, background: "none", border: `1.5px solid ${C.bad}`, color: C.bad, borderRadius: 10, padding: "7px 12px", fontSize: 13.5, cursor: "pointer" } },
+              _T("Aus der Freundesliste entfernen"),
+            )
+          : null,
+      }),
     React.createElement(
       TopBar,
       {
@@ -18702,6 +19383,7 @@ function HomeScreen({
   onCases: a,
   onErrors: n,
   onShop: i,
+  onAvatar: goAvatar,
   onAtlas: d,
   onLevel: lvSet,
   onExam: goExam,
@@ -18872,6 +19554,7 @@ function HomeScreen({
         React.createElement(
           "div",
           { className: "ana-display", style: { fontSize: 24, fontWeight: 700, color: C.ink, lineHeight: 1.1 } },
+          goAvatar && React.createElement("span", { style: { marginRight: 9, display: "inline-block", verticalAlign: "-10px" } }, React.createElement(AvatarBadge, { look: avLook(s), size: 40, onClick: goAvatar, label: _T("Dein Avatar") })),
           s.avatar ? React.createElement("span", { style: { marginRight: 6 } }, s.avatar) : null,
           _T("Anatomia"),
           React.createElement("span", { style: { color: C.artery } }, "."),
@@ -19781,15 +20464,22 @@ function UnlockSheet({ lesson: s, next: r, direct: o, tokens: e, coins: t, onClo
     ),
   );
 }
-function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t, onClaim: a, focus: fc }) {
+function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t, onClaim: a, focus: fc, onLook: lk, tab: tb }) {
   const n = s.owned || [],
     [i, l] = useState(!1),
     d = ACHIEVEMENTS.map((x) => ({ a: x, st: achState(s, x) })),
     c = d.filter((x) => x.st.done && !x.st.claimed),
     m = i ? d : [...c, ...d.filter((x) => !x.st.done).slice(0, Math.max(0, 4 - c.length))],
     // one tab at a time: the achievements, then the kinds of goods (opened for a token: the helps)
-    TABS = { Erfolge: [], Designs: ["Hintergrund", "Lernpfad"], Avatare: ["Avatar"], Effekte: ["Effekte"], Hilfen: ["Hilfen"] },
-    [tab, setTab] = useState(() => (fc && SHOP.find((x) => x.grant && x.grant[fc]) ? "Hilfen" : "Erfolge")),
+    TABS = {
+      Erfolge: [],
+      Avatar: ["OP-Kleidung", "Oberteile", "Hosen & R\xF6cke", "Schuhe", "Kopf", "Gesicht", "Hals", "In der Hand", "Haarfarben", "Abzeichen"],
+      Designs: ["Hintergrund", "Lernpfad"],
+      Effekte: ["Effekte"],
+      Hilfen: ["Hilfen"],
+    },
+    [tab, setTab] = useState(() => (TABS[tb] ? tb : fc && SHOP.find((x) => x.grant && x.grant[fc]) ? "Hilfen" : "Erfolge")),
+    myLook = avLook(s),
     h = useBoostLeft(s),
     y = (x) =>
       x.apply && x.apply.theme
@@ -19868,7 +20558,8 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
       {
         role: "tablist",
         "data-shoptabs": "1",
-        style: { display: "flex", gap: 5, padding: "8px 14px 10px", margin: "0 -14px 6px", position: "sticky", top: "var(--ana-topbar, 0px)", zIndex: 6, background: C.paper },
+        // each tab as wide as its word (longer words in other languages); on a very narrow phone the row scrolls sideways
+        style: { display: "flex", gap: 4, padding: "8px 14px 10px", margin: "0 -14px 6px", position: "sticky", top: "var(--ana-topbar, 0px)", zIndex: 6, background: C.paper, overflowX: "auto", scrollbarWidth: "none" },
       },
       Object.keys(TABS).map((x) =>
         React.createElement(
@@ -19880,9 +20571,8 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
             onClick: () => (setTab(x), window.scrollTo(0, 0)),
             className: "ana-display",
             style: {
-              flex: "1 1 0",
-              minWidth: 0,
-              padding: "8px 2px",
+              flex: "1 1 auto",
+              padding: "8px 4px",
               borderRadius: 999,
               fontSize: 12.5,
               fontWeight: 700,
@@ -19967,6 +20657,7 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
         ),
       ),
     ),
+    tab === "Avatar" && lk && React.createElement(AvatarLooks, { progress: s, onLook: lk }),
     SHOP_CATS.filter((x) => (TABS[tab] || []).includes(x)).map((x) =>
       React.createElement(
         "div",
@@ -20003,7 +20694,14 @@ function ShopScreen({ progress: s, onExit: r, onBuy: o, onEquip: e, onUnequip: t
                 scrollMarginTop: "calc(var(--ana-topbar, 0px) + 72px)",
               },
             },
-            b.apply && b.apply.pathSkin
+            b.av
+              ? React.createElement(
+                  "div",
+                  { "data-av-preview": b.id, style: { width: 48, height: 48, flex: "0 0 48px", borderRadius: 12, overflow: "hidden", background: C.blueBg, border: `1.5px solid ${C.line}`, boxSizing: "border-box" } },
+                  // trousers and shoes: without the coat, which would hide them
+                  React.createElement(AvatarArt, { look: { ...myLook, ...((b.av === "legs" || b.av === "feet") && myLook.top === "coat" ? { top: "shirt-blue" } : {}), ...avApplyLook(b.apply) }, view: b.av, size: 45 }),
+                )
+              : b.apply && b.apply.pathSkin
               ? React.createElement(PathPreview, { skin: b.apply.pathSkin })
               : w
               ? React.createElement(
@@ -25172,6 +25870,14 @@ function AnatomiaApp() {
       _T("Lade deinen Fortschritt \u2026"),
     );
   const xm = () => (boostLeft(s) > 0 ? 2 : 1),
+    // the avatar's free looks (skin, eyes, hair, beard), chosen in the shop's avatar tab
+    setLook = (k, v) => {
+      haptic("tap");
+      r((p) => {
+        const f = { ...p, [k]: v };
+        return (saveProgress(f), f);
+      });
+    },
     unequipItem = (u) => {
       r((p) => {
         const f = { ...p };
@@ -25404,6 +26110,7 @@ function AnatomiaApp() {
       onCases: () => e({ name: "cases", cases: buildCases(CASES, 12) }),
       onErrors: () => e({ name: "errors" }),
       onShop: () => e({ name: "shop" }),
+      onAvatar: () => e({ name: "shop", tab: "Avatar" }),
       onAtlas: (u) => e({ name: "figatlas", q: typeof u == "string" ? u : "" }),
       onLevel: setLevel,
       onExam: goExam,
@@ -25430,7 +26137,7 @@ function AnatomiaApp() {
       onPrivacy: () => e({ name: "privacy", from: o.from }),
     });
   else if (o.name === "friends")
-    A = React.createElement(FriendsScreen, { onExit: () => e({ name: "home" }), onAccount: () => e({ name: "account", from: "friends" }) });
+    A = React.createElement(FriendsScreen, { look: avLook(s), onExit: () => e({ name: "home" }), onAccount: () => e({ name: "account", from: "friends" }) });
   else if (o.name === "privacy") A = React.createElement(PrivacyScreen, { onExit: () => e({ name: "account", from: o.from }) });
   else if (o.name === "settings")
     A = React.createElement(SettingsScreen, {
@@ -25690,6 +26397,8 @@ function AnatomiaApp() {
       onEquip: h,
       onUnequip: unequipItem,
       onClaim: claimAch,
+      onLook: setLook,
+      tab: o.tab,
     });
   else if (o.name === "deck")
     A = React.createElement(DeckSetupScreen, {
