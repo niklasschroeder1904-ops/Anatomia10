@@ -29,8 +29,8 @@ Selbststudium – nach XP pro Person, die gelernt hat; dazu mein Platz in meiner
 `delete_account()`. Wer `profiles.public` ausschaltet, steht
 nicht in der Liste der anderen, sieht aber den eigenen Platz.
 
-Der Avatar: Die App speichert Hautfarbe, Augen, Frisur, Haarfarbe, Bart und die angezogenen
-Sachen aus dem Shop im Fortschritt (`avSkin`, `avTop`, …). `avatar_of(d)` nimmt daraus nur die
+Der Avatar: Die App speichert die Figur (männlich/weiblich), Hautfarbe, Augen, Frisur, Haarfarbe, Bart
+und die angezogenen Sachen aus dem Shop im Fortschritt (`avBody`, `avSkin`, `avTop`, …). `avatar_of(d)` nimmt daraus nur die
 bekannten Teile, jeder ein kurzer Name aus Kleinbuchstaben, Ziffern und Bindestrichen; die
 Ranglisten (`leaderboard`, `global_board`, `group_board`) geben ihn als `look` mit. Was die App
 nicht kennt, zeichnet sie in der Grundform.

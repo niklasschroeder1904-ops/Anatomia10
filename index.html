@@ -11875,6 +11875,7 @@ const STORAGE_KEY = "anatomia-v1",
     avFace: null,
     avNeck: null,
     avHand: null,
+    avBody: null,
     fx: null,
     level: "alle",
     claimed: [],
@@ -14655,7 +14656,7 @@ const avShade = (h, a) => {
   // the white coat over a light blue shirt: open in a V at the top, long sleeves, pockets, a pen
   AV_COAT = "M 120,150 L 108.6,96 C 107.6,88 107.4,80 108,72.4 C 100,74.4 92,76.4 85.6,79.6 C 79.6,84 77.8,94 79.4,106 C 81.4,128 82.4,160 82.4,195 C 81.4,235 79,272 77,307 C 92,310 106,310.5 120,310.5 Z",
   AV_TOPS = {
-    "shirt-blue": avTop("#4C86C6"),
+    "shirt-blue": avTop("#86B9E8"),
     "shirt-red": avTop("#D9534F"),
     "shirt-green": avTop("#3FA66B"),
     "shirt-yellow": avTop("#F2C230"),
@@ -14958,8 +14959,8 @@ const AV_SKINS = {
     pink: ["#F08BB8", "#C25C8B"], blue: ["#5A8FE0", "#2F5DA8"], green: ["#58B98A", "#2F7F57"], purple: ["#9B72E0", "#6A47AE"],
   },
   // what each slot can hold: the free looks and the clothes; an unknown value counts as the default
-  AV_DEFAULT = { skin: "t1", eyes: "blue", hair: "short", hairColor: "brown", beard: "none", top: "shirt-blue", bottom: "jeans", shoes: "sneaker", head: "none", face: "none", neck: "none", hand: "none" },
-  AV_KEYS = { skin: "avSkin", eyes: "avEyes", hair: "avHair", hairColor: "avHairColor", beard: "avBeard", top: "avTop", bottom: "avBottom", shoes: "avShoes", head: "avHead", face: "avFace", neck: "avNeck", hand: "avHand" };
+  AV_DEFAULT = { skin: "t1", eyes: "blue", hair: "short", hairColor: "brown", beard: "none", top: "shirt-blue", bottom: "jeans", shoes: "sneaker", head: "none", face: "none", neck: "none", hand: "none", body: "m" },
+  AV_KEYS = { skin: "avSkin", eyes: "avEyes", hair: "avHair", hairColor: "avHairColor", beard: "avBeard", top: "avTop", bottom: "avBottom", shoes: "avShoes", head: "avHead", face: "avFace", neck: "avNeck", hand: "avHand", body: "avBody" };
 let AV_N = 0;
 const avWc = new Map(),
   avWAc = new Map(),
@@ -15145,7 +15146,8 @@ const AV3D = (() => {
   const mk = (list) => (h, o) => {
     o = o || {};
     const m = new T.MeshStandardMaterial({ color: o.map ? 0xffffff : col(h), roughness: o.r != null ? o.r : 0.62, metalness: o.m || 0 });
-    m.envMapIntensity = o.env != null ? o.env : o.m || (o.r != null && o.r < 0.4) ? 1 : 0.55;
+    m.envMapIntensity = o.env != null ? o.env : o.m || (o.r != null && o.r < 0.4) ? 0.9 : 0.35;
+    if (!o.m && (o.r == null || o.r >= 0.4)) m.roughness = Math.max(m.roughness, 0.78);
     if (o.map) m.map = o.map;
     if (o.op != null) {
       m.transparent = true;
@@ -15199,7 +15201,7 @@ const AV3D = (() => {
     HZ = 0.9,
     HBT = 1.08,
     HBB = 1.0,
-    headW = (th) => 1 - 0.24 * smooth(1.8, 3.0, th);
+    headW = (th) => 1 - 0.13 * smooth(1.95, 3.0, th);
   function headPt(th, ph, s, v) {
     const h = Math.sin(th) * headW(th),
       dy = Math.cos(th) * (th < PI / 2 ? HBT : HBB);
@@ -15239,9 +15241,19 @@ const AV3D = (() => {
       [0.001, 5.02], [0.45, 5.05], [0.78, 5.16], [0.93, 5.38], [0.99, 5.68], [0.98, 5.95], [0.9, 6.35], [0.86, 6.7], [0.9, 7.2],
       [0.99, 7.7], [1.07, 8.15], [1.13, 8.5], [1.12, 8.72], [1.05, 8.9], [0.9, 9.04], [0.68, 9.14], [0.46, 9.21], [0.3, 9.26], [0.001, 9.3],
     ],
+    BODY_F = [
+      [0.001, 5.02], [0.46, 5.05], [0.8, 5.16], [0.96, 5.38], [1.01, 5.68], [0.97, 5.95], [0.86, 6.35], [0.81, 6.7], [0.85, 7.2],
+      [0.94, 7.7], [0.99, 8.15], [1.04, 8.5], [1.03, 8.72], [0.97, 8.9], [0.84, 9.04], [0.64, 9.14], [0.44, 9.21], [0.29, 9.26], [0.001, 9.3],
+    ],
     BODY_Z = 0.58,
-    bodyCurve = new T.SplineCurve(BODY.map(([r, y]) => new T.Vector2(r, y))),
-    bodyPts = bodyCurve.getPoints(160),
+    bodyPtsOf = (b) => new T.SplineCurve(b.map(([r, y]) => new T.Vector2(r, y))).getPoints(160),
+    BODY_PTS = { m: bodyPtsOf(BODY), f: bodyPtsOf(BODY_F) };
+  let PROF = "m",
+    bodyPts = BODY_PTS.m;
+  const useBody = (b) => {
+      PROF = b === "f" ? "f" : "m";
+      bodyPts = BODY_PTS[PROF];
+    },
     bodyR = (y) => {
       for (let i = 1; i < bodyPts.length; i++)
         if (bodyPts[i].y >= y) {
@@ -15253,7 +15265,7 @@ const AV3D = (() => {
     };
   // the body between y0 and y1, d further out (clothes); open ends get a rim turned in
   function bodyGeo(y0, y1, d, o) {
-    return gk(`b|${y0}|${y1}|${typeof d === "function" ? d.toString() : d}|${JSON.stringify(o || {})}`, () => bodyGeoNew(y0, y1, d, o));
+    return gk(`b|${PROF}|${y0}|${y1}|${typeof d === "function" ? d.toString() : d}|${JSON.stringify(o || {})}`, () => bodyGeoNew(y0, y1, d, o));
   }
   function bodyGeoNew(y0, y1, d, o) {
     o = o || {};
@@ -15327,18 +15339,20 @@ const AV3D = (() => {
   };
 
   // ---- the joints of the figure (left side, x > 0; the right side mirrored) ----
-  const J = {
-    S: V3(1.22, 8.5, 0),
-    E: V3(1.47, 6.86, -0.12),
-    W: V3(1.57, 5.36, 0.2),
-    H: V3(0.5, 5.4, 0),
-    K: V3(0.47, 3.0, 0.05),
-    A: V3(0.45, 0.62, -0.02),
-  };
+  const JM = {
+      S: V3(1.22, 8.5, 0),
+      E: V3(1.5, 6.86, -0.12),
+      W: V3(1.62, 5.36, 0.2),
+      H: V3(0.5, 5.4, 0),
+      K: V3(0.47, 3.0, 0.05),
+      A: V3(0.45, 0.62, -0.02),
+    },
+    JF = { ...JM, S: V3(1.13, 8.5, 0), E: V3(1.41, 6.86, -0.12), W: V3(1.53, 5.36, 0.2) };
+  let J = JM;
   const mir = (v, s) => V3(v.x * s, v.y, v.z);
   const lerpV = (a, b, t) => new T.Vector3().lerpVectors(a, b, t);
-  const R_UP = [[0, 0.28], [0.3, 0.275], [1, 0.225]],
-    R_FORE = [[0, 0.225], [0.22, 0.235], [1, 0.155]],
+  const R_UP = [[0, 0.31], [0.3, 0.305], [1, 0.26]],
+    R_FORE = [[0, 0.26], [0.22, 0.27], [1, 0.19]],
     R_THIGH = [[0, 0.47], [0.4, 0.41], [1, 0.28]],
     R_SHIN = [[0, 0.28], [0.25, 0.315], [0.7, 0.235], [1, 0.18]];
 
@@ -15376,6 +15390,7 @@ const AV3D = (() => {
   }
 
   // ---- a shoe on the floor under the ankle: sole, a rounded upper, the collar round the ankle, laces ----
+  const x2sphere = (r, m) => sphere(r, m, 12, 8);
   function shoe(A, s, o, M, sock) {
     const g = new T.Group(),
       c = o.c,
@@ -15403,6 +15418,17 @@ const AV3D = (() => {
           g.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 12, 0.028, 6), M(o.stripe, { r: 0.5 })));
         });
     }
+    if (o.straps)
+      [0.1, 0.3].forEach((z, i) => {
+        const st = new T.Mesh(gk("strap", () => new T.BoxGeometry(0.44, 0.055, 0.13)), M(o.straps, { r: 0.7 }));
+        st.position.set(0.01, 0.47 - i * 0.075, z);
+        st.rotation.x = -0.32 - i * 0.12;
+        g.add(st);
+        const tip = x2sphere(0.04, M(o.straps, { r: 0.7 }));
+        tip.position.set(0.23, 0.465 - i * 0.075, z);
+        tip.scale.set(0.04, 0.024, 0.064);
+        g.add(tip);
+      });
     if (o.lace)
       [0.14, 0.24, 0.34].forEach((z, i) => {
         const b = new T.Mesh(new T.CylinderGeometry(0.018, 0.018, 0.2, 8), M(o.lace, { r: 0.5 }));
@@ -15424,6 +15450,7 @@ const AV3D = (() => {
     } else if (sock) g.add(tube(V3(0, o.clog ? 0.25 : 0.4, -0.05), V3(0, 1.0, -0.02), [[0, 0.2], [1, 0.19]], M("#F4F5F7", { r: 0.9 })));
     g.position.set(A.x, 0, A.z);
     g.rotation.y = 0.07 * s;
+    g.scale.setScalar(1.38);
     return g;
   }
 
@@ -15495,16 +15522,16 @@ const AV3D = (() => {
       c.restore();
     }
     // the mouth: a soft smile, a little open, upper teeth, the tongue below
-    const mouth = [...curve([-0.2, -0.55], [0, -0.585], [0.2, -0.55], 18), ...curve([0.2, -0.55], [0.15, -0.68], [0, -0.69], 14), ...curve([0, -0.69], [-0.15, -0.68], [-0.2, -0.55], 14)];
+    const mouth = [...curve([-0.21, -0.56], [0, -0.59], [0.21, -0.56], 18), ...curve([0.21, -0.56], [0.17, -0.73], [0, -0.735], 14), ...curve([0, -0.735], [-0.17, -0.73], [-0.21, -0.56], 14)];
     path(mouth, true);
     c.fillStyle = "#8C3434";
     c.fill();
     c.save();
     c.clip();
-    path([...curve([-0.18, -0.55], [0, -0.58], [0.18, -0.55], 18), ...curve([0.18, -0.6], [0, -0.625], [-0.18, -0.6], 18)], true);
+    path([...curve([-0.2, -0.555], [0, -0.585], [0.2, -0.555], 18), ...curve([0.2, -0.61], [0, -0.635], [-0.2, -0.61], 18)], true);
     c.fillStyle = "#FBFBF8";
     c.fill();
-    const [tx, ty] = at(0, -0.665);
+    const [tx, ty] = at(0, -0.7);
     c.fillStyle = "#D9686E";
     c.beginPath();
     c.ellipse(tx, ty, 30, 13, 0, 0, 2 * PI);
@@ -15528,8 +15555,8 @@ const AV3D = (() => {
     });
     // the brows: thicker inside, a fine tail outside
     [-1, 1].forEach((s) => {
-      const top = curve([0.12 * s, 0.1], [0.3 * s, 0.185], [0.47 * s, 0.085], 18),
-        bot = curve([0.46 * s, 0.075], [0.3 * s, 0.145], [0.125 * s, 0.05], 18);
+      const top = curve([0.13 * s, 0.13], [0.3 * s, 0.215], [0.46 * s, 0.13], 18),
+        bot = curve([0.45 * s, 0.105], [0.3 * s, 0.155], [0.14 * s, 0.07], 18);
       path([...top, ...bot], true);
       c.fillStyle = shade(hc[1], 0.04);
       c.fill();
@@ -15557,27 +15584,15 @@ const AV3D = (() => {
   }
   function hairTextureNew(hc) {
     const cv = document.createElement("canvas");
-    cv.width = 512;
+    cv.width = 64;
     cv.height = 256;
     const c = cv.getContext("2d"),
       g = c.createLinearGradient(0, 0, 0, 256);
-    g.addColorStop(0, hc[0]);
-    g.addColorStop(1, shade(hc[0], -0.04));
+    g.addColorStop(0, shade(hc[0], 0.06));
+    g.addColorStop(0.5, hc[0]);
+    g.addColorStop(1, shade(hc[0], -0.05));
     c.fillStyle = g;
-    c.fillRect(0, 0, 512, 256);
-    // strands: lines from the crown down to the edge
-    for (let i = 0; i < 260; i++) {
-      const x = (i * 197.3) % 512,
-        w = 1 + (i % 3);
-      c.strokeStyle = i % 2 ? shade(hc[1], 0.02) : shade(hc[0], 0.08);
-      c.globalAlpha = 0.22 + (i % 5) * 0.04;
-      c.lineWidth = w;
-      c.beginPath();
-      c.moveTo(x, 0);
-      c.bezierCurveTo(x + 6, 80, x - 6, 170, x + 3, 256);
-      c.stroke();
-    }
-    c.globalAlpha = 1;
+    c.fillRect(0, 0, 64, 256);
     return cv;
   }
   // a lock: a strip on the head from (th0, ph0) to (th1, ph1), raised in the middle, narrowing to its tip
@@ -15597,53 +15612,88 @@ const AV3D = (() => {
   const LOCKS = {
     // the short cut: a fringe swept to the side, a little height on top
     short: [
-      ...[-0.72, -0.48, -0.24, 0, 0.24, 0.48, 0.72].map((p, i) => [0.62, p * 0.7, 1.3 + (i % 2) * 0.05, p + 0.3, 0.42, 0.07, 1.055]),
-      ...[-0.5, -0.17, 0.17, 0.5].map((p) => [0.3, p * 2.2, 0.8, p * 0.9 + 0.12, 0.5, 0.045, 1.065]),
-    ],
-    long: [
-      ...[-0.6, -0.36, -0.12].map((p) => [0.7, p * 0.4 - 0.2, 1.28, p - 0.05, 0.4, 0.06, 1.05]),
-      ...[0.12, 0.36, 0.6].map((p) => [0.7, p * 0.4 - 0.2, 1.26, p + 0.1, 0.4, 0.06, 1.05]),
+      ...[-0.72, -0.48, -0.24, 0, 0.24, 0.48, 0.72].map((p, i) => [0.55, p * 0.7, 1.28 + (i % 2) * 0.06, p + 0.26, 0.5, 0.1, 1.07]),
+      ...[-0.5, -0.17, 0.17, 0.5].map((p) => [0.25, p * 2.2, 0.8, p * 0.9 + 0.12, 0.55, 0.07, 1.1]),
     ],
     bun: [-0.55, -0.2, 0.2, 0.55].map((p) => [1.15, p, 0.3, p * 0.5 + PI, 0.45, 0.04, 1.04]),
   };
+  // long hair in one piece: from the crown over the whole head, parted on the right with a swoop over the forehead to
+  // the left, above the ears; behind the ears it falls to the shoulders, the ends a little turned in; a round rim along
+  // its edge makes it thick
+  const LONG_PART = -0.42,
+    longFront = (ph) =>
+      lerpTab(
+        [[-PI, 1.5], [-1.6, 1.5], [-1.15, 1.42], [-0.8, 1.22], [-0.45, 1.04], [-0.15, 1.16], [0.2, 1.3], [0.55, 1.4], [0.95, 1.48], [1.6, 1.5], [PI, 1.5]],
+        ph,
+      ),
+    longHang = (ph) => smooth(1.45, 1.85, Math.abs(ph)),
+    longPt = (u, v, t) => {
+      const ph = -PI + 2 * PI * u,
+        hg = longHang(ph),
+        th1 = longFront(ph) * (1 - hg) + 1.62 * hg,
+        vh = 1 - 0.45 * hg,
+        groove = 0.028 * Math.exp(-Math.pow((ph - LONG_PART) / 0.07, 2)),
+        ridge = 0.01 * Math.sin(ph * 11);
+      if (v <= vh) {
+        const th = 0.004 + (th1 - 0.004) * (v / vh),
+          sc = 1.075 + 0.045 * (1 - th / 1.62) - groove * (1 - th / 1.2) + ridge;
+        // over the forehead the edge comes down onto the skin, so it is a hairline and not a band
+        return headPt(th, ph, sc - (1 - hg) * (sc - 1.028) * smooth(0.78, 1, v / vh), t);
+      }
+      const k = (v - vh) / (1 - vh),
+        P = headPt(th1, ph, 1.075 + ridge),
+        y1 = lerpTab([[1.45, 9.3], [2.2, 9.05], [PI, 8.98]], Math.abs(ph)),
+        out = 1 + 0.16 * Math.sin(k * PI * 0.62) - 0.07 * smooth(0.8, 1, k);
+      return t.set(P.x * out, P.y + (y1 - P.y) * k, P.z * out - 0.06 * k);
+    };
+  // the rim: a round edge along the hair's edge, thin at the hairline over the face, thick at the ends
+  const longRimGeo = () => {
+    const pts = [];
+    for (let i = 0; i < 120; i++) pts.push(longPt(i / 120, 1, new T.Vector3()));
+    const cu = new T.CatmullRomCurve3(pts, !0, "centripetal"),
+      C = V3(0, HC, 0),
+      P = new T.Vector3(),
+      D = new T.Vector3(),
+      N = new T.Vector3(),
+      B = new T.Vector3();
+    return new T.ParametricGeometry(
+      (u, v, t) => {
+        cu.getPoint(u % 1, P);
+        cu.getTangent(u % 1, D);
+        N.copy(P).sub(C);
+        N.addScaledVector(D, -N.dot(D)).normalize();
+        B.crossVectors(D, N);
+        const r = 0.024 + 0.032 * smooth(10.3, 9.7, P.y),
+          a = 2 * PI * v;
+        return t.copy(P).addScaledVector(N, r * Math.cos(a)).addScaledVector(B, r * Math.sin(a));
+      },
+      240,
+      10,
+    );
+  };
+  function longHair(hm) {
+    const surf = new T.Mesh(gk("hair|long2", () => new T.ParametricGeometry(longPt, 120, 40)), hm);
+    const rim = new T.Mesh(gk("hair|longrim2", longRimGeo), hm);
+    return [surf, rim];
+  }
   function hairMeshes(L, hc, M, hatOn) {
     const out = [],
       kind = L.hair;
     if (kind === "bald") return out;
-    const hm = M("#ffffff", { map: tex(hairTexture(hc)), r: 0.4, env: 1 });
+    const hm = M("#ffffff", { map: tex(hairTexture(hc)), r: 0.62, env: 0.5 });
+    if (kind === "long") return longHair(M("#ffffff", { map: hm.map, r: 0.62, env: 0.5, side: T.DoubleSide }));
     const edge = HAIR_EDGE[kind] || HAIR_EDGE.short,
-      vol = kind === "curly" ? 0.05 : kind === "bun" ? 0.03 : 0.05;
+      vol = kind === "curly" ? 0.05 : kind === "bun" ? 0.03 : 0.1;
     const cap = new T.Mesh(
       gk("hair|" + kind, () => shellGeo(edge, (v) => (v <= 1 ? 1.025 + vol * (1 - v * v) : 1.025 - (v - 1) * 0.5), { lip: 0.05, su: 96, sv: 44 })),
       hm,
     );
     out.push(cap);
-    const lm = M("#ffffff", { map: hm.map, r: 0.42, side: T.DoubleSide, env: 1 });
+    const lm = M("#ffffff", { map: hm.map, r: 0.62, side: T.DoubleSide, env: 0.5 });
     (LOCKS[kind] || []).forEach(([t0, p0, t1, p1, w, h, s0]) => {
       if (hatOn && Math.min(t0, t1) < 1.0 && kind !== "long") return;
       out.push(new T.Mesh(lockGeo(t0, p0, t1, p1, w, h, s0), lm));
     });
-    if (kind === "long") {
-      // down the back and the sides to the shoulders
-      const back = new T.Mesh(
-        new T.ParametricGeometry(
-          (u, v, t) => {
-            const ph = PI + (2 * PI - 1.9) * (u - 0.5),
-              th = 1.45,
-              top = headPt(th, ph, 1.07),
-              a = Math.abs(((ph + PI) % (2 * PI)) - PI),
-              y1 = lerpTab([[0.95, 9.05], [1.4, 8.8], [PI, 8.55]], a),
-              y = top.y + (y1 - top.y) * v,
-              k = 1.0 + 0.1 * smooth(0, 0.6, v) - 0.06 * smooth(0.85, 1, v);
-            return t.set(top.x * k, y, top.z * k - 0.04 * v);
-          },
-          60,
-          18,
-        ),
-        M("#ffffff", { map: hm.map, r: 0.5, side: T.DoubleSide }),
-      );
-      out.push(back);
-    }
     if (kind === "bun" && !hatOn) {
       const b = sphere(0.36, hm, 28, 20);
       b.position.copy(headPt(0.42, PI, 1.12));
@@ -15670,9 +15720,79 @@ const AV3D = (() => {
     return out;
   }
 
+  // ---- the figure's proportions (like the pictures it follows): everything is built at the proportions above and then
+  // shaped: the head (with hair, hats, glasses) bigger round the neck, the body from the hips to the neck shorter, the
+  // arms moved down with the shoulders (their length kept), the legs as built. Parts across two zones are shaped point
+  // by point (neck, collar, coat, long trousers, things round the neck).
+  const Y_C = 4.95,
+    Y_P = 9.35,
+    Y_N0 = 9.0,
+    Y_N1 = 9.45,
+    CT = 0.72,
+    KH = 1.52,
+    TYP = Y_C + (Y_P - Y_C) * CT,
+    DY_ARM = Y_C + (8.52 - Y_C) * CT - 8.52,
+    TYf = (y) => (y <= Y_C ? y : y <= Y_P ? Y_C + (y - Y_C) * CT : TYP + (y - Y_P) * KH),
+    HF = (y) => 1 + (KH - 1) * smooth(Y_N0, Y_N1, y);
+  const SH_HEAD = new T.Matrix4().makeTranslation(0, TYP, 0).multiply(new T.Matrix4().makeScale(KH, KH, KH)).multiply(new T.Matrix4().makeTranslation(0, -Y_P, 0)),
+    SH_BODY = new T.Matrix4().makeTranslation(0, Y_C, 0).multiply(new T.Matrix4().makeScale(1, CT, 1)).multiply(new T.Matrix4().makeTranslation(0, -Y_C, 0)),
+    SH_ARM = new T.Matrix4().makeTranslation(0, DY_ARM, 0),
+    SH_NONE = new T.Matrix4();
+  function shape(fig) {
+    fig.updateMatrixWorld(!0);
+    const meshes = [],
+      box = new T.Box3();
+    fig.traverse((m) => m.isMesh && meshes.push(m));
+    meshes.forEach((m) => {
+      let part = null;
+      for (let o = m; o && o !== fig; o = o.parent) if (o.userData.part) part = part || o.userData.part;
+      const W = m.matrixWorld.clone();
+      let A = part === "arm" ? SH_ARM : part === "head" ? SH_HEAD : null;
+      if (!A) {
+        if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+        box.copy(m.geometry.boundingBox).applyMatrix4(W);
+        if (box.max.y <= Y_C + 1e-3) A = SH_NONE;
+        else if (box.min.y >= Y_C - 1e-3 && box.max.y <= Y_N0) A = SH_BODY;
+      }
+      m.parent && m.parent.remove(m);
+      m.matrixAutoUpdate = !1;
+      if (A) m.matrix.copy(A).multiply(W);
+      else {
+        // point by point
+        const g = m.geometry.clone();
+        g.applyMatrix4(W);
+        const pa = g.attributes.position,
+          na = g.attributes.normal;
+        for (let i = 0; i < pa.count; i++) {
+          const x = pa.getX(i),
+            y = pa.getY(i),
+            z = pa.getZ(i),
+            h = HF(y),
+            sy = y <= Y_C ? 1 : y <= Y_P ? CT : KH;
+          pa.setXYZ(i, x * h, TYf(y), z * h);
+          if (na) {
+            const nx = na.getX(i) / h,
+              ny = na.getY(i) / sy,
+              nz = na.getZ(i) / h,
+              l = Math.hypot(nx, ny, nz) || 1;
+            na.setXYZ(i, nx / l, ny / l, nz / l);
+          }
+        }
+        g.computeBoundingSphere();
+        m.geometry = g;
+        m.matrix.identity();
+      }
+      fig.add(m);
+    });
+    // empty groups (hands) left behind
+    fig.children.filter((o) => !o.isMesh).forEach((o) => fig.remove(o));
+  }
+
   // ---- build the figure for a look ----
   function build(look, opt) {
     opt = opt || {};
+    useBody(look.body);
+    J = look.body === "f" ? JF : JM;
     const L = look,
       mats = [],
       M = mk(mats),
@@ -15702,15 +15822,15 @@ const AV3D = (() => {
       w.scale.set(0.168, 0.182, 0.09);
       g.add(w);
       const ir = sphere(1, M(eye[1], { r: 0.18 }), 24, 16);
-      ir.scale.set(0.125, 0.13, 0.02);
+      ir.scale.set(0.138, 0.143, 0.02);
       ir.position.z = 0.075;
       g.add(ir);
       const ir2 = sphere(1, M(eye[0], { r: 0.18 }), 24, 16);
-      ir2.scale.set(0.092, 0.097, 0.02);
+      ir2.scale.set(0.104, 0.108, 0.02);
       ir2.position.set(0, -0.012, 0.082);
       g.add(ir2);
       const pu = sphere(1, M("#141A24", { r: 0.15 }), 20, 14);
-      pu.scale.set(0.052, 0.056, 0.02);
+      pu.scale.set(0.06, 0.064, 0.02);
       pu.position.z = 0.089;
       g.add(pu);
       [
@@ -15724,20 +15844,24 @@ const AV3D = (() => {
         g.add(hl);
       });
       // the upper lid (skin) over the top of the eye, the lash line along its edge, a little wing outside
-      const lid = new T.Mesh(gk("lid", () => new T.SphereGeometry(1, 28, 10, 0, 2 * PI, 0, PI * 0.24)), skin);
-      lid.scale.set(0.176, 0.192, 0.098);
-      lid.rotation.x = 0.1;
-      g.add(lid);
       const lash = new T.Mesh(gk("lash", () => new T.TorusGeometry(1, 0.1, 8, 32, PI * 0.86)), M("#2A1E1A", { r: 0.5 }));
-      lash.scale.set(0.16, 0.168, 0.16);
+      lash.scale.set(0.172, 0.186, 0.2);
       lash.rotation.set(-0.05, 0, PI * 0.07);
-      lash.position.set(0, 0.02, 0.05);
+      lash.position.set(0, 0.0, 0.035);
       g.add(lash);
       const wing = sphere(1, lash.material, 10, 8);
       wing.scale.set(0.05, 0.018, 0.02);
       wing.position.set(0.175 * s, 0.055, 0.03);
       wing.rotation.z = 0.5 * s;
       g.add(wing);
+      if (L.body === "f")
+        [0, 1].forEach((i) => {
+          const la = sphere(1, lash.material, 8, 6);
+          la.scale.set(0.045, 0.012, 0.012);
+          la.position.set(0.178 * s * -1 * -1, 0.09 + i * 0.045, 0.03);
+          la.rotation.z = (0.55 + i * 0.35) * s;
+          g.add(la);
+        });
       const low = new T.Mesh(new T.TorusGeometry(0.19, 0.007, 6, 24, PI * 0.6), M(shade(sk.line, 0.15), { r: 0.6 }));
       low.rotation.z = PI + PI * 0.2;
       low.position.z = 0.02;
@@ -15746,9 +15870,9 @@ const AV3D = (() => {
     });
     // nose: a small soft bump
     {
-      const [th, ph] = headAng(0, HC - 0.36),
+      const [th, ph] = headAng(0, HC - 0.38),
         nose = sphere(1, skin, 20, 14);
-      nose.scale.set(0.062, 0.058, 0.062);
+      nose.scale.set(0.078, 0.07, 0.075);
       nose.position.copy(headPt(th, ph, 0.995));
       fig.add(nose);
     }
@@ -15757,11 +15881,13 @@ const AV3D = (() => {
       const [th] = headAng(0, HC - 0.22),
         P = headPt(th, (PI / 2) * s, 1.0),
         e = sphere(1, M(sk.ear, { r: 0.6 }), 20, 14);
-      e.scale.set(0.05, 0.15, 0.1);
+      e.scale.set(0.065, 0.19, 0.135);
       e.position.set(P.x + 0.012 * s, P.y, P.z - 0.06);
       e.rotation.y = -0.35 * s;
       fig.add(e);
     });
+    const tag = (from, part) => fig.children.slice(from).forEach((o) => (o.userData.part = part));
+    tag(0, "head");
     // neck
     const neck = new T.Mesh(gk("neck", () => new T.CylinderGeometry(0.245, 0.275, 1.0, 28, 1, true)), skin);
     neck.position.set(0, 9.55, -0.02);
@@ -15778,24 +15904,26 @@ const AV3D = (() => {
     TOP(ctx);
     const cov = ctx.cov;
     // arms: skin where no sleeve is, the hands
+    const nArm = fig.children.length;
     [-1, 1].forEach((s) => {
       const S = mir(J.S, s),
         E = mir(J.E, s),
         Wr = mir(J.W, s);
       if (cov.arm < 1) {
         fig.add(limb(lerpV(S, E, cov.arm * 0.85), E, R_UP, limbM));
-        fig.add(sphere(0.225, limbM, 20, 14).translateX(E.x).translateY(E.y).translateZ(E.z));
+        fig.add(sphere(0.255, limbM, 20, 14).translateX(E.x).translateY(E.y).translateZ(E.z));
         fig.add(limb(E, Wr, R_FORE, limbM));
-      } else fig.add(limb(lerpV(E, Wr, 0.82), Wr, [[0, 0.17], [1, 0.155]], limbM));
+      } else fig.add(limb(lerpV(E, Wr, 0.82), Wr, [[0, 0.19], [1, 0.175]], limbM));
       const h = hand(s, limbM),
         d = new T.Vector3().subVectors(Wr, E).normalize();
       h.position.copy(Wr);
       h.quaternion.setFromUnitVectors(UP, d.clone().negate());
       h.rotateY(-0.75 * s);
-      h.scale.setScalar(0.92);
+      h.scale.setScalar(1.08);
       fig.add(h);
       (ctx.hands = ctx.hands || {})[s] = h;
     });
+    tag(nArm, "arm");
     // legs: skin below shorts or a skirt, socks and shoes
     [-1, 1].forEach((s) => {
       const H = mir(J.H, s),
@@ -15809,6 +15937,7 @@ const AV3D = (() => {
       fig.add(shoe(A, s, SHO, M, cov.leg < 2));
     });
     // hair
+    const nHead = fig.children.length;
     const hatOn = !!(L.head && L.head !== "none" && L.head !== "crown" && L.head !== "head-mirror");
     hairMeshes(L, hc, M, hatOn).forEach((m) => fig.add(m));
     // a full beard round the jaw and the chin, a moustache over the mouth
@@ -15848,12 +15977,25 @@ const AV3D = (() => {
       FC = AV3_FACES[L.face],
       HD = AV3_HEADS[L.head],
       HN = AV3_HANDS[L.hand];
-    NK && NK(ctx);
+    const nFace = fig.children.length;
     FC && FC(ctx);
     HD && HD(ctx);
+    tag(nHead, "head");
+    // round the neck: shaped with the body and the head
+    fig.children.slice(nHead, nFace).forEach((o) => (o.userData.part = "head"));
+    NK && NK(ctx);
     HN && HN(ctx, ctx.hands[-1]);
     fig.userData.mats = mats;
-    fig.userData.handR = ctx.hands[-1];
+    // where the right hand is (the camera for things held in it), after the shaping below
+    fig.updateMatrixWorld(!0);
+    fig.userData.handPos = ctx.hands[-1].getWorldPosition(new T.Vector3()).add(V3(0, DY_ARM, 0));
+    shape(fig);
+    fig.traverse((m) => {
+      if (m.isMesh) {
+        m.castShadow = !m.material.transparent;
+        m.receiveShadow = !0;
+      }
+    });
     return fig;
   }
 
@@ -15966,25 +16108,27 @@ const AV3D = (() => {
     const sl = M(o.sleeve || c, { r: 0.72 }),
       cuffM = M(x.shade(o.sleeve || c, -0.08), { r: 0.72 });
     x.cov.arm = o.long ? 1 : 0.48;
+    const nSl = fig.children.length;
     [-1, 1].forEach((s) => {
       const S = mir(J.S, s),
         E = mir(J.E, s),
         Wr = mir(J.W, s);
-      const sh = x.sphere(0.3, sl, 24, 16);
-      sh.position.set(S.x + 0.02 * s, S.y, S.z);
+      const sh = x.sphere(0.31, sl, 24, 16);
+      sh.position.set(S.x - 0.01 * s, S.y - 0.06, S.z);
       fig.add(sh);
       if (o.long) {
-        fig.add(x.tube(S, E, [[0, 0.3], [1, 0.262]], sl));
-        fig.add(x.sphere(0.262, sl, 20, 14).translateX(E.x).translateY(E.y).translateZ(E.z));
+        fig.add(x.tube(S, E, [[0, 0.25], [0.15, 0.33], [1, 0.29]], sl));
+        fig.add(x.sphere(0.29, sl, 20, 14).translateX(E.x).translateY(E.y).translateZ(E.z));
         const cuff = x.lerpV(E, Wr, 0.88);
-        fig.add(x.tube(E, cuff, [[0, 0.262], [0.3, 0.268], [1, 0.2]], sl));
-        fig.add(x.ring(cuff, Wr, 0.193, 0.042, cuffM));
+        fig.add(x.tube(E, cuff, [[0, 0.29], [0.3, 0.295], [1, 0.225]], sl));
+        fig.add(x.ring(cuff, Wr, 0.218, 0.044, cuffM));
       } else {
         const end = x.lerpV(S, E, 0.48);
-        fig.add(x.tube(S, end, [[0, 0.3], [1, 0.292]], sl));
-        fig.add(x.ring(end, E, 0.29, 0.032, cuffM));
+        fig.add(x.tube(S, end, [[0, 0.25], [0.3, 0.335], [1, 0.34]], sl));
+        fig.add(x.ring(end, E, 0.337, 0.034, cuffM));
       }
     });
+    fig.children.slice(nSl).forEach((o) => (o.userData.part = "arm"));
     o.extra && o.extra(x, m);
   };
   // the hood of the hoodie lies round the back of the neck; two cords in front
@@ -16050,7 +16194,7 @@ const AV3D = (() => {
     x.outer = 0.13;
   };
   const AV3_TOPS = {
-    "shirt-blue": avTop3("#4C86C6"),
+    "shirt-blue": avTop3("#86B9E8"),
     "shirt-red": avTop3("#D9534F"),
     "shirt-green": avTop3("#3FA66B"),
     "shirt-yellow": avTop3("#F2C230"),
@@ -16078,21 +16222,21 @@ const AV3D = (() => {
         K = mir(J.K, s),
         A = mir(J.A, s),
         H2 = x.V3(H.x * 0.88, H.y + 0.45, H.z),
-        end = o.short ? x.lerpV(H, K, 0.55) : x.V3(A.x, o.cuff ? 0.7 : o.roll ? 0.86 : 0.6, A.z + 0.02);
+        end = o.short ? x.lerpV(H, K, 0.55) : x.V3(A.x, o.cuff ? 0.74 : o.roll ? 0.66 : 0.66, A.z + 0.02);
       if (o.short) {
-        fig.add(x.tube(H2, end, [[0, 0.47], [0.25, 0.51], [1, 0.45]], m));
-        fig.add(x.ring(end, K, 0.445, 0.035, M(x.shade(c, -0.08), { r: 0.8 })));
+        fig.add(x.tube(H2, end, [[0, 0.48], [0.25, 0.52], [1, 0.48]], m));
+        fig.add(x.ring(end, K, 0.475, 0.035, M(x.shade(c, -0.08), { r: 0.8 })));
       } else {
-        fig.add(x.tube(H2, K, [[0, 0.47], [0.2, 0.51], [0.5, 0.44], [1, 0.33]], m));
-        fig.add(x.sphere(0.33, m, 20, 14).translateX(K.x).translateY(K.y).translateZ(K.z));
-        fig.add(x.tube(K, end, o.cuff ? [[0, 0.33], [0.3, 0.335], [0.9, 0.255], [1, 0.22]] : [[0, 0.33], [0.3, 0.335], [1, 0.275]], m));
+        fig.add(x.tube(H2, K, [[0, 0.5], [0.2, 0.54], [0.5, 0.5], [1, 0.43]], m));
+        fig.add(x.sphere(0.43, m, 20, 14).translateX(K.x).translateY(K.y).translateZ(K.z));
+        fig.add(x.tube(K, end, o.cuff ? [[0, 0.43], [0.3, 0.41], [0.9, 0.3], [1, 0.25]] : [[0, 0.43], [0.3, 0.42], [1, 0.405]], m));
         if (o.roll) {
           // the rolled cuff: wider, the lighter inside of the cloth
           const rm = M(o.roll, { r: 0.85 });
-          fig.add(x.tube(x.V3(end.x, end.y - 0.02, end.z), x.V3(end.x, end.y + 0.16, end.z), [[0, 0.295], [1, 0.3]], rm));
-          fig.add(x.ring(x.V3(end.x, end.y + 0.16, end.z), K, 0.297, 0.022, rm));
-          fig.add(x.ring(x.V3(end.x, end.y - 0.02, end.z), K, 0.292, 0.022, rm));
-        } else fig.add(x.ring(end, K, o.cuff ? 0.22 : 0.272, o.cuff ? 0.065 : 0.03, M(x.shade(c, -0.08), { r: 0.8 })));
+          fig.add(x.tube(x.V3(end.x, end.y - 0.02, end.z), x.V3(end.x, end.y + 0.24, end.z), [[0, 0.435], [1, 0.44]], rm));
+          fig.add(x.ring(x.V3(end.x, end.y + 0.24, end.z), K, 0.437, 0.03, rm));
+          fig.add(x.ring(x.V3(end.x, end.y - 0.02, end.z), K, 0.432, 0.03, rm));
+        } else fig.add(x.ring(end, K, o.cuff ? 0.25 : 0.402, o.cuff ? 0.065 : 0.03, M(x.shade(c, -0.08), { r: 0.8 })));
       }
     });
     if (o.cord)
@@ -16143,7 +16287,7 @@ const AV3D = (() => {
     skirt,
   };
   const AV3_SHOES = {
-    sneaker: { c: "#F7F8FA", sole: "#FFFFFF", lace: "#D5DBE3", stripe: "#8FA8C4", dark: 0 },
+    sneaker: { c: "#F7F8FA", sole: "#FFFFFF", straps: "#EDF0F4", dark: 0 },
     "sneaker-red": { c: "#D9534F", sole: "#FFFFFF", lace: "#FFFFFF", stripe: "#FFFFFF" },
     "sneaker-black": { c: "#2F3540", sole: "#FFFFFF", lace: "#C9CED6", stripe: "#FFFFFF", dark: 1 },
     clogs: { c: "#4FAE8E", sole: "#2F7F63", holes: !0, clog: !0 },
@@ -16586,24 +16730,37 @@ const AV3D = (() => {
   // how a renderer draws the figure: filmic colours
   function setup(r) {
     r.outputEncoding = T.sRGBEncoding;
-    r.toneMapping = T.ACESFilmicToneMapping;
-    r.toneMappingExposure = 0.88;
+    r.toneMapping = T.NoToneMapping;
     r.setClearColor(0, 0);
+    r.shadowMap.enabled = !0;
+    r.shadowMap.type = T.PCFSoftShadowMap;
   }
   function scene(look, r) {
     const sc = new T.Scene(),
       fig = build(look);
     const env = r ? envFor(r) : null;
     env && (sc.environment = env);
-    sc.add(new T.HemisphereLight(0xffffff, 0x8f8478, env ? 0.25 : 0.7));
-    const key = new T.DirectionalLight(0xfff6ee, env ? 0.85 : 0.75);
-    key.position.set(-3.5, 7, 8);
+    sc.add(new T.HemisphereLight(0xffffff, 0xc7cfdc, env ? 0.4 : 0.62));
+    const key = new T.DirectionalLight(0xfff6ec, 0.52);
+    key.position.set(-3, 9, 9);
+    key.castShadow = !0;
+    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.camera.left = -4;
+    key.shadow.camera.right = 4;
+    key.shadow.camera.top = 12.5;
+    key.shadow.camera.bottom = -0.5;
+    key.shadow.camera.near = 1;
+    key.shadow.camera.far = 30;
+    key.shadow.bias = -0.0008;
+    key.shadow.radius = 3;
+    key.target.position.set(0, 6, 0);
     sc.add(key);
-    const fill = new T.DirectionalLight(0xeef4ff, env ? 0.2 : 0.28);
-    fill.position.set(6, 3, 5);
+    sc.add(key.target);
+    const fill = new T.DirectionalLight(0xeef4ff, 0.24);
+    fill.position.set(6, 4, 7);
     sc.add(fill);
-    const rim = new T.DirectionalLight(0xffffff, env ? 0.55 : 0.35);
-    rim.position.set(1, 6, -7);
+    const rim = new T.DirectionalLight(0xffffff, 0.3);
+    rim.position.set(1, 6, -8);
     sc.add(rim);
     const sh = new T.Mesh(gk("shadow", () => new T.PlaneGeometry(3.6, 1.6)), new T.MeshBasicMaterial({ map: shadowTex(), transparent: !0, depthWrite: !1 }));
     sh.rotation.x = -PI / 2;
@@ -16613,14 +16770,13 @@ const AV3D = (() => {
     return { scene: sc, fig };
   }
   // the camera on a part of the figure: [centre x, centre y, half height]
-  const VIEWS = { full: [0, 6.28, 6.55], bust: [0, 10.32, 1.86], top: [0, 7.55, 2.1], chest: [0, 9.05, 1.85], legs: [0, 3.2, 3.05], feet: [0, 0.55, 0.85], hand: [-1.9, 5.0, 1.1] };
+  const VIEWS = { full: [0, 5.95, 6.15], bust: [0, 9.35, 2.3], top: [0, 6.75, 1.85], chest: [0, 8.15, 1.9], legs: [0, 2.9, 2.9], feet: [0, 0.45, 1.02], hand: [-1.9, 4.2, 1.1] };
   function frame(cam, view, aspect, fig) {
     let [cx, cy, hh] = VIEWS[view] || VIEWS.full;
     // the right hand: where it is after the figure's turn
-    if (view === "hand" && fig && fig.userData.handR) {
-      const p = new T.Vector3();
+    if (view === "hand" && fig && fig.userData.handPos) {
       fig.updateMatrixWorld(!0);
-      fig.userData.handR.getWorldPosition(p);
+      const p = fig.userData.handPos.clone().applyMatrix4(fig.matrixWorld);
       cx = p.x;
       cy = p.y - 0.62;
       hh = 1.0;
@@ -16646,7 +16802,7 @@ const AV3D = (() => {
 // ---- 3D pictures of the avatar: one renderer off screen draws them one after the other, kept by look and size;
 // the small ones of the last looks are kept on the device for the next start ----
 const av3 = { ok: null, r: null, pics: new Map(), queue: [], busy: !1 },
-  AV3_STORE = "ana:av3pics:2",
+  AV3_STORE = "ana:av3pics:3",
   av3Usable = () => {
     if (av3.ok != null) return av3.ok;
     try {
@@ -16657,14 +16813,14 @@ const av3 = { ok: null, r: null, pics: new Map(), queue: [], busy: !1 },
     }
     if (av3.ok)
       try {
-        localStorage.removeItem("ana:av3pics");
+        ["ana:av3pics", "ana:av3pics:2"].forEach((k) => localStorage.removeItem(k));
         const o = JSON.parse(localStorage.getItem(AV3_STORE) || "{}");
         Object.keys(o).forEach((k) => typeof o[k] === "string" && o[k].startsWith("data:image/png") && av3.pics.set(k, o[k]));
       } catch {}
     return av3.ok;
   },
   av3Key = (L) => Object.keys(AV_DEFAULT).map((k) => L[k] || "").join(","),
-  AV3_ROT = { full: 0.35, bust: 0.3, hand: 0.5 },
+  AV3_ROT = { full: 0.22, bust: 0.18, hand: 0.5 },
   av3Draw = (L, view, w, h) => {
     if (av3.r && av3.r.getContext().isContextLost()) av3.r = null;
     if (!av3.r) {
@@ -16759,7 +16915,7 @@ function Avatar3DView({ look: lk, size = 240, title }) {
     k = av3Key(L),
     w = Math.round(size * 0.5),
     cv = useRef(null),
-    st = useRef({ rot: 0.35, r: null, scene: null, fig: null, cam: null, drag: null }),
+    st = useRef({ rot: 0.22, r: null, scene: null, fig: null, cam: null, drag: null }),
     draw = () => {
       const s = st.current;
       if (!s.r || !s.fig) return;
@@ -16910,6 +17066,7 @@ function AvatarLooks({ progress: s, onLook }) {
         e("div", { className: "ana-display", style: { fontSize: 12, fontWeight: 700, color: C.inkSoft, letterSpacing: 0.6, marginBottom: 6 } }, label.toUpperCase()),
         e("div", { style: { display: "flex", flexWrap: "wrap", gap: 7 } }, kids),
       ),
+    BODY = { m: _T("M\xE4nnlich"), f: _T("Weiblich") },
     HAIR = { short: _T("Kurz"), long: _T("Lang"), bun: _T("Dutt"), curly: _T("Locken"), bald: _T("Glatze") },
     BEARD = { none: _T("Ohne"), stubble: _T("Stoppeln"), moustache: _T("Schnurrbart"), full: _T("Vollbart") },
     EYES = { blue: _T("Blau"), green: _T("Gr\xFCn"), brown: _T("Braun"), grey: _T("Grau") },
@@ -16927,6 +17084,24 @@ function AvatarLooks({ progress: s, onLook }) {
         { style: { flex: 1, minWidth: 0, paddingBottom: 6 } },
         e("div", { className: "ana-display", style: { fontSize: 17, fontWeight: 700, color: C.ink } }, _T("Dein Avatar")),
         e("div", { className: "ana-body", style: { fontSize: 13, color: C.inkSoft, marginTop: 4, lineHeight: 1.4 } }, _T("Aussehen kostenlos w\xE4hlen, Kleidung und mehr unten mit Talern kaufen. Deine Freunde sehen deinen Avatar in der Rangliste.")),
+      ),
+    ),
+    row(
+      _T("Figur"),
+      Object.keys(BODY).map((v) =>
+        e(
+          "button",
+          {
+            key: v,
+            type: "button",
+            onClick: () => (onLook("avBody", v), v === "f" && L.hair === "short" && onLook("avHair", "long")),
+            "aria-pressed": L.body === v ? "true" : "false",
+            "data-look": `body:${v}`,
+            className: "ana-display",
+            style: { padding: "6px 13px", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", border: `1.5px solid ${L.body === v ? C.ink : C.line}`, background: L.body === v ? C.ink : C.card, color: L.body === v ? C.paper : C.ink },
+          },
+          BODY[v],
+        ),
       ),
     ),
     row(_T("Hautfarbe"), Object.keys(AV_SKINS).map((v, i) => sw("skin", v, AV_SKINS[v].g[1], _T("Hautfarbe {0}", i + 1), L.skin === v))),

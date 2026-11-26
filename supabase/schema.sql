@@ -422,3 +422,17 @@ grant execute on function public.leaderboard(date, date), public.global_board(te
 
 -- the avatars of the accounts that have progress already
 select public.stats_put(user_id, data) from public.progress;
+
+-- ---- 6. avatars: the figure (male or female) is part of the avatar too ----
+create or replace function public.avatar_of(d jsonb) returns jsonb
+language sql immutable set search_path = '' as $$
+  select coalesce(jsonb_object_agg(k.slot, d ->> k.field), '{}'::jsonb)
+    from (values ('skin', 'avSkin'), ('eyes', 'avEyes'), ('hair', 'avHair'), ('hairColor', 'avHairColor'), ('beard', 'avBeard'),
+                 ('top', 'avTop'), ('bottom', 'avBottom'), ('shoes', 'avShoes'), ('head', 'avHead'), ('face', 'avFace'),
+                 ('neck', 'avNeck'), ('hand', 'avHand'), ('body', 'avBody')) k (slot, field)
+   where jsonb_typeof(d -> k.field) = 'string' and (d ->> k.field) ~ '^[a-z0-9-]{1,24}$';
+$$;
+revoke execute on function public.avatar_of(jsonb) from public, anon, authenticated;
+
+-- the avatars of the accounts that have progress already
+select public.stats_put(user_id, data) from public.progress;
