@@ -9,7 +9,10 @@ import WebKit
 /// The page talks to the app through two message handlers: "haptic" (vibration patterns, HapticBridge)
 /// and "share" (the progress backup as a file in the share sheet, ShareBridge). Its alert() and
 /// confirm() dialogs are shown as native alerts (Coordinator) - a WKWebView shows none on its own.
+/// Until the page has loaded, the web view is the blue of the launch screen and of the page's loading screen.
 struct WebAppView: UIViewRepresentable {
+    static let startURL = URL(string: "\(BundleSchemeHandler.scheme)://app/index.html")!
+
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
@@ -24,22 +27,46 @@ struct WebAppView: UIViewRepresentable {
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.uiDelegate = context.coordinator
+        webView.navigationDelegate = context.coordinator
         webView.isOpaque = false
-        webView.backgroundColor = UIColor(red: 0.957, green: 0.965, blue: 0.984, alpha: 1)
+        webView.backgroundColor = Coordinator.startColor
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.allowsBackForwardNavigationGestures = false
         if #available(iOS 16.4, *) {
             // lets Safari's Web Inspector attach while debugging
             webView.isInspectable = true
         }
-        webView.load(URLRequest(url: URL(string: "\(BundleSchemeHandler.scheme)://app/index.html")!))
+        webView.load(URLRequest(url: Self.startURL))
         return webView
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
-    /// Shows the page's alert(), confirm() and prompt() as native alerts.
-    final class Coordinator: NSObject, WKUIDelegate {
+    /// Shows the page's alert(), confirm() and prompt() as native alerts, and sets the colour behind the page.
+    final class Coordinator: NSObject, WKUIDelegate, WKNavigationDelegate {
+        /// the blue of the launch screen and of the page's loading screen (#1E2836)
+        static let startColor = UIColor(red: 0.118, green: 0.157, blue: 0.212, alpha: 1)
+        /// the page's light ground (#F4F6FB): shows where the page is pulled past its top or bottom
+        static let pageColor = UIColor(red: 0.957, green: 0.965, blue: 0.984, alpha: 1)
+        private var lastRestart = Date.distantPast
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            webView.backgroundColor = Self.pageColor
+        }
+
+        /// iOS may end the page's process (e.g. while the app waits in the background): load the page again instead of
+        /// leaving the screen empty, but not over and over if it keeps ending at once
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            guard Date().timeIntervalSince(lastRestart) > 15 else { return }
+            lastRestart = Date()
+            webView.backgroundColor = Self.startColor
+            if webView.url != nil {
+                webView.reload()
+            } else {
+                webView.load(URLRequest(url: WebAppView.startURL))
+            }
+        }
+
         func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String,
                      initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
             let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)

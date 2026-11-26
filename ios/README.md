@@ -107,6 +107,12 @@ heißt: Der Swift-Code lässt sich bauen, und die App zeigt die Web-App.
   - `ShareBridge` („share“): gibt die Sicherungsdatei an das Teilen-Menü.
   - `Coordinator`: zeigt `alert()`/`confirm()` der Seite als iOS-Dialoge (sonst würde z. B.
     „Prüfung abbrechen?“ nie gefragt).
+- Start: Der Startbildschirm von iOS ist das Blau der Ladeanimation der Web-App (Farbe
+  `LaunchBackground` in `Assets.xcassets`, eingetragen in `Info.plist`), ebenso der Hintergrund
+  der Web-Ansicht, bis die Seite geladen ist – so kommt beim Öffnen kein weißer oder schwarzer
+  Bildschirm, sondern gleich die Animation. iOS merkt sich den Startbildschirm: Zeigt die App nach
+  dem Update noch den alten, hilft einmal das iPhone neu zu starten (nicht die App löschen – das
+  löscht den Fortschritt).
 - Build-Phase „Copy web app“: kopiert `*.html`, `*.js`, Bilder und `*.glb` aus dem Hauptordner.
 - `Anatomia/Info.plist`: nennt die Sprachen der Web-App (Deutsch, Englisch, Spanisch,
   Schwedisch, Norwegisch). Nur dann meldet die Web-Ansicht der App die Sprache des iPhones, und die App
